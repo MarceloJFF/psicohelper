@@ -122,6 +122,7 @@ function showMessage(message: string, color = 'error') {
 
 const calendarOptions = ref({
   plugins: [dayGridPlugin, timeGridPlugin, interactionPlugin, listPlugin],
+  height: 'auto',
   initialView: 'timeGridDay',
   headerToolbar: {
     left: 'prev,next today',
