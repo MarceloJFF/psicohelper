@@ -14,7 +14,7 @@
     </v-navigation-drawer>
 
     <!-- Barra superior -->
-    <v-app-bar app color="primary" dark>
+    <v-app-bar app  color="primary">
       <v-app-bar-nav-icon @click="drawer = !drawer" />
       <v-app-bar-title>Psicohelper Solutions</v-app-bar-title>
       <v-text-field
@@ -30,9 +30,7 @@
 
       <v-spacer />
 
-      <v-avatar size="36">
-        <v-img src="https://randomuser.me/api/portraits/men/85.jpg" />
-      </v-avatar>
+
     </v-app-bar>
 
     <v-main app>
@@ -59,6 +57,12 @@ const items = [
   { title: 'Home', icon: 'mdi-home' },
   { title: 'Financeiro', icon: 'mdi-currency-usd' },
   { title: 'Calendar', icon: 'mdi-calendar-month' },
+  {title: 'Relatórios',icon: 'mdi-clock' },
+  {title:'Contratos',icon: 'mdi-clock' },
+  { title: 'Atendimentos', icon: 'mdi-account-clock' },
+  { title: 'Clientes', icon: 'mdi-account-multiple' },
+  { title: 'Configurações', icon: 'mdi-cog' },
+  { title: 'Sair', icon: 'mdi-logout' }
 ]
 </script>
 
