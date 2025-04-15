@@ -1,7 +1,14 @@
 <template>
   <v-app id="inspire">
+
     <!-- Drawer lateral -->
-    <v-navigation-drawer v-model="drawer" app>
+    <v-navigation-drawer v-model="drawer" app  class="bg-deep-purple">
+      <v-img
+        :width="321"
+        aspect-ratio="16/9"
+        cover
+        src="https://cdn.vuetifyjs.com/images/parallax/material.jpg"
+      ></v-img>
       <v-list>
         <v-list-item
           v-for="item in items"
@@ -14,7 +21,7 @@
     </v-navigation-drawer>
 
     <!-- Barra superior -->
-    <v-app-bar app  color="primary">
+    <v-app-bar app  color="yellow-accent-2" >
       <v-app-bar-nav-icon @click="drawer = !drawer" />
       <v-app-bar-title>Psicohelper Solutions</v-app-bar-title>
       <v-text-field
