@@ -35,7 +35,7 @@
   </v-dialog>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { ref } from 'vue'
 
 const props = defineProps({
@@ -123,7 +123,7 @@ const menus = ref([
 ])
 
 function salvar() {
-  const dados = menus.value.reduce((acc, menu, index) => {
+  const dados = menus.value.reduce((acc, menu) => {
     acc[menu.label] = menu.value.value
     return acc
   }, {})
