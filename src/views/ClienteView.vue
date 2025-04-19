@@ -1,81 +1,174 @@
 <template>
-  <v-container fluid class="pa-6 mt-10 mr-6" max-width="100%">
-  <v-row>
-    <v-col cols="10" md="9" >
-      <!-- Cabeçalho -->
-      <v-container max-width="90%">
-        <v-card
-          flat
-          class="mb-6 pa-4 d-flex align-center justify-space-between bg-grey-lighten-3 elevation-1 rounded"
-        >
-          <div class="text-h6 font-weight-medium d-flex align-center">
-            <v-icon class="mr-2" color="primary">mdi-account-group</v-icon>
-            Listagem de Clientes
-          </div>
-
-          <v-text-field
-            v-model="search"
-            density="compact"
-            label="Buscar clientes"
-            prepend-inner-icon="mdi-magnify"
-            variant="solo-filled"
-            hide-details
-            class="bg-white rounded"
-            style="max-width: 300px"
-          />
-        </v-card>
-
-        <!-- Tabela -->
-        <v-data-table
-          :items="clientes"
-          :search="search"
-          :headers="headers"
-          :items-per-page="5"
-          density="small"
-          class="elevation-2 rounded-lg bg-grey-lighten-4"
-        >
-          <!-- Status como chip -->
-          <template v-slot:item.status="{ item }">
-            <v-chip
-              :color="item.status === 'Ativo' ? 'green' : 'grey'"
-              text-color="white"
-              size="small"
-              class="text-uppercase"
+  <v-layout class="fill-height">
+    <!-- Conteúdo principal -->
+    <v-main>
+      <v-container fluid class="pa-6">
+        <v-row class="fill-height">
+          <!-- Coluna principal (clientes) -->
+          <v-col cols="8" md="9" class="d-flex flex-column">
+            <!-- Cabeçalho -->
+            <v-card
+              flat
+              class="mb-4 pa-4 d-flex align-center  bg-grey-lighten-3 elevation-1 rounded"
             >
-              {{ item.status }}
-            </v-chip>
-          </template>
+              <v-row class="d-flex justify-end align-center" style="width: 100%;">
+            <v-col cols="6">
+                <div class="text-h6 font-weight-medium d-flex align-center">
+                <v-icon class="mr-2" color="primary">mdi-account-group</v-icon>
+                Listagem de Clientes
+              </div>
+            </v-col>
+              <!-- Área de busca e botão -->
+                <v-col cols="5">
+                  <v-text-field
+                    v-model="search"
+                    density="compact"
+                    label="Buscar clientes"
+                    prepend-inner-icon="mdi-magnify"
+                    variant="solo-filled"
+                    hide-details
+                    class="bg-white rounded"
+                    style="max-width: 600px;"
+                  />
+                </v-col>
+                <v-col cols="1">
+                  <v-btn
+                    color="purple"
+                    fab
+                    dark
+                    @click="abrirModalNovo"
+                    aria-label="Adicionar Cliente"
+                    size="small"
+                  >
+                    <v-icon>mdi-plus</v-icon>
+                  </v-btn>
+                </v-col>
+              </v-row>
+            </v-card>
 
-          <!-- Ações -->
-          <template v-slot:item.acoes="{ item }">
-            <v-btn icon color="red" variant="text" title="Inativar">
-              <v-icon>mdi-close-circle</v-icon>
-            </v-btn>
-            <v-btn icon color="blue" variant="text" title="Editar">
-              <v-icon>mdi-pencil</v-icon>
-            </v-btn>
-          </template>
-        </v-data-table>
+            <!-- Tabela preenchendo o restante da altura -->
+            <v-card class="flex-grow-1 overflow-hidden elevation-2 rounded-lg bg-grey-lighten-4">
+              <v-data-table
+                :items="clientes"
+                :search="search"
+                :headers="headers"
+                :items-per-page="5"
+                density="compact"
+                class="h-100 v-data-table--bordered body-2 pa-6"
+              >
+                <!-- Status como chip -->
+                <template v-slot:item.status="{ item }">
+                  <v-chip
+                    :color="item.status === 'Ativo' ? 'green' : 'grey'"
+                    text-color="white"
+                    size="small"
+                    class="text-uppercase"
+                  >
+                    {{ item.status }}
+                  </v-chip>
+                </template>
+
+                <!-- Ações -->
+                <template v-slot:item.acoes="{ item ,index}">
+                  <v-btn icon color="red" variant="text" title="Inativar">
+                    <v-icon>mdi-close-circle</v-icon>
+                  </v-btn>
+                  <v-btn icon color="blue" variant="text" title="Editar" @click="abrirModalEdicao(item, index)">
+                    <v-icon>mdi-pencil</v-icon>
+                  </v-btn>
+                </template>
+              </v-data-table>
+            </v-card>
+          </v-col>
+
+          <!-- Coluna lateral (to-do + calendário) -->
+          <v-col cols="4" md="3" class="d-flex flex-column">
+            <todo class="mb-3" />
+            <calendario-diario class="flex-grow-1" />
+          </v-col>
+        </v-row>
       </v-container>
+    </v-main>
 
-    </v-col>
+    <ModalGenerico v-model="showModal" :title="modoEdicao ? 'Editar Cliente' : 'Cadastrar Novo Cliente'">
+      <template #content>
+        <v-form>
+          <v-text-field v-model="clienteAtual.nome" label="Nome" />
+          <v-text-field v-model="clienteAtual.grupo" label="Grupo" />
+          <v-text-field v-model="clienteAtual.contatos" label="Contatos" />
+          <v-select
+            v-model="clienteAtual.status"
+            :items="['Ativo', 'Inativo']"
+            label="Status"
+          />
+        </v-form>
+      </template>
 
-    <v-col cols="2" md="3">
-      <todo class="mb-16" />
-      <calendario-diario></calendario-diario>
-    </v-col>
+      <template #actions>
+        <v-btn color="green" @click="salvarCliente">Salvar</v-btn>
+        <v-btn color="grey" @click="showModal = false">Cancelar</v-btn>
+      </template>
+    </ModalGenerico>
 
 
-
-  </v-row>
-
-  </v-container>
+  </v-layout>
 </template>
 
 <script setup lang="ts">
 import { ref } from 'vue'
+import { useRouter } from 'vue-router';
+
 import CalendarioDiario from '@/components/calendario-diario.vue'
 import Todo from '@/components/todo.vue'
+import BotaoAdd from '@/components/botao-add.vue'
+import ModalGenerico from '@/components/ModalGenerico.vue'
+const showModal = ref(false)
+const modoEdicao = ref(false)
+const indexEdicao = ref<number | null>(null)
+const router = useRouter();
+const newCliente = ref({
+  nome: '',
+  grupo: '',
+  contatos: '',
+  status: 'Ativo'
+})
+
+const clienteAtual = ref({
+  nome: '',
+  grupo: '',
+  contatos: '',
+  status: 'Ativo'
+})
+
+const abrirModalNovo = () => {
+  router.push("/clientes/add")
+}
+
+const abrirModalEdicao = (item: any, index: number) => {
+  clienteAtual.value = { ...item }
+  indexEdicao.value = index
+  modoEdicao.value = true
+  showModal.value = true
+}
+
+const salvarCliente = () => {
+  if (modoEdicao.value && indexEdicao.value !== null) {
+    clientes.value[indexEdicao.value] = { ...clienteAtual.value }
+  } else {
+    clientes.value.push({ ...clienteAtual.value })
+  }
+
+  showModal.value = false
+  modoEdicao.value = false
+  indexEdicao.value = null
+}
+
+
+const saveCliente = () => {
+  clientes.value.push({ ...newCliente.value })
+  showModal.value = false
+  newCliente.value = { nome: '', grupo: '', contatos: '', status: 'Ativo' }
+}
 
 const search = ref('')
 

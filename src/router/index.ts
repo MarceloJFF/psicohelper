@@ -3,6 +3,7 @@ import HomeView from '../views/HomeView.vue'
 import FinanceiroView from '@/views/FinanceiroView.vue'
 import RelatoriosView from '@/views/RelatoriosView.vue'
 import ClienteView from '@/views/ClienteView.vue'
+import  AddClienteView from '@/views/AddClienteView.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -26,6 +27,13 @@ const router = createRouter({
       path: '/Clientes',
       name: 'clientes',
       component: ClienteView,
+    },
+
+    {
+      path: '/clientes/add',
+      name: 'clientes-add',
+      component: AddClienteView,
+
     },
 
     {

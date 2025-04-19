@@ -1,20 +1,23 @@
 <template>
-  <v-card class="pa-6" elevation="2"  width="100%">
+  <v-card class="pa-6" elevation="2" width="100%">
     <v-card-title class="text-h6 font-weight-bold pb-4">Task List</v-card-title>
 
     <div class="mb-2 font-weight-medium">Checklist Items</div>
 
-    <div v-for="(item, index) in tasks" :key="index" class="d-flex align-center mb-2">
-      <v-checkbox
-        v-model="item.done"
-        :label="item.text"
-        hide-details
-        density="compact"
-        class="flex-grow-1"
-      />
-      <v-btn icon color="grey-darken-1" variant="text" @click="removeTask(index)">
-        <v-icon>mdi-close</v-icon>
-      </v-btn>
+    <!-- Container com scroll -->
+    <div class="task-list-container" style="max-height: 300px; overflow-y: auto;">
+      <div v-for="(item, index) in tasks" :key="index" class="d-flex align-center mb-2">
+        <v-checkbox
+          v-model="item.done"
+          :label="item.text"
+          hide-details
+          density="compact"
+          class="flex-grow-1"
+        />
+        <v-btn icon color="grey-darken-1" variant="text" @click="removeTask(index)">
+          <v-icon>mdi-close</v-icon>
+        </v-btn>
+      </div>
     </div>
 
     <!-- Adicionar tarefa -->
@@ -73,3 +76,10 @@ const progress = computed(() => {
   return total ? (done / total) * 100 : 0
 })
 </script>
+
+<style scoped>
+.task-list-container {
+  max-height: 150px;
+  overflow-y: auto;
+}
+</style>
