@@ -5,13 +5,14 @@ import { RouterLink, RouterView } from 'vue-router'
 <template>
 
   <v-app id="inspire">
-  <v-navigation-drawer v-model="drawer" app  color="primary" permanent="true">
+  <v-navigation-drawer v-model="drawer" app  color="primary" permanent >
       <v-img
         :width="321"
         aspect-ratio="16/9"
         cover
         src="https://cdn.vuetifyjs.com/images/parallax/material.jpg"
       ></v-img>
+
       <v-list>
         <RouterLink
           v-for="item in items"
@@ -61,6 +62,8 @@ import { RouterLink, RouterView } from 'vue-router'
     <template #activator="{ props }">
       <v-btn v-bind="props" class="d-flex align-center" variant="text">
         <v-avatar size="32">
+          <v-img>
+          </v-img>
         </v-avatar>
         <span class="ml-2 font-weight-medium">Marcelo</span>
       </v-btn>
@@ -80,7 +83,7 @@ import { RouterLink, RouterView } from 'vue-router'
 </template>
 <script lang="ts">
 import { ref } from 'vue'
-const drawer = ref(true)
+const drawer = ref(false)
 const items = [
   { title: 'Home', icon: 'mdi-home', to: '/' },
   { title: 'Financeiro', icon: 'mdi-currency-usd', to: '/financeiro' },

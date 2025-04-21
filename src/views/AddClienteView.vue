@@ -2,14 +2,20 @@
   <v-layout class="fill-height mt-2">
     <v-main>
       <v-container class="pa-0 ma-a fill-height">
-        <v-row class="fill-height" style="width: 100%;" justify="space-between">
-          <v-col cols="7" md="8" class="d-flex flex-column">
+        <v-row class="fill-height w-100"  justify="space-between">
+          <!-- Coluna principal do formulário -->
+          <v-col cols="7" md="8" class="d-flex flex-column w-100">
             <v-card elevation="2" class="pa-6">
               <v-card-title class="text-h5 font-weight-bold mb-4">Cadastro de Cliente</v-card-title>
               <v-form ref="form" v-model="valid">
                 <v-row dense>
+                  <!-- Campos do cliente -->
                   <v-col cols="12" md="6">
-                    <v-text-field v-model="cliente.nome" label="Nome do Contratante" :rules="[v => !!v || 'Campo obrigatório']" />
+                    <v-text-field
+                      v-model="cliente.nome"
+                      label="Nome do Contratante"
+                      :rules="[v => !!v || 'Campo obrigatório']"
+                    />
                   </v-col>
                   <v-col cols="12" md="6">
                     <v-text-field v-model="cliente.cpf" label="CPF" />
@@ -33,12 +39,30 @@
                     <v-text-field v-model="cliente.estado" label="Estado" />
                   </v-col>
                   <v-col cols="12" md="4">
-                    <v-text-field v-model="cliente.nascimento" label="Data de Nascimento" type="date" />
+                    <v-text-field
+                      v-model="cliente.nascimento"
+                      label="Data de Nascimento"
+                      type="date"
+                    />
                   </v-col>
-                  <v-col cols="12" md="6">
+                  <v-col cols="12" md="8">
                     <v-text-field v-model="cliente.email" label="Email" />
                   </v-col>
+                  <v-col cols="12" md="8">
+                    <h4 class="text-h5">O atendimento será para o próprio cliente?</h4>
+                    <div class="d-flex ">
+                      <v-checkbox  label="Sim" v-model="cliente.atendimentoPróprio" value="Sim"></v-checkbox>
+                      <v-checkbox label="Não" v-model="cliente.atendimentoPróprio" value="Não"></v-checkbox>
+                    </div>
+                  </v-col>
 
+                  <v-col cols="12" md="4">
+                    <h4 class="text-h5">Sexo</h4>
+                    <div class="d-flex ">
+                      <v-checkbox  label="Masculino" v-model="cliente.sexo" value="M"></v-checkbox>
+                      <v-checkbox label="Feminino" v-model="cliente.sexo" value="F"></v-checkbox>
+                    </div>
+                  </v-col>
                   <v-col cols="12" md="6">
                     <v-select
                       v-model="cliente.tipoAtendimento"
@@ -51,15 +75,19 @@
                 <!-- Dependentes -->
                 <div class="mt-6">
                   <h3 class="text-subtitle-1 font-weight-medium mb-2">Dependentes</h3>
-                  <v-row v-for="(dependente, index) in cliente.dependentes" :key="index" dense>
+                  <v-row v-for="(dep, i) in cliente.dependentes" :key="i" dense>
                     <v-col cols="6">
-                      <v-text-field v-model="dependente.nome" label="Nome do Dependente" />
+                      <v-text-field v-model="dep.nome" label="Nome do Dependente" />
                     </v-col>
                     <v-col cols="4">
-                      <v-text-field v-model="dependente.nascimento" label="Nascimento" type="date" />
+                      <v-text-field
+                        v-model="dep.nascimento"
+                        label="Nascimento"
+                        type="date"
+                      />
                     </v-col>
                     <v-col cols="2" class="d-flex align-end">
-                      <v-btn icon color="red" @click="removerDependente(index)">
+                      <v-btn icon color="red" @click="removerDependente(i)">
                         <v-icon>mdi-delete</v-icon>
                       </v-btn>
                     </v-col>
@@ -68,6 +96,7 @@
                     <v-icon start>mdi-plus</v-icon> Adicionar dependente
                   </v-btn>
 
+                  <!-- Botão para gerar contrato -->
                   <v-alert
                     v-if="cliente.tipoAtendimento === 'Contrato' && !contrato.cadastrado"
                     type="info"
@@ -86,14 +115,18 @@
                     <v-icon start>mdi-plus</v-icon> Gerar Contrato
                   </v-btn>
 
+                  <!-- Exibição do contrato gerado -->
                   <v-divider class="my-6" v-if="contrato.cadastrado" />
                   <div v-if="contrato.cadastrado" class="mt-4">
                     <h3 class="text-subtitle-1 font-weight-medium mb-2">Informações do Contrato</h3>
                     <v-list two-line>
-                      <v-list-item v-for="(dia, index) in contrato.diasAtendimento" :key="index">
+                      <v-list-item
+                        v-for="(dia, idx) in contrato.diasAtendimento"
+                        :key="idx"
+                      >
                         <v-list-item-content>
                           <v-list-item-title>{{ dia.dia }}</v-list-item-title>
-                          <v-list-item-subtitle>{{ dia.horario }}</v-list-item-subtitle>
+                          <v-list-item-subtitle>{{ dia.inicio }} - {{ dia.fim }}</v-list-item-subtitle>
                         </v-list-item-content>
                       </v-list-item>
                       <v-list-item>
@@ -124,9 +157,10 @@
                   </div>
                 </div>
 
+                <!-- Ações finais do formulário -->
                 <v-row class="mt-8">
                   <v-btn text color="red" @click="cancelar">Cancelar</v-btn>
-                  <v-spacer></v-spacer>
+                  <v-spacer />
                   <v-btn color="primary" @click="salvar">Cadastrar Cliente</v-btn>
                 </v-row>
               </v-form>
@@ -134,52 +168,106 @@
           </v-col>
 
           <!-- Coluna lateral (to-do + calendário) -->
-          <v-col cols="5" md="4" class="d-flex flex-column">
+          <v-col cols="5" md="4" class="d-flex flex-column w-100">
             <todo class="mb-3" />
             <calendario-diario class="flex-grow-1" />
           </v-col>
         </v-row>
 
-        <!-- Modal contrato -->
+        <!-- Modal para gerar contrato -->
         <v-dialog v-model="modalContrato" max-width="700">
           <v-card>
             <v-card-title class="headline">Gerar Contrato</v-card-title>
             <v-card-text>
               <v-row dense>
-                <v-col cols="12" v-for="(dia, index) in novoContrato.diasAtendimento" :key="index">
+                <v-col
+                  cols="12"
+                  v-for="(dia, index) in novoContrato.diasAtendimento"
+                  :key="index"
+                >
                   <v-row>
-                    <v-col cols="5">
-                      <v-text-field v-model="dia.dia" label="Dia da Semana" />
+                    <v-col cols="4">
+                      <v-select
+                        v-model="dia.dia"
+                        label="Dia da semana"
+                        :items="['Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado']"
+                      />
                     </v-col>
-                    <v-col cols="5">
-                      <v-text-field v-model="dia.horario" label="Horário (ex: 14h - 18h)" />
+                    <v-col cols="8">
+                      <v-row>
+                        <v-col cols="4">
+                          <v-text-field
+                            v-model="dia.inicio"
+                            type="time"
+                            label="Início"
+                            variant="outlined"
+                            density="compact"
+                            class="grey lighten-3"
+                            hide-details
+                            @change="atualizarHorario(dia)"
+                          />
+                        </v-col>
+                        <v-col cols="4">
+                          <v-text-field
+                            v-model="dia.fim"
+                            type="time"
+                            label="Término"
+                            variant="outlined"
+                            density="compact"
+                            class="grey lighten-3"
+                            hide-details
+                            @change="atualizarHorario(dia)"
+                          />
+                        </v-col>
+                        <v-col cols="2" class="d-flex align-end">
+                          <v-btn icon color="red" @click="removerDiaAtendimento(index)">
+                            <v-icon>mdi-delete</v-icon>
+                          </v-btn>
+                        </v-col>
+                        <v-col cols="2" class="d-flex align-end">
+                          <v-btn icon color="primary" @click="adicionarDiaAtendimento">
+                            <v-icon>mdi-plus</v-icon>
+                          </v-btn>
+                        </v-col>
+                      </v-row>
                     </v-col>
-                    <v-col cols="2">
-                      <v-btn icon @click="adicionarDiaAtendimento">
-                        <v-icon>mdi-plus</v-icon>
-                      </v-btn>
-                    </v-col>
-
                   </v-row>
                 </v-col>
 
                 <v-col cols="6">
-                  <v-text-field v-model="novoContrato.valorMensal" label="Valor Mensal (R$)" type="number" />
+                  <v-text-field
+                    v-model="novoContrato.valorMensal"
+                    label="Valor Mensal (R$)"
+                    type="number"
+                  />
                 </v-col>
                 <v-col cols="6">
-                  <v-text-field v-model="novoContrato.duracao" label="Duração (meses)" type="number" />
+                  <v-text-field
+                    v-model="novoContrato.duracao"
+                    label="Duração (meses)"
+                    type="number"
+                  />
                 </v-col>
                 <v-col cols="6">
-                  <v-text-field v-model="novoContrato.vencimento" label="Data de Vencimento" :disabled="true" />
+                  <v-text-field
+                    v-model="novoContrato.vencimento"
+                    label="Data de Vencimento"
+                    :disabled="true"
+                  />
                 </v-col>
                 <v-col cols="12">
-                  <v-textarea v-model="novoContrato.descricao" label="Descrição do Serviço" rows="3" />
+                  <v-textarea
+                    v-model="novoContrato.descricao"
+                    label="Descrição do Serviço"
+                    rows="3"
+                  />
                 </v-col>
               </v-row>
             </v-card-text>
+            {{novoContrato}}
             <v-card-actions>
               <v-spacer />
-              <v-btn color="red" @click="">Fechar</v-btn>
+              <v-btn color="red" @click="modalContrato = false">Fechar</v-btn>
               <v-btn color="primary" @click="salvarContrato">Salvar Contrato</v-btn>
             </v-card-actions>
           </v-card>
@@ -191,12 +279,13 @@
 
 <script setup lang="ts">
 import { ref } from 'vue'
+import {useRouter} from 'vue-router'
 import Todo from '@/components/todo.vue'
 import CalendarioDiario from '@/components/calendario-diario.vue'
-
 const valid = ref(false)
 const form = ref()
 const modalContrato = ref(false)
+const router = useRouter()
 
 const cliente = ref({
   nome: '',
@@ -207,15 +296,18 @@ const cliente = ref({
   endereco: '',
   cidade: '',
   estado: '',
+  sexo: '',
+  atendimentoPróprio:'',
   nascimento: '',
   email: '',
   tipoAtendimento: '',
   dependentes: [] as { nome: string; nascimento: string }[],
+  contrato: null as typeof contrato.value | null
 })
 
 const contrato = ref({
   cadastrado: false,
-  diasAtendimento: [] as { dia: string; horario: string }[],
+  diasAtendimento: [] as { dia: string; inicio: string; fim: string }[],
   valorMensal: '',
   duracao: '',
   vencimento: '',
@@ -223,21 +315,12 @@ const contrato = ref({
 })
 
 const novoContrato = ref({
-  diasAtendimento: [{ dia: '', horario: '' }],
+  diasAtendimento: [{ dia: '', inicio: '', fim: '' }],
   valorMensal: '',
   duracao: '',
   vencimento: new Date().toISOString().substr(0, 10),
   descricao: '',
 })
-
-const adicionarDiaAtendimento = () => {
-  novoContrato.value.diasAtendimento.push({ dia: '', horario: '' })
-}
-
-const salvarContrato = () => {
-  contrato.value = { ...novoContrato.value, cadastrado: true }
-  modalContrato.value = false
-}
 
 const adicionarDependente = () => {
   cliente.value.dependentes.push({ nome: '', nascimento: '' })
@@ -247,17 +330,45 @@ const removerDependente = (index: number) => {
   cliente.value.dependentes.splice(index, 1)
 }
 
+const adicionarDiaAtendimento = () => {
+  novoContrato.value.diasAtendimento.push({ dia: '', inicio: '', fim: '' })
+}
+
+const removerDiaAtendimento = (index: number) => {
+  novoContrato.value.diasAtendimento.splice(index, 1)
+}
+
+const salvarContrato = () => {
+  console.log(novoContrato.value)
+  contrato.value = {
+    ...novoContrato.value,
+    cadastrado: true,
+    diasAtendimento: [...novoContrato.value.diasAtendimento], // copiar corretamente
+  }
+  modalContrato.value = false
+}
+
 const cancelar = () => {
-  // lógica de cancelamento se necessário
+  router.push({ name: 'home' }) // ou use o path: router.push('/')
 }
 
 const salvar = () => {
   form.value?.validate().then((result: any) => {
     if (result.valid) {
-      console.log('Cliente salvo:', cliente.value)
-      console.log('Contrato:', contrato.value)
-      // Aqui vai a lógica de salvar no backend
+      if(cliente.value.tipoAtendimento == 'contrato' && contrato.value.cadastrado){
+        cliente.value.contrato = contrato.value;
+      }else{
+        cliente.value.contrato= null;
+      }
     }
+    alert("Clinte salvo com sucesso!")
   })
+}
+
+const atualizarHorario = (dia: { inicio: string, fim: string }) => {
+  // Força a atualização do objeto e pode disparar qualquer lógica adicional
+  dia.inicio = dia.inicio.trim()
+  dia.fim = dia.fim.trim()
+  // Se tiver alguma lógica de validação, invoque aqui
 }
 </script>

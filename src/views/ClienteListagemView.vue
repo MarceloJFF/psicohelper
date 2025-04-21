@@ -11,7 +11,7 @@
               flat
               class="mb-4 pa-4 d-flex align-center  bg-grey-lighten-3 elevation-1 rounded"
             >
-              <v-row class="d-flex justify-end align-center" style="width: 100%;">
+              <v-row class="d-flex justify-end align-center w-100" >
             <v-col cols="6">
                 <div class="text-h6 font-weight-medium d-flex align-center">
                 <v-icon class="mr-2" color="primary">mdi-account-group</v-icon>
@@ -76,6 +76,9 @@
                   <v-btn icon color="blue" variant="text" title="Editar" @click="abrirModalEdicao(item, index)">
                     <v-icon>mdi-pencil</v-icon>
                   </v-btn>
+                  <v-btn icon color="green" variant="text" title="Visualizar" @click="visualizarCliente(item)">
+                    <v-icon>mdi-eye</v-icon>
+                  </v-btn>
                 </template>
               </v-data-table>
             </v-card>
@@ -120,7 +123,6 @@ import { useRouter } from 'vue-router';
 
 import CalendarioDiario from '@/components/calendario-diario.vue'
 import Todo from '@/components/todo.vue'
-import BotaoAdd from '@/components/botao-add.vue'
 import ModalGenerico from '@/components/ModalGenerico.vue'
 const showModal = ref(false)
 const modoEdicao = ref(false)
@@ -185,4 +187,17 @@ const clientes = ref([
   { nome: 'Carlos Lima', grupo: 'Padrão', status: 'Inativo', contatos: 'carlos@email.com / (11) 98888-0002' },
   { nome: 'Beatriz Silva', grupo: 'VIP', status: 'Ativo', contatos: 'bia@email.com / (11) 97777-0003' },
 ])
+const visualizarCliente = (cliente: any) => {
+  router.push({
+    name: 'cliente-detalhes',
+    params: { id: cliente.nome }, // ou outro ID real
+    query: {
+      nome: cliente.nome,
+      grupo: cliente.grupo,
+      contatos: cliente.contatos,
+      status: cliente.status
+    }
+  })
+}
+
 </script>
