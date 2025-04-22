@@ -1,5 +1,5 @@
 <template>
-  <div class="calendar-container pa-10 my-4">
+  <div class="calendar-container pa-10 my-4 w-100 w-100-lg" >
     <v-btn color="deep-purple-accent-4" class="mb-4" @click="openEventModal">Add Agendamento</v-btn>
 
     <FullCalendar
@@ -14,7 +14,9 @@
           <span class="text-h6">Novo Agendamento</span>
         </v-card-title>
         <v-card-text>
-          <v-text-field label="Título *" v-model="eventData.title" rounded/>
+          <v-text-field label="Título*" v-model="eventData.title" rounded/>
+          <v-text-field label="Aprendente*" v-model="eventData.cliente" rounded/>
+
           <v-textarea label="Descrição" v-model="eventData.description" auto-grow />
 
           <v-row>
@@ -97,6 +99,7 @@ const eventData = ref({
   startTime: '',
   endDate: '',
   endTime: '',
+  cliente: '',
   color: '#1976d2'
 })
 

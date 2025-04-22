@@ -5,6 +5,7 @@ import RelatoriosView from '@/views/RelatoriosView.vue'
 import ClienteListagemView from '@/views/ClienteListagemView.vue'
 import  AddClienteView from '@/views/AddClienteView.vue'
 import ClienteDetalhesView from '@/views/ClienteDetalhesView.vue'
+import AtendimentosView from '@/views/AtendimentosView.vue'
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   routes: [
@@ -39,6 +40,11 @@ const router = createRouter({
       path:'/clientes/:id/detalhes',
       name:'cliente-detalhes',
       component: ClienteDetalhesView,
+    },
+    {
+      path:'/atendimentos',
+      name:'atendimentos',
+      component: AtendimentosView,
     },
     {
       path: '/about',

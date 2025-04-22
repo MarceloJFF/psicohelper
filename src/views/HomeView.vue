@@ -1,5 +1,5 @@
 <template>
-    <v-container class="pa-2">
+    <v-container class="pa-2 w-100">
       <v-row justify="center" align="center">
         <v-col cols="12" md="6" class="text-center">
           <h1>Bem-vindo ao painel</h1>
