@@ -83,7 +83,7 @@ import { RouterLink, RouterView } from 'vue-router'
 </template>
 <script lang="ts">
 import { ref } from 'vue'
-const drawer = ref(false)
+const drawer = ref(true)
 const items = [
   { title: 'Home', icon: 'mdi-home', to: '/' },
   { title: 'Financeiro', icon: 'mdi-currency-usd', to: '/financeiro' },

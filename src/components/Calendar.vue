@@ -1,5 +1,5 @@
 <template>
-  <div class="calendar-container pa-10 my-4 w-100 w-100-lg" >
+  <div class="calendar-container pa-10 my-4 w-100 h-100 w-100-md w-100-lg" >
     <v-btn color="deep-purple-accent-4" class="mb-4" @click="openEventModal">Add Agendamento</v-btn>
 
     <FullCalendar
