@@ -1,15 +1,20 @@
 <template>
-  <v-container class="py-6" max-width="800">
-    <!-- Header com botão de voltar -->
-    <v-row class="mb-4" align="center" justify="space-between">
-      <v-btn icon to="/">
-        <v-icon>mdi-arrow-left</v-icon>
-      </v-btn>
-      <h2 class="text-h5 font-weight-bold">Configurações do Perfil</h2>
-      <div style="width: 36px" /> <!-- Espaço reservado para alinhar o botão -->
-    </v-row>
-
+  <v-container class="py-6 w-100 h-100">
     <v-card elevation="2" class="pa-6">
+      <!-- Header com botão de voltar -->
+      <v-row class="mb-4 d-flex align-center justify-space-between">
+        <v-col cols="auto">
+          <v-btn icon to="/" color="text-deep-purple-lighten-2">
+            <v-icon>mdi-arrow-left</v-icon>
+          </v-btn>
+        </v-col>
+        <v-col class="text-center">
+          <h2 class="text-h3 mb-8 font-weight-bold text-deep-purple-lighten-2">
+            Configurações do Perfil
+          </h2>
+        </v-col>
+      </v-row>
+
       <v-form @submit.prevent="salvarPerfil" ref="formRef">
         <!-- Avatar com Upload -->
         <v-row class="mb-6" align="center">
@@ -32,8 +37,26 @@
 
         <v-divider class="mb-4" />
 
-        <!-- Informações Pessoais -->
+        <!-- Dados do Usuário com botão animado -->
         <v-row dense>
+          <v-col cols="12">
+            <v-row class="d-flex align-center">
+              <v-col class="pa-2">
+                <h4 class="mb-2 text-h4 text-deep-purple-lighten-1">
+                  Dados do usuário
+                </h4>
+              </v-col>
+              <v-col cols="auto" class="pa-2">
+                <v-btn icon @click="exibirDadosUsuario = !exibirDadosUsuario" color="primary">
+                  <v-icon :class="{ rotate: exibirDadosUsuario }">mdi-chevron-down</v-icon>
+                </v-btn>
+              </v-col>
+            </v-row>
+          </v-col>
+        </v-row>
+
+        <!-- Campos de Dados do Usuário (visíveis apenas quando exibirDadosUsuario for true) -->
+        <v-row v-if="exibirDadosUsuario" dense>
           <v-col cols="12" sm="6">
             <v-text-field label="Nome Completo" v-model="perfil.nome" required />
           </v-col>
@@ -65,9 +88,26 @@
 
         <v-divider class="my-6" />
 
-        <!-- Endereço Detalhado -->
-        <h4 class="text-subtitle-1 mb-2">Endereço</h4>
+        <!-- Endereço com botão animado -->
         <v-row dense>
+          <v-col cols="12">
+            <v-row class="d-flex align-center">
+              <v-col class="pa-2">
+                <h4 class="mb-2 text-h4 text-deep-purple-lighten-1">
+                  Endereço
+                </h4>
+              </v-col>
+              <v-col cols="auto" class="pa-2">
+                <v-btn icon @click="exibirEndereco = !exibirEndereco" color="primary">
+                  <v-icon :class="{ rotate: exibirEndereco }">mdi-chevron-down</v-icon>
+                </v-btn>
+              </v-col>
+            </v-row>
+          </v-col>
+        </v-row>
+
+        <!-- Campos de Endereço (visíveis apenas quando exibirEndereco for true) -->
+        <v-row v-if="exibirEndereco" dense>
           <v-col cols="12" sm="8">
             <v-text-field label="Rua" v-model="perfil.endereco.rua" />
           </v-col>
@@ -135,7 +175,6 @@
 import { ref } from 'vue'
 
 const formRef = ref(null)
-
 const perfil = ref({
   nome: '',
   email: '',
@@ -152,13 +191,13 @@ const perfil = ref({
     estado: '',
   }
 })
-
 const novaSenha = ref('')
 const confirmarSenha = ref('')
 const modalSenha = ref(false)
-
 const foto = ref(null)
 const fotoUrl = ref(null)
+const exibirEndereco = ref(false)
+const exibirDadosUsuario = ref(false)
 
 function atualizarFoto(file) {
   if (file) {
@@ -192,5 +231,18 @@ function salvarSenha() {
 <style scoped>
 .v-avatar {
   border: 2px solid #ccc;
+}
+
+.v-btn:hover {
+  background-color: #e8e8e8;
+}
+
+.rotate {
+  transform: rotate(180deg);
+  transition: transform 0.3s ease;
+}
+
+.v-icon {
+  transition: transform 0.3s ease;
 }
 </style>

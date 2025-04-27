@@ -1,5 +1,5 @@
 <template>
-  <v-container class="py-6">
+  <v-container class="pa-8 border rounded h-100 w-75  bg-white">
     <!-- Breadcrumbs -->
     <v-breadcrumbs v-if="caminhoAtual.length" class="mb-4">
       <v-breadcrumbs-item
@@ -14,7 +14,7 @@
 
     <!-- Cabeçalho e Botões -->
     <v-row class="mb-4" justify="space-between">
-      <h2 class="text-h5 font-weight-bold">
+      <h2 class="text-h5 font-weight-bold text-deep-purple-lighten-2">
         {{ caminhoAtual.length ? caminhoAtual[caminhoAtual.length - 1].nome : 'Meus Relatórios' }}
       </h2>
       <div>
@@ -47,7 +47,7 @@
         cols="12" sm="6" md="4"
       >
         <v-card
-          class="pa-4 d-flex flex-column align-center"
+          class="pa-4 d-flex flex-column align-center border"
           elevation="2"
           @dragover.prevent
           @drop="soltarArquivoNaPasta(pasta)"

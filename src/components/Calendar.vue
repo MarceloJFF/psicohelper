@@ -1,5 +1,5 @@
 <template>
-  <div class="calendar-container pa-10 my-4 w-100 h-100 w-100-md w-100-lg" >
+  <div class="calendar-container pa-10 my-4 w-100 h-100 rounded" >
     <v-btn color="deep-purple-accent-4" class="mb-4" @click="openEventModal">Add Agendamento</v-btn>
 
     <FullCalendar
@@ -261,26 +261,38 @@ function deleteEvent() {
 
 <style scoped>
 .calendar-container {
-  background-color: #D1C4E9;
+  background-color: white;
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
   color: #fff;
 }
+
+/* FullCalendar geral */
 :deep(.fc) {
   padding: 1.5%;
   background-color: #FFFFFF;
   color: #0a0a0a;
+  font-size: 1rem;
 }
+
+/* Título do calendário */
 :deep(.fc-toolbar-title) {
-  font-size: 1.5rem;
+  font-size: clamp(1.2rem, 2vw, 2rem);
+  font-weight: 600;
 }
+
+/* Evento no calendário */
 :deep(.fc-event-main) {
   height: auto !important;
   min-height: 40px;
+  font-size: clamp(0.8rem, 1.5vw, 1rem);
 }
+
+/* Botões do calendário */
 :deep(.fc-button) {
   background-color: white !important;
   color: #4527A0 !important;
   font-weight: 500;
+  font-size: clamp(0.8rem, 1.2vw, 1rem);
   border: 2px solid #8d6ee1 !important;
   border-radius: 6px;
   padding: 6px 12px;
@@ -288,18 +300,84 @@ function deleteEvent() {
   transition: 0.3s;
   text-transform: none;
 }
+
+/* Botão "Hoje" */
 :deep(.fc-button.fc-today-button) {
   background-color: #311B92 !important;
   color: white !important;
 }
+
+/* Botão ativo */
 :deep(.fc-button.fc-button-active) {
   background-color: #5E35B1 !important;
   color: white !important;
   outline: none;
 }
+
+/* Botão hover */
 :deep(.fc-button:hover) {
   background-color: #B39DDB !important;
   border-color: #B39DDB !important;
   outline: none;
 }
+
+/* Responsividade extra para a tela toda */
+@media (max-width: 600px) {
+  :deep(.fc-toolbar-title) {
+    font-size: 1.2rem;
+  }
+  :deep(.fc-event-main) {
+    font-size: 0.8rem;
+  }
+  :deep(.fc-button) {
+    font-size: 0.8rem;
+    padding: 5px 10px;
+  }
+}
 </style>
+
+
+<!--<style scoped>-->
+<!--.calendar-container {-->
+<!--  background-color: #D1C4E9;-->
+<!--  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);-->
+<!--  color: #fff;-->
+<!--}-->
+<!--:deep(.fc) {-->
+<!--  padding: 1.5%;-->
+<!--  background-color: #FFFFFF;-->
+<!--  color: #0a0a0a;-->
+<!--}-->
+<!--:deep(.fc-toolbar-title) {-->
+<!--  font-size: 1.5rem;-->
+<!--}-->
+<!--:deep(.fc-event-main) {-->
+<!--  height: auto !important;-->
+<!--  min-height: 40px;-->
+<!--}-->
+<!--:deep(.fc-button) {-->
+<!--  background-color: white !important;-->
+<!--  color: #4527A0 !important;-->
+<!--  font-weight: 500;-->
+<!--  border: 2px solid #8d6ee1 !important;-->
+<!--  border-radius: 6px;-->
+<!--  padding: 6px 12px;-->
+<!--  margin: 0 2px;-->
+<!--  transition: 0.3s;-->
+<!--  text-transform: none;-->
+<!--}-->
+<!--:deep(.fc-button.fc-today-button) {-->
+<!--  background-color: #311B92 !important;-->
+<!--  color: white !important;-->
+<!--}-->
+<!--:deep(.fc-button.fc-button-active) {-->
+<!--  background-color: #5E35B1 !important;-->
+<!--  color: white !important;-->
+<!--  outline: none;-->
+<!--}-->
+<!--:deep(.fc-button:hover) {-->
+<!--  background-color: #B39DDB !important;-->
+<!--  border-color: #B39DDB !important;-->
+<!--  outline: none;-->
+<!--}-->
+<!--</style>-->

@@ -1,32 +1,34 @@
 <template>
-  <v-container>
-
-    <h1 class="text-deep-purple-lighten-2 mb-4">
+  <v-container class="w-100">
+    <v-container class="sessoes rounded pa-8">
+      <h1 class="text-deep-purple-lighten-2 mb-4">
         Controle do Pagamento das Sessões realizadas.
-    </h1>
-    <v-row align="center" justify="space-between" class="mb-6">
-      <v-col cols="12" sm="6" md="4">
-        <v-select
-          :items="pacientes"
-          v-model="filtroPaciente"
-          label="Filtrar por paciente"
-          clearable
-          variant="outlined"
-          density="comfortable"
-        />
-      </v-col>
-    </v-row>
+      </h1>
+      <v-row align="center" justify="space-between" class="mb-6">
+        <v-col cols="12" sm="6" md="4">
+          <v-select
+            :items="pacientes"
+            v-model="filtroPaciente"
+            label="Filtrar por paciente"
+            clearable
+            variant="outlined"
+            density="comfortable"
+          />
+        </v-col>
+      </v-row>
 
-    <v-btn
-      color="success"
-      variant="outlined"
-      @click="abrirModalPagamento(atendimento)"
-    >
-      Lançar Pagamento
-    </v-btn>
-    <v-span>
-      Selecione os pagamentos pendentes para lançar os pagamentos
-    </v-span>
+      <v-btn
+        color="success"
+        variant="outlined"
+        @click="abrirModalPagamento(atendimento)"
+      >
+        Lançar Pagamento
+      </v-btn>
+      <v-span>
+        Selecione os pagamentos pendentes para lançar os pagamentos
+      </v-span>
+
+    </v-container>
 
     <v-divider class="my-6" />
 
@@ -349,11 +351,14 @@ function abrirModalPagamento(atendimento: any) {
 .details-section {
   width: 100%;
   padding: 24px;
-  background-color: #f9f9f9;
+  background-color: white;
   border-radius: 12px;
   border: 1px solid #e0e0e0;
 }
 .v-list-item {
   border-bottom: 1px solid #f0f0f0;
+}
+.sessoes{
+  background-color: #f9f9f9 !important;
 }
 </style>

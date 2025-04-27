@@ -5,15 +5,15 @@
       <v-container fluid class="pa-6">
         <v-row class="fill-height">
           <!-- Coluna principal (clientes) -->
-          <v-col cols="8" md="9" class="d-flex flex-column">
+          <v-col cols="7" md="8" class="d-flex flex-column">
             <!-- Cabeçalho -->
             <v-card
               flat
-              class="mb-4 pa-4 d-flex align-center  bg-grey-lighten-3 elevation-1 rounded"
+              class="mb-4 pa-4 d-flex align-center  bg-white elevation-1 rounded"
             >
               <v-row class="d-flex justify-end align-center w-100" >
             <v-col cols="6">
-                <div class="text-h6 font-weight-medium d-flex align-center">
+                <div class="text-h6 font-weight-medium d-flex align-center" >
                 <v-icon class="mr-2" color="primary">mdi-account-group</v-icon>
                 Listagem de Clientes
               </div>
@@ -85,9 +85,9 @@
           </v-col>
 
           <!-- Coluna lateral (to-do + calendário) -->
-          <v-col cols="4" md="3" class="d-flex flex-column">
+          <v-col cols="5" md="4" class="d-flex flex-column">
             <todo class="mb-3" />
-            <calendario-diario class="flex-grow-1" />
+            <calendario-diario class="flex-grow-1"  />
           </v-col>
         </v-row>
       </v-container>

@@ -1,5 +1,5 @@
 <template>
-    <FullCalendar :options="calendarOptions" class="calendar-container" />
+    <FullCalendar :options="calendarOptions" class="calendar-container bg-white pa-4" />
 </template>
 
 <script setup lang="ts">
