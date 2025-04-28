@@ -45,28 +45,28 @@ const items = [
       </v-list>
     </v-navigation-drawer>
 
-    <v-app-bar app>
-      <v-app-bar-nav-icon @click="drawer = !drawer" />
-      <v-app-bar-title>Psicohelper Solutions</v-app-bar-title>
+    <v-app-bar app class="pa-2">
+      <v-app-bar-nav-icon @click="drawer = !drawer"  color="#9C27B0" />
+      <v-app-bar-title class="text-h5 font-weight-bold" style="color:purple;">Psicopedag Pro</v-app-bar-title>
 
       <v-btn icon>
-        <v-icon>mdi-bell</v-icon>
+        <v-icon color="#9C27B0">mdi-bell</v-icon>
       </v-btn>
 
       <v-btn icon>
-        <v-icon>mdi-cog</v-icon>
+        <v-icon color="#9C27B0">mdi-cog</v-icon>
       </v-btn>
 
       <v-menu>
         <template #activator="{ props }">
-          <v-btn v-bind="props" class="d-flex align-center" variant="text">
+          <v-btn v-bind="props" class="d-flex align-center" style="color:purple;" variant="text">
             <v-avatar size="32">
               <v-img />
             </v-avatar>
-            <span class="ml-2 font-weight-medium">Marcelo</span>
+            <span class="ml-2 font-weight-medium"  style="color:purple;">Allana Abreu</span>
           </v-btn>
         </template>
-        <v-list>
+        <v-list color="#9C27B0">
           <v-list-item title="Perfil" />
           <v-list-item title="Sair" />
         </v-list>
@@ -80,23 +80,27 @@ const items = [
     </v-main>
   </v-app>
 </template>
-
 <style scoped>
-/* Animação de fade para as mudanças de página */
-.fade-enter-active, .fade-leave-active {
-  transition: opacity 0.5s ease;
-}
-.fade-enter, .fade-leave-to /* .fade-leave-active em <2.1.8 */ {
-  opacity: 0;
-}
-
-/* Efeito de hover nos itens do menu */
+/* Efeito geral nos itens do menu */
 .menu-item {
-  transition: background-color 0.3s ease, transform 0.3s ease;
+  transition: background-color 0.3s ease, transform 0.3s ease, box-shadow 0.3s ease;
+  margin-bottom: 12px; /* Espaçamento entre os itens */
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); /* Sombra leve */
 }
 
+/* Quando o mouse passa por cima */
 .menu-item:hover {
-  background-color: #d3a3e4; /* cor de destaque no hover */
-  transform: scale(1.05); /* animação de aumento de tamanho */
+  background-color: #d3a3e4; /* Cor de destaque no hover */
+  transform: scale(1.05); /* Pequeno aumento */
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2); /* Sombra mais forte no hover */
 }
+
+/* Estilo para o item ativo */
+.router-link-exact-active .menu-item {
+  background-color: #ba68c8; /* Cor de fundo do ativo */
+  color: white;
+  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.3); /* Sombra mais intensa no ativo */
+}
+
 </style>

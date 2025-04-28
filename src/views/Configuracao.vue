@@ -23,7 +23,7 @@
               <v-img :src="fotoUrl || 'https://via.placeholder.com/100'" />
             </v-avatar>
           </v-col>
-          <v-col>
+          <v-col cols="4">
             <v-file-input
               label="Alterar foto de perfil"
               prepend-icon="mdi-camera"
@@ -108,18 +108,9 @@
 
         <!-- Campos de Endereço (visíveis apenas quando exibirEndereco for true) -->
         <v-row v-if="exibirEndereco" dense>
-          <v-col cols="12" sm="8">
-            <v-text-field label="Rua" v-model="perfil.endereco.rua" />
+          <v-col cols="4" sm="2">
+            <v-text-field label="CEP" v-model="perfil.endereco.cep" />
           </v-col>
-
-          <v-col cols="12" sm="4">
-            <v-text-field label="Complemento" v-model="perfil.endereco.complemento" />
-          </v-col>
-
-          <v-col cols="12" sm="6">
-            <v-text-field label="Bairro" v-model="perfil.endereco.bairro" />
-          </v-col>
-
           <v-col cols="12" sm="4">
             <v-text-field label="Cidade" v-model="perfil.endereco.cidade" />
           </v-col>
@@ -127,6 +118,16 @@
           <v-col cols="12" sm="2">
             <v-text-field label="Estado" v-model="perfil.endereco.estado" />
           </v-col>
+          <v-col cols="12" sm="8">
+            <v-text-field label="logradouro" v-model="perfil.endereco.rua" />
+          </v-col>
+          <v-col cols="12" sm="6">
+            <v-text-field label="Bairro" v-model="perfil.endereco.bairro" />
+          </v-col>
+          <v-col cols="12" sm="4">
+            <v-text-field label="Complemento" v-model="perfil.endereco.complemento" />
+          </v-col>
+
         </v-row>
 
         <v-divider class="my-6" />
@@ -184,6 +185,7 @@ const perfil = ref({
   cnpj: '',
   numeroConselho: '',
   endereco: {
+    cep:'',
     rua: '',
     complemento: '',
     bairro: '',

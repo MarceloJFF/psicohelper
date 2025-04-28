@@ -86,12 +86,21 @@
             color="primary"
             variant="outlined"
           >Ver Arquivo</v-btn>
-          <v-btn icon @click="renomearArquivo(arquivo)">
-            <v-icon>mdi-pencil</v-icon>
-          </v-btn>
-          <v-btn icon @click="excluirArquivo(arquivo)">
-            <v-icon color="red">mdi-delete</v-icon>
-          </v-btn>
+          <v-row class="d-flex justify-center w-100">
+            <v-col class="d-flex justify-center" cols="auto">
+              <v-btn icon @click="renomearPasta(pasta)">
+                <v-icon>mdi-pencil</v-icon>
+              </v-btn>
+            </v-col>
+            <v-col class="d-flex justify-center" cols="auto">
+              <v-btn icon @click="excluirPasta(pasta)">
+                <v-icon color="red">mdi-delete</v-icon>
+              </v-btn>
+            </v-col>
+          </v-row>
+
+
+
         </v-card>
       </v-col>
     </v-row>

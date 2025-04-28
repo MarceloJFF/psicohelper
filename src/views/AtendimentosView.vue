@@ -24,9 +24,12 @@
       >
         Lançar Pagamento
       </v-btn>
-      <v-span>
-        Selecione os pagamentos pendentes para lançar os pagamentos
-      </v-span>
+      <div>
+        <v-span class="mb-2">
+          Clique para  lançar os pagamentos pendentes de um aprendente.
+        </v-span>
+
+      </div>
 
     </v-container>
 
@@ -48,7 +51,6 @@
           >
               <v-row class="pa-4  d-flex 	align-self-center">
                 <v-col cols="12" sm="6" md="4">
-                  <v-checkbox label="Selecione se deseja registrar pagamento" v-if="atendimento.status=='Pendente'" ></v-checkbox>
                   <div class="font-weight-medium pa-2">
                   Horário Agendado:  {{ atendimento.horario }} - {{atendimento.horario_fim }}
                   </div>
