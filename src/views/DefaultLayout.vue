@@ -10,7 +10,7 @@ const items = [
   { title: 'Financeiro', icon: 'mdi-currency-usd', to: '/financeiro' },
   { title: 'Calendar', icon: 'mdi-calendar-month', to: '/calendario' },
   { title: 'Relatórios', icon: 'mdi-clock', to: '/relatorios' },
-  { title: 'Contratos', icon: 'mdi-file-document', to: '/contratos' },
+  { title: 'Inventario', icon: 'mdi-file-document', to: '/Inventario' },
   { title: 'Atendimentos', icon: 'mdi-account-clock', to: '/atendimentos' },
   { title: 'Clientes', icon: 'mdi-account-multiple', to: '/clientes' },
   { title: 'Configurações', icon: 'mdi-cog', to: '/configuracoes' },
@@ -45,7 +45,7 @@ const items = [
       </v-list>
     </v-navigation-drawer>
 
-    <v-app-bar app class="pa-2">
+    <v-app-bar app>
       <v-app-bar-nav-icon @click="drawer = !drawer"  color="#9C27B0" />
       <v-app-bar-title class="text-h5 font-weight-bold" style="color:purple;">Psicopedag Pro</v-app-bar-title>
 

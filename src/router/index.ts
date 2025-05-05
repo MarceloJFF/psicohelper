@@ -1,8 +1,7 @@
 import { createRouter, createWebHistory } from 'vue-router'
 
-// Importa o layout padrão
 import DefaultLayout from '@/views/DefaultLayout.vue'
-// Importa as views
+import InventarioView from '@/views/InventarioView.vue'
 import CalendarioAgendamento from '@/views/CalendarioAgendamento.vue'
 import FinanceiroView from '@/views/FinanceiroView.vue'
 import RelatoriosView from '@/views/RelatoriosView.vue'
@@ -33,7 +32,7 @@ const router = createRouter({
           component: CalendarioAgendamento
         },
         {
-          path: 'finaceiro',
+          path: 'financeiro',
           name: 'financeiro',
           component: FinanceiroView
         },
@@ -58,6 +57,11 @@ const router = createRouter({
           component: ClienteDetalhesView
         },
         {
+          path: 'inventario',
+          name: 'inventario',
+          component: InventarioView
+        },
+        {
           path: 'atendimentos',
           name: 'atendimentos',
           component: AtendimentosView
@@ -73,13 +77,7 @@ const router = createRouter({
           component: AboutView
         }
       ]
-    },
-    // Exemplo de login sem layout (no futuro você coloca a tela de login aqui)
-    // {
-    //   path: '/login',
-    //   name: 'login',
-    //   component: () => import('@/views/LoginView.vue')
-    // }
+    }
   ]
 })
 

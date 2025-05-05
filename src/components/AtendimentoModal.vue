@@ -1,5 +1,5 @@
 <template>
-  <v-dialog :model-value="modelValue" @update:model-value="$emit('update:modelValue', $event)" max-width="1200px" min-width="900px" persistent>
+  <v-dialog v-model="internalModel" max-width="1200px" min-width="900px" persistent>
     <v-card>
       <v-card-title class="d-flex align-center">
         <span>Atendimento - {{ title }}</span>
@@ -36,7 +36,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
 
 const props = defineProps({
   modelValue: Boolean,
@@ -44,6 +44,11 @@ const props = defineProps({
 })
 
 const emit = defineEmits(['update:modelValue'])
+
+const internalModel = computed({
+  get: () => props.modelValue,
+  set: (val) => emit('update:modelValue', val)
+})
 
 const tab = ref(0)
 
@@ -121,7 +126,6 @@ const menus = ref([
     }
   },
 ])
-
 function salvar() {
   const dados = menus.value.reduce((acc, menu) => {
     acc[menu.label] = menu.value.value
@@ -129,6 +133,7 @@ function salvar() {
   }, {})
   console.log('Dados salvos:', dados)
 }
+
 </script>
 
 <style scoped>
