@@ -21,7 +21,14 @@
         <v-window v-model="tab" class="mt-4">
           <v-window-item v-for="(item, index) in menus" :key="index" :value="index">
             <h4>{{item.label}}</h4>
-            <component :is="item.component" v-model="item.value" />
+            <component
+              :is="item.component"
+              :model-value="item.value"
+              @update:modelValue="item.value = $event"
+              v-bind="item.props"
+            />
+
+
           </v-window-item>
         </v-window>
       </v-card-text>
@@ -37,6 +44,7 @@
 
 <script setup lang="ts">
 import { computed, ref } from 'vue'
+import EditorText from '@/components/editor-text.vue'
 
 const props = defineProps({
   modelValue: Boolean,
@@ -66,12 +74,10 @@ const menus = ref([
   },
   {
     label: 'Queixas',
-    component: 'v-textarea',
+    component: 'v-text-area',
     value: ref(''),
     props: {
-      label: 'Principais queixas relatadas',
-      rows: 3,
-      placeholder: 'Descreva as queixas do paciente...'
+      label: 'Principais queixas relatadas'
     }
   },
   {
