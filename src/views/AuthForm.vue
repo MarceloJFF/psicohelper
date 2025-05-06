@@ -1,34 +1,33 @@
 <template>
-  <v-container fluid class="auth-container d-flex align-center justify-center " style="min-height: 100vh;">
+  <v-container fluid class="auth-container auth-container d-flex align-center justify-center" style="min-height: 100vh;">
     <v-row class="fill-height d-flex align-center justify-center" align="center" justify="center">
-      <v-col cols="12" sm="10" md="8" lg="6" xl="4" class="d-flex justify-center w-100" >
+      <v-col class="d-flex justify-center" cols="12" sm="10" md="8" lg="6" xl="4">
         <v-card class="auth-card" elevation="0">
           <div class="logo-container">
             <v-img
-              src="../assets/logo.jpeg"
+              src="src/assets/logo.jpeg"
               alt="Logo"
               contain
-              max-height="120"
+              max-width="250"
               class="mb-4"
             />
           </div>
 
           <v-card-title class="text-center auth-title">
-            {{ isLogin ? 'Bem-vindo de volta' : 'Crie sua conta' }}
-            <v-icon class="ml-2" color="primary">
-              {{ isLogin ? 'mdi-hand-wave' : 'mdi-account-plus' }}
-            </v-icon>
+            {{ isLogin ? 'Bem-vindo' : 'Crie sua conta' }}
+
           </v-card-title>
 
           <v-card-subtitle class="text-center auth-subtitle">
             {{ isLogin ? 'Entre com suas credenciais' : 'Preencha seus dados para começar' }}
           </v-card-subtitle>
 
-          <v-form @submit.prevent="handleAuth" class="pa-12  w-100 h-100">
+          <v-form ref="form" v-model="isFormValid" @submit.prevent="handleAuth" class="px-4">
             <v-text-field
               v-model="credentials.email"
               label="Email"
               type="email"
+              :rules="[rules.required, rules.email]"
               variant="outlined"
               prepend-inner-icon="mdi-email-outline"
               color="primary"
@@ -41,6 +40,7 @@
               v-model="credentials.password"
               label="Senha"
               type="password"
+              :rules="[rules.required, rules.min(6)]"
               variant="outlined"
               prepend-inner-icon="mdi-lock-outline"
               color="primary"
@@ -48,11 +48,11 @@
               required
               density="comfortable"
             />
-
             <template v-if="!isLogin">
               <v-text-field
                 v-model="profissional.nome"
                 label="Nome completo"
+                :rules="[rules.required]"
                 variant="outlined"
                 class="mb-3"
                 color="primary"
@@ -63,6 +63,7 @@
               <v-text-field
                 v-model="profissional.profissao"
                 label="Profissão"
+                :rules="[rules.required]"
                 variant="outlined"
                 class="mb-3"
                 color="primary"
@@ -73,6 +74,7 @@
               <v-text-field
                 v-model="profissional.telefone"
                 label="Telefone"
+                :rules="[rules.required, rules.phone]"
                 variant="outlined"
                 class="mb-4"
                 color="primary"
@@ -126,30 +128,40 @@ const profissional = ref({
 })
 
 const isLogin = ref(true)
+const rules = {
+  required: v => !!v || 'Campo obrigatório',
+  email: v => /.+@.+\..+/.test(v) || 'Email inválido',
+  min: (min) => v => (v && v.length >= min) || `Mínimo de ${min} caracteres`,
+  phone: v => /^\(?\d{2}\)?\s?\d{4,5}-?\d{4}$/.test(v) || 'Telefone inválido',
+}
+
+const isFormValid = ref(false)
+const form = ref(null)
 
 const toggleMode = () => {
   isLogin.value = !isLogin.value
 }
-
 const handleAuth = async () => {
+  const isValid = await form.value?.validate()
+  if (!isValid) return
+
   const storeAuth = useStoreAuth()
 
-  if (isLogin.value) {
-    try {
-      await storeAuth.loginUser({ email: credentials.value, password: credentials.value })
-      clearState()
-    } catch (err) {
-      alert(err.message)
+  try {
+    if (isLogin.value) {
+      await storeAuth.loginUser({ email: credentials.value.email, password: credentials.value.password })
+    } else {
+      await storeAuth.registerUser({
+        email: credentials.value.email,
+        password: credentials.value.password,
+      }, profissional.value)
     }
-  } else {
-    try {
-      await storeAuth.registerUser({ email: credentials.value, password: credentials.value })
-      clearState()
-    } catch (err) {
-      alert(err.message)
-    }
+    clearState()
+  } catch (err) {
+    alert(err.message)
   }
 }
+
 
 function clearState() {
   credentials.value.email = ''

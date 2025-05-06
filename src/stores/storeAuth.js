@@ -11,6 +11,7 @@ export const useStoreAuth = defineStore('auth', () => {
   */
   const router = useRouter()
   const { showError } = useShowErrorMessage()
+  const storesProfissional = useStoreProfissional()
 
 
   const userDetailsDefault = {
@@ -27,7 +28,6 @@ export const useStoreAuth = defineStore('auth', () => {
     actions
   */
   const init = async (router) => {
-    const storeEntries = useStoreProfissional()
 
     // Obtém a sessão atual ao iniciar
     const { data: { session } } = await supabase.auth.getSession()
@@ -35,7 +35,7 @@ export const useStoreAuth = defineStore('auth', () => {
     if (session) {
       userDetails.id = session.user.id
       userDetails.email = session.user.email
-      storeEntries.loadEntries()
+      await storesProfissional.loadProfissional()
     } else {
       // Não há sessão -> redireciona para login
       router.replace('/login')
@@ -48,25 +48,27 @@ export const useStoreAuth = defineStore('auth', () => {
           userDetails.id = session.user.id
           userDetails.email = session.user.email
           router.push('/')
-          storeEntries.loadEntries()
+          storesProfissional.loadProfissional()
         }
       } else if (event === 'SIGNED_OUT') {
         Object.assign(userDetails, userDetailsDefault)
         router.replace('/login')
-        storeEntries.unsubscribeEntries()
-        storeEntries.clearEntries()
+        storesProfissional.unsubscribeEntries()
+        storesProfissional.clearEntries()
       }
     })
   }
 
-  const registerUser = async ({ email, password }) => {
+  const registerUser = async ({ email, password }, profissional) => {
     let { data, error } = await supabase.auth.signUp({
       email,
       password
     })
-  if(data){
 
-  }
+    if(data){
+      await storesProfissional.registerProfissional(profissional, data.user.id)
+    }
+
     if (error)showError(error.message)
   }
 
@@ -75,12 +77,22 @@ export const useStoreAuth = defineStore('auth', () => {
       email,
       password
     })
+    if (data) {
+      console.log(data)
+      userDetails.id = data.user.id;
+      userDetails.email = data.user.email;
+      await storesProfissional.loadProfissional();
+
+      router.push('/')
+    }
 
     if (error) showError(error.message)
   }
 
   const logoutUser = async () => {
     let { error } = await supabase.auth.signOut()
+
+    storesProfissional.clearEntries()
     if (error) showError(error.message)
     else router.push('/login')
   }
@@ -93,7 +105,7 @@ export const useStoreAuth = defineStore('auth', () => {
   return {
     // state
     userDetails,
-
+    useStoreProfissional,
     // actions
     init,
     registerUser,

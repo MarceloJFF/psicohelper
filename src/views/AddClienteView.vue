@@ -297,7 +297,7 @@ const cliente = ref({
   cidade: '',
   estado: '',
   sexo: '',
-  atendimentoPróprio:'',
+  atendimentoProprio:'',
   nascimento: '',
   email: '',
   tipoAtendimento: '',
