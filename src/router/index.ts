@@ -1,4 +1,5 @@
 import { createRouter, createWebHistory } from 'vue-router'
+import supabase from '@/config/supabase.js'
 
 import DefaultLayout from '@/views/DefaultLayout.vue'
 import InventarioView from '@/views/InventarioView.vue'
@@ -18,67 +19,101 @@ const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   routes: [
     {
+      path: '/login',
+      name: 'login',
+      component: () => import('@/views/AuthForm.vue') // ou LoginView.vue
+    },
+    {
       path: '/',
       component: DefaultLayout,
       children: [
         {
           path: '',
           name: 'home',
-          component: Home
+          component: Home,
+          meta: { requiresAuth: true }
         },
         {
           path: 'calendario',
           name: 'calendario',
-          component: CalendarioAgendamento
+          component: CalendarioAgendamento,
+          meta: { requiresAuth: true }
+
         },
         {
           path: 'financeiro',
           name: 'financeiro',
-          component: FinanceiroView
+          component: FinanceiroView,
+          meta: { requiresAuth: true }
         },
         {
           path: 'relatorios',
           name: 'relatorios',
-          component: RelatoriosView
+          component: RelatoriosView,
+          meta: { requiresAuth: true }
+
         },
         {
           path: 'clientes',
           name: 'clientes',
-          component: ClienteListagemView
+          component: ClienteListagemView,
+          meta: { requiresAuth: true }
+
         },
         {
           path: 'clientes/add',
           name: 'clientes-add',
-          component: AddClienteView
+          component: AddClienteView,
+          meta: { requiresAuth: true }
+
         },
         {
           path: 'clientes/:id/detalhes',
           name: 'cliente-detalhes',
-          component: ClienteDetalhesView
+          component: ClienteDetalhesView,
+          meta: { requiresAuth: true }
+
         },
         {
           path: 'inventario',
           name: 'inventario',
-          component: InventarioView
+          component: InventarioView,
+          meta: { requiresAuth: true }
+
         },
         {
           path: 'atendimentos',
           name: 'atendimentos',
-          component: AtendimentosView
+          component: AtendimentosView,
+          meta: { requiresAuth: true }
+
         },
         {
           path: 'configuracoes',
           name: 'configuracoes',
-          component: Configuracao
+          component: Configuracao,
+          meta: { requiresAuth: true }
+
         },
         {
           path: 'about',
           name: 'about',
-          component: AboutView
+          component: AboutView,
+          meta: { requiresAuth: true }
+
         }
       ]
     }
   ]
+})
+
+router.beforeEach(async (to, from, next) => {
+  const { data: { session } } = await supabase.auth.getSession()
+  if (to.meta.requiresAuth && !session) {
+    next('/login') // redirecione para a tela de login (crie esta rota!)
+  } else {
+    next()
+  }
 })
 
 export default router
