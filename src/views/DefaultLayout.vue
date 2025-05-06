@@ -2,6 +2,7 @@
 import { RouterView, RouterLink } from 'vue-router'
 import { ref } from 'vue'
 import logo from '@/assets/logo.jpeg';
+import { useStoreAuth } from '@/stores/storeAuth.js'
 
 
 const drawer = ref(true)
@@ -16,6 +17,8 @@ const items = [
   { title: 'Configurações', icon: 'mdi-cog', to: '/configuracoes' },
   { title: 'Sair', icon: 'mdi-logout', to: '/logout' }
 ]
+const storeAuth = useStoreAuth()
+
 </script>
 
 <template>
@@ -68,7 +71,7 @@ const items = [
         </template>
         <v-list color="#9C27B0">
           <v-list-item title="Perfil" />
-          <v-list-item title="Sair" />
+          <v-list-item @click="storeAuth.logoutUser()" title="Sair" />
         </v-list>
       </v-menu>
     </v-app-bar>

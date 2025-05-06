@@ -1,6 +1,6 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import supabase from '@/config/supabase.js'
-
+import {useStoreAuth} from '@/stores/storeAuth'
 import DefaultLayout from '@/views/DefaultLayout.vue'
 import InventarioView from '@/views/InventarioView.vue'
 import CalendarioAgendamento from '@/views/CalendarioAgendamento.vue'
@@ -108,12 +108,19 @@ const router = createRouter({
 })
 
 router.beforeEach(async (to, from, next) => {
-  const { data: { session } } = await supabase.auth.getSession()
-  if (to.meta.requiresAuth && !session) {
-    next('/login') // redirecione para a tela de login (crie esta rota!)
+  const storeAuth = useStoreAuth()
+  const { data: session } = await supabase.auth.getSession()
+
+  const isAuthenticated = !!session.session
+
+  if (to.meta.requiresAuth && !isAuthenticated) {
+    next('/login')
+  } else if (to.path === '/login' && isAuthenticated) {
+    next('/')
   } else {
     next()
   }
 })
+
 
 export default router

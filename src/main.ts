@@ -2,6 +2,8 @@ import { createApp, h } from 'vue'
 import { createPinia } from 'pinia'
 import App from './App.vue'
 import router from './router'
+import { useStoreAuth } from '/src/stores/storeAuth'
+
 // Vuetify
 import 'vuetify/styles'
 import { createVuetify } from 'vuetify'
@@ -48,3 +50,7 @@ app.use(router)
 app.use(vuetify)
 
 app.mount('#app')
+
+const storeAuth = useStoreAuth()
+storeAuth.init(router)
+
