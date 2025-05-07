@@ -1,7 +1,7 @@
-export default interface Configuracao {
-  id: string;
-  dia: Date;
-  inicio:number;
-  fim:number;
-  contratoId:string;
+export default class DiasAtendimentoContrato {
+  id: string = '';
+  dia: Date = new Date();
+  inicio:number = 0;
+  fim:number = 0;
+  contratoId:string='';
 }

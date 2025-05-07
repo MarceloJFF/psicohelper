@@ -1,9 +1,9 @@
-import { reactive, ref } from 'vue'
+import { ref } from 'vue'
 import { defineStore } from 'pinia'
 import supabase from '/src/config/supabase'
 import { useStoreProfissional } from '/src/stores/storeProfissional'
 import { useShowErrorMessage } from '/src/userCases/useShowErrorMessage'
-import Cliente from '@/models/Cliente.ts'
+import Cliente from '@/models/Cliente'
 
 export const useStoreCliente = defineStore('cliente', () => {
   /*
@@ -32,11 +32,10 @@ export const useStoreCliente = defineStore('cliente', () => {
         .from('tb_cliente')
         .select('*')
         .eq('id_profissional', idProfissional)
-        .eq('status', true)
 
       if (error) throw error
 
-      clientes.value = data as Cliente[];
+      clientes.value = data as Cliente[]   // garante o cast correto
     } catch (err: any) {
       showError(err.message || 'Erro ao carregar clientes')
     } finally {

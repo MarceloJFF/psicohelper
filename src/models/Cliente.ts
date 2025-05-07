@@ -11,7 +11,7 @@ export default class Cliente {
   cidade: string ='';
   estado: string = '';
   nascimento: string='';
-  atendimentoProprio: boolea= false;
+  atendimentoProprio: boolean= false;
   sexo: string ='';
   tipoAtendimento: string = '';
   idProfissional: string ='';

@@ -1,14 +1,24 @@
-import type Cliente from '@/models/Cliente.ts'
-import type Profissional from '@/models/Profissional.ts'
+import  Cliente from '@/models/Cliente.ts'
+import  Profissional from '@/models/Profissional.ts'
+import type DiasAtendimentoContrato from '@/models/DiasAtendimentoContrato.ts'
 
-export default interface Contrato {
-  idContrato: string;
-  valorMensal: number;
-  duracao: bigint;
-  vencimento: string;
-  descricaoServico: string
-  idCliente: string;
-  cliente?:Cliente;
-  idProfissional: string;
-  profissional?:Profissional;
+export default class Contrato {
+  idContrato: string = ''
+  valorMensal: number = 0.0
+  duracao: number = 0         // Duração em dias (ou unidades que desejar)
+  vencimento: Date = (() => {
+    const data = new Date()
+    data.setDate(data.getDate() + 30)
+    return data
+  })()
+  descricaoServico: string = ''
+  idDiasAtendimento:string = ''
+  diasAtendimento?:DiasAtendimentoContrato[]
+  idCliente: string = ''
+  cliente?: Cliente
+  idProfissional: string = ''
+  profissional?: Profissional
+  cadastrado: boolean = false;
+  descricao: string ='';
+
 }

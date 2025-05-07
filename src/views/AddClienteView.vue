@@ -51,8 +51,8 @@
                   <v-col cols="12" md="8">
                     <h4 class="text-h5">O atendimento será para o próprio cliente?</h4>
                     <div class="d-flex ">
-                      <v-checkbox  label="Sim" v-model="cliente.atendimentoPróprio" value="Sim"></v-checkbox>
-                      <v-checkbox label="Não" v-model="cliente.atendimentoPróprio" value="Não"></v-checkbox>
+                      <v-checkbox  label="Sim" v-model="cliente.atendimentoProprio" value="Sim"></v-checkbox>
+                      <v-checkbox label="Não" v-model="cliente.atendimentoProprio" value="Não"></v-checkbox>
                     </div>
                   </v-col>
 
@@ -282,10 +282,14 @@ import { ref } from 'vue'
 import {useRouter} from 'vue-router'
 import Todo from '@/components/todo.vue'
 import CalendarioDiario from '@/components/calendario-diario.vue'
+import { useStoreContrato } from '@/stores/storeContrato.ts'
+import Contrato from '@/models/Contrato.ts'
+import type DiasAtendimentoContrato from '@/models/DiasAtendimentoContrato.ts'
 const valid = ref(false)
 const form = ref()
 const modalContrato = ref(false)
 const router = useRouter()
+const storeContrato = useStoreContrato()
 
 const cliente = ref({
   nome: '',
@@ -304,23 +308,18 @@ const cliente = ref({
   dependentes: [] as { nome: string; nascimento: string }[],
   contrato: null as typeof contrato.value | null
 })
+const contrato = ref(new Contrato());
+contrato.value.cadastrado =false;
+contrato.value.diasAtendimento = [] as DiasAtendimentoContrato[];
 
-const contrato = ref({
-  cadastrado: false,
-  diasAtendimento: [] as { dia: string; inicio: string; fim: string }[],
-  valorMensal: '',
-  duracao: '',
-  vencimento: '',
-  descricao: '',
-})
-
-const novoContrato = ref({
+const novoContrato = ref(new Contrato());
+novoContrato.value = {
   diasAtendimento: [{ dia: '', inicio: '', fim: '' }],
   valorMensal: '',
   duracao: '',
   vencimento: new Date().toISOString().substr(0, 10),
   descricao: '',
-})
+}
 
 const adicionarDependente = () => {
   cliente.value.dependentes.push({ nome: '', nascimento: '' })
@@ -339,12 +338,14 @@ const removerDiaAtendimento = (index: number) => {
 }
 
 const salvarContrato = () => {
-  console.log(novoContrato.value)
+
   contrato.value = {
     ...novoContrato.value,
     cadastrado: true,
     diasAtendimento: [...novoContrato.value.diasAtendimento], // copiar corretamente
   }
+  console.log(contrato.value)
+  //storeContrato.addContrato(contrato.value);
   modalContrato.value = false
 }
 

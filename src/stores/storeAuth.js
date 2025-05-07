@@ -64,8 +64,7 @@ export const useStoreAuth = defineStore('auth', () => {
       email,
       password
     })
-
-    if(data){
+    if(data.user){
       await storesProfissional.registerProfissional(profissional, data.user.id)
     }
 
