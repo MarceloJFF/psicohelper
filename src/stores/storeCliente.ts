@@ -4,6 +4,9 @@ import supabase from '/src/config/supabase'
 import { useStoreProfissional } from '/src/stores/storeProfissional'
 import { useShowErrorMessage } from '/src/userCases/useShowErrorMessage'
 import Cliente from '@/models/Cliente'
+import { useStoreContrato } from '@/stores/storeContrato.ts'
+import { useStoreDependente } from '@/stores/storeDependente.ts'
+
 
 export const useStoreCliente = defineStore('cliente', () => {
   /*
@@ -22,19 +25,17 @@ export const useStoreCliente = defineStore('cliente', () => {
   const loadClientes = async () => {
     isLoading.value = true
     try {
-      const idProfissional = storeProfissional.profissional?.id
+      const idProfissional = storeProfissional.profissionalDetails?.id
       if (!idProfissional) {
         showError('Profissional não está autenticado')
         return
       }
-
       const { data, error } = await supabase
         .from('tb_cliente')
         .select('*')
         .eq('id_profissional', idProfissional)
 
       if (error) throw error
-
       clientes.value = data as Cliente[]   // garante o cast correto
     } catch (err: any) {
       showError(err.message || 'Erro ao carregar clientes')
@@ -43,14 +44,17 @@ export const useStoreCliente = defineStore('cliente', () => {
     }
   }
 
-  const addCliente = async (cliente: Cliente) => {
+  const addCliente = async (cliente) => {
+    const storeContrato = useStoreContrato()
+    const storeDependente = useStoreDependente()
+    console.log(cliente)
     try {
-      cliente.idProfissional = storeProfissional.profissional?.id || ''
+      cliente.idProfissional = storeProfissional.profissionalDetails?.id || ''
+      cliente.status = true;
       const { error } = await supabase
         .from('tb_cliente')
         .insert([{
-          id: cliente.id,
-          nome_cliente: cliente.nomeCliente,
+          nome_cliente: cliente.nome,
           cpf: cliente.cpf,
           telefone: cliente.telefone1,
           telefone2: cliente.telefone2,
@@ -63,11 +67,18 @@ export const useStoreCliente = defineStore('cliente', () => {
           sexo: cliente.sexo,
           tipo_atendimento: cliente.tipoAtendimento,
           id_profissional: cliente.idProfissional,
-          status: cliente.status
+          status: cliente.status,
         }])
-
       if (error) throw error
-
+      if(cliente.dependentes.length > 0) {
+        for(const dependente of cliente.dependentes) {
+          dependente.idCliente = storeProfissional.profissional?.id || ''
+          await storeDependente.addDependente(dependente);
+        }
+      }
+      if(cliente.contrato != null){
+        await storeContrato.addContrato(cliente.contrato);
+      }
       await loadClientes()
     } catch (err: any) {
       showError(err.message || 'Erro ao adicionar cliente')

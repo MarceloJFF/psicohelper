@@ -1,7 +1,14 @@
 export default class DiasAtendimentoContrato {
   id: string = '';
-  dia: Date = new Date();
-  inicio:number = 0;
-  fim:number = 0;
+  dia: string = '';
+  inicio:string = '';
+  fim:string = '';
   contratoId:string='';
+
+  constructor(dia,inicio,fim) {
+    this.dia = dia;
+    this.inicio = inicio;
+    this.fim = fim;
+  }
+
 }

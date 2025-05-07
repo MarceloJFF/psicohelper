@@ -21,7 +21,7 @@
                     <v-text-field v-model="cliente.cpf" label="CPF" />
                   </v-col>
                   <v-col cols="12" md="6">
-                    <v-text-field v-model="cliente.telefone1" label="Telefone 1" />
+                    <v-text-field v-model="cliente.telefone" label="Telefone 1" />
                   </v-col>
                   <v-col cols="12" md="6">
                     <v-text-field v-model="cliente.telefone2" label="Telefone 2" />
@@ -51,8 +51,8 @@
                   <v-col cols="12" md="8">
                     <h4 class="text-h5">O atendimento será para o próprio cliente?</h4>
                     <div class="d-flex ">
-                      <v-checkbox  label="Sim" v-model="cliente.atendimentoProprio" value="Sim"></v-checkbox>
-                      <v-checkbox label="Não" v-model="cliente.atendimentoProprio" value="Não"></v-checkbox>
+                      <v-checkbox  label="Sim" v-model="cliente.atendimentoProprio" value="true"></v-checkbox>
+                      <v-checkbox label="Não" v-model="cliente.atendimentoProprio" value="false"></v-checkbox>
                     </div>
                   </v-col>
 
@@ -282,19 +282,24 @@ import { ref } from 'vue'
 import {useRouter} from 'vue-router'
 import Todo from '@/components/todo.vue'
 import CalendarioDiario from '@/components/calendario-diario.vue'
-import { useStoreContrato } from '@/stores/storeContrato.ts'
+import { ContratoService } from '@/services/contratoService.ts'
+import { ClienteService } from '@/services/clienteService'
+import { DependenteService } from '@/services/DependenteService'
+
 import Contrato from '@/models/Contrato.ts'
 import type DiasAtendimentoContrato from '@/models/DiasAtendimentoContrato.ts'
 const valid = ref(false)
 const form = ref()
 const modalContrato = ref(false)
 const router = useRouter()
-const storeContrato = useStoreContrato()
+const contratoService = new ContratoService();
+const clienteService = new ClienteService()
+const dependenteService = new DependenteService()
 
 const cliente = ref({
   nome: '',
   cpf: '',
-  telefone1: '',
+  telefone: '',
   telefone2: '',
   cep: '',
   endereco: '',
@@ -330,11 +335,17 @@ const removerDependente = (index: number) => {
 }
 
 const adicionarDiaAtendimento = () => {
-  novoContrato.value.diasAtendimento.push({ dia: '', inicio: '', fim: '' })
-}
+// After:
+  novoContrato?.value.diasAtendimento.push({
+    id: '',
+    dia: '',
+    inicio: '',
+    fim: '',
+    contratoId: '',
+  })}
 
 const removerDiaAtendimento = (index: number) => {
-  novoContrato.value.diasAtendimento.splice(index, 1)
+  novoContrato?.value.diasAtendimento.splice(index, 1)
 }
 
 const salvarContrato = () => {
@@ -344,27 +355,52 @@ const salvarContrato = () => {
     cadastrado: true,
     diasAtendimento: [...novoContrato.value.diasAtendimento], // copiar corretamente
   }
-  console.log(contrato.value)
-  //storeContrato.addContrato(contrato.value);
+
   modalContrato.value = false
 }
 
 const cancelar = () => {
   router.push({ name: 'home' }) // ou use o path: router.push('/')
 }
+const limparClienteState = () => {
+  cliente.value = {
+    nome: '',
+    cpf: '',
+    telefone: '',
+    telefone2: '',
+    cep: '',
+    endereco: '',
+    cidade: '',
+    estado: '',
+    sexo: '',
+    atendimentoProprio: '',
+    nascimento: '',
+    email: '',
+    tipoAtendimento: '',
+    dependentes: [] as { nome: string; nascimento: string }[],
+    contrato: null,
+  };
+  contrato.value = new Contrato();
+  contrato.value.cadastrado = false;
+  contrato.value.diasAtendimento = [];
+};
 
 const salvar = () => {
-  form.value?.validate().then((result: any) => {
+  form.value?.validate().then(async (result: any) => {
     if (result.valid) {
-      if(cliente.value.tipoAtendimento == 'contrato' && contrato.value.cadastrado){
+      console.log(cliente.value);
+      if (cliente.value.tipoAtendimento == 'Contrato' && contrato.value.cadastrado) {
         cliente.value.contrato = contrato.value;
-      }else{
-        cliente.value.contrato= null;
+        await clienteService.addCliente(cliente.value);
+        alert("Cliente salvo com sucesso!");
+      } else {
+        await clienteService.addCliente(cliente.value);
+        alert("Cliente salvo com sucesso com contrato!");
       }
+      limparClienteState();
     }
-    alert("Clinte salvo com sucesso!")
-  })
-}
+  });
+};
 
 const atualizarHorario = (dia: { inicio: string, fim: string }) => {
   // Força a atualização do objeto e pode disparar qualquer lógica adicional

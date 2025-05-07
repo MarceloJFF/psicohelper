@@ -4,8 +4,9 @@ export default class Cliente {
   id: string = '';
   nomeCliente: string='';
   cpf: string ='';
-  telefone1: string ='';
+  telefone: string ='';
   telefone2: string = '';
+  email: string = '';
   cep: string = '';
   logradouro: string='';
   cidade: string ='';

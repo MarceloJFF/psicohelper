@@ -32,7 +32,7 @@ export const useStoreContrato = defineStore('contrato', () => {
   const addContrato = async (contrato: Contrato) => {
     try {
       contrato.idProfissional = storeProfissional.profissional?.id || ''
-
+      console.log('Contrato', contrato)
       const { error } = await supabase
         .from('tb_contrato')
         .insert([contrato])
