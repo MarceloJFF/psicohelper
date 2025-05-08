@@ -1,6 +1,7 @@
-import { reactive } from 'vue'
+import {ref, reactive } from 'vue'
 import { useRouter } from 'vue-router'
 import { defineStore } from 'pinia'
+
 import supabase from '/src/config/supabase'
 import { useStoreProfissional } from '/src/stores/storeProfissional'
 import { useShowErrorMessage } from '/src/userCases/useShowErrorMessage'
@@ -9,6 +10,8 @@ export const useStoreAuth = defineStore('auth', () => {
   /*
     state
   */
+  const sessionLoaded = ref(false)
+
   const router = useRouter()
   const { showError } = useShowErrorMessage()
   const storesProfissional = useStoreProfissional()
@@ -26,39 +29,30 @@ export const useStoreAuth = defineStore('auth', () => {
 
   /*
     actions
-  */
-  const init = async (router) => {
-
-    // Obtém a sessão atual ao iniciar
+  */const init = async () => {
     const { data: { session } } = await supabase.auth.getSession()
 
     if (session) {
       userDetails.id = session.user.id
       userDetails.email = session.user.email
       await storesProfissional.loadProfissional()
-    } else {
-      // Não há sessão -> redireciona para login
-      router.replace('/login')
     }
 
-    // Escuta mudanças futuras de login/logout
+    sessionLoaded.value = true
+
     supabase.auth.onAuthStateChange((event, session) => {
-      if (event === 'SIGNED_IN') {
-        if (session) {
-          userDetails.id = session.user.id
-          userDetails.email = session.user.email
-          router.push('/')
-          storesProfissional.loadProfissional()
-        }
+      if (event === 'SIGNED_IN' && session) {
+        userDetails.id = session.user.id
+        userDetails.email = session.user.email
+        storesProfissional.loadProfissional()
+        // REMOVA O REDIRECIONAMENTO AUTOMÁTICO
       } else if (event === 'SIGNED_OUT') {
         Object.assign(userDetails, userDetailsDefault)
-        router.replace('/login')
-        storesProfissional.unsubscribeEntries()
         storesProfissional.clearEntries()
+        router.replace('/login')
       }
     })
   }
-
   const registerUser = async ({ email, password }, profissional) => {
     let { data, error } = await supabase.auth.signUp({
       email,

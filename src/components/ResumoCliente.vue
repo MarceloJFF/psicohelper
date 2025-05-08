@@ -1,5 +1,5 @@
 <template>
-  <v-card elevation="1" class="pa-4 rounded-lg mb-8">
+  <v-card v-if="aprendente" elevation="1" class="pa-4 rounded-lg mb-8">
     <v-row align="center">
       <!-- Avatar e botão de edição -->
       <v-col cols="12" md="2" class="text-center">
@@ -14,21 +14,24 @@
       <!-- Dados do cliente -->
       <v-col cols="12" md="6">
         <div class="d-flex align-center mb-2">
-          <span class="text-h6 font-weight-bold me-3">Maria</span>
-          <v-chip class="me-2" color="green-lighten-3" text-color="green-darken-2" size="small">sem débitos</v-chip>
+          <span class="text-h6 font-weight-bold me-3">{{
+            aprendente.nome_cliente || aprendente.nome_dependente
+          }}</span>
+          <v-chip class="me-2" color="green-lighten-3" text-color="green-darken-2" size="small">
+            sem débitos
+          </v-chip>
           <v-chip color="green-lighten-2" text-color="green-darken-4" size="small">Ativo</v-chip>
         </div>
 
         <div class="d-flex flex-wrap align-center mb-2">
-          <v-icon size="20" class="me-1">mdi-phone</v-icon><span class="me-4">--</span>
+          <v-icon size="20" class="me-1">mdi-phone</v-icon><span class="me-4">{}</span>
           <v-icon size="20" class="me-1">mdi-email</v-icon><span class="me-4">--</span>
           <v-icon size="20" class="me-1">mdi-account</v-icon><span class="me-4">--</span>
           <v-icon size="20" class="me-1">mdi-calendar</v-icon><span>--</span>
         </div>
 
         <div class="text-caption">
-          <strong>CIDADE:</strong> -- |
-          <strong>PRÓXIMA SESSÃO:</strong> -- |
+          <strong>CIDADE:</strong> -- | <strong>PRÓXIMA SESSÃO:</strong> -- |
           <strong>SESSÕES:</strong> 1
         </div>
       </v-col>
@@ -46,9 +49,25 @@
       </v-col>
     </v-row>
   </v-card>
-
 </template>
 
-<script setup>
+<script setup lang="ts">
+import { onMounted, ref } from 'vue'
+import { AprendenteService } from '@/services/aprendenteService'
+import { ClienteService } from '@/services/clienteService'
 
+const props = defineProps<{
+  idAprendente: string
+  isAprendente: boolean
+  responsavelDetalhes: any // ou defina o tipo correto se souber, como: responsavelDetalhes: Responsavel
+}>()
+
+const aprendente = ref<any>(null)
+console.log(props)
+onMounted(async () => {
+  const service = props.isAprendente ? new AprendenteService() : new ClienteService()
+  aprendente.value = props.isAprendente
+    ? await service.getAprendenteById(props.idAprendente)
+    : await service.getClienteById(props.idAprendente)
+})
 </script>

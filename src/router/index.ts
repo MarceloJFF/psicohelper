@@ -68,12 +68,12 @@ const router = createRouter({
 
         },
         {
-          path: 'clientes/:id/detalhes',
+          path: '/clientes/:idResponsavel/dependentes/:idAprendente?/detalhes',
           name: 'cliente-detalhes',
           component: ClienteDetalhesView,
           meta: { requiresAuth: true }
-
         },
+
         {
           path: 'inventario',
           name: 'inventario',
@@ -109,17 +109,22 @@ const router = createRouter({
 
 router.beforeEach(async (to, from, next) => {
   const storeAuth = useStoreAuth()
-  const { data: session } = await supabase.auth.getSession()
 
-  const isAuthenticated = !!session.session
+  if (!storeAuth.sessionLoaded) {
+    await storeAuth.init()
+  }
+
+  const isAuthenticated = !!storeAuth.userDetails.id
 
   if (to.meta.requiresAuth && !isAuthenticated) {
-    next('/login')
-  } else if (to.path === '/login' && isAuthenticated) {
-    next('/')
-  } else {
-    next()
+    return next('/login')
   }
+
+  if (to.path === '/login' && isAuthenticated) {
+    return next('/') // redireciona somente se ele for para o login
+  }
+
+  next()
 })
 
 

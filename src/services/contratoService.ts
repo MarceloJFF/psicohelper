@@ -23,15 +23,24 @@ export class ContratoService {
     }
   }
 
-  async addContrato(contrato: Contrato): Promise<void> {
+  async addContrato(contrato: Contrato, idCliente): Promise<void> {
     try {
       contrato.idProfissional = this.profissionalStore.profissionalDetails?.id || ''
       const {data, error } = await supabase
         .from('tb_contrato')
-        .insert([contrato])
-
+        .insert({
+          valor_mensal: contrato.valorMensal,
+          duracao: contrato.duracao,
+          vencimento: contrato.vencimento,
+          cadastrado: contrato.cadastrado,
+          descricao_servico: contrato.descricao,
+          id_cliente: idCliente,
+          id_profissional: contrato.idProfissional
+          }
+        ).select()
       if (error) throw error
-      return data.id_contrato;
+      console.log(data)
+      return data[0].id_contrato;
     } catch (err: any) {
       this.showError(err.message || 'Erro ao adicionar contrato')
     }

@@ -49,22 +49,39 @@
               </template>
               <template v-else>
                 <v-data-table
-                  :items="clientes"
-                  :search="search"
                   :headers="headers"
-                  :items-per-page="5"
-                  density="compact"
-                  class="h-100 v-data-table--bordered body-2 pa-6"
+                  :items="aprendentes"
+                  :loading="loading"
+                  class="elevation-1"
+                  loading-text="Carregando aprendentes..."
                 >
-                  <template #item.acoes="{ item, index }">
-                    <v-btn icon color="blue" variant="text" title="Editar" @click="abrirModalEdicao(item, index)">
-                      <v-icon>mdi-pencil</v-icon>
+                  <!-- Telefone com ícone do WhatsApp -->
+                  <template v-slot:item.telefoneResponsavel="{ item }">
+                    {{item}}
+                    <span>{{ formatarTelefone(item.telefoneResponsavel) }}</span>
+                    <a
+                      :href="`https://wa.me/55${item.telefoneResponsavel}`"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      <v-icon small color="green" class="ml-2">mdi-whatsapp</v-icon>
+                    </a>
+                  </template>
+                  <!-- Ações -->
+                  <template v-slot:item.actions="{ item }">
+                    <v-btn icon @click="editarAprendente(item)">
+                      <v-icon color="blue">mdi-pencil</v-icon>
                     </v-btn>
-                    <v-btn icon color="green" variant="text" title="Visualizar" @click="visualizarCliente(item)">
-                      <v-icon>mdi-eye</v-icon>
+                    <v-btn icon @click="removerAprendente(item)">
+                      <v-icon color="red">mdi-delete</v-icon>
+                    </v-btn>
+                    <v-btn icon @click="visualizarCliente(item)">
+                      <v-icon color="primary">mdi-eye</v-icon>
                     </v-btn>
                   </template>
                 </v-data-table>
+
+
               </template>
             </v-card>
           </v-col>
@@ -80,35 +97,51 @@
       <v-overlay :model-value="loading" class="align-center justify-center" persistent>
         <v-progress-circular indeterminate size="64" color="primary" />
       </v-overlay>
-    </v-main>
 
-    <!-- Modal de cliente -->
-    <ModalGenerico v-model="showModal" :title="modoEdicao ? 'Editar Cliente' : 'Cadastrar Novo Cliente'">
-      <template #content>
-        <v-form>
-          <v-text-field v-model="clienteAtual.nomeCliente" label="Nome" />
-          <v-text-field v-model="clienteAtual.telefone" label="Telefone" />
-          <v-text-field v-model="clienteAtual.email" label="Email" />
-          <v-text-field v-model="clienteAtual.tipoAtendimento" label="Tipo de Atendimento" />
-        </v-form>
-      </template>
-      <template #actions>
-        <v-btn color="green" @click="salvarCliente">Salvar</v-btn>
-        <v-btn color="grey" @click="showModal = false">Cancelar</v-btn>
-      </template>
-    </ModalGenerico>
+      <!-- Modal de cliente -->
+      <ModalGenerico v-model="showModal" :title="modoEdicao ? 'Editar Cliente' : 'Cadastrar Novo Cliente'">
+        <template #content>
+          <v-form>
+            <v-text-field v-model="clienteAtual.nomeCliente" label="Nome" />
+            <v-text-field v-model="clienteAtual.telefone" label="Telefone" />
+            <v-text-field v-model="clienteAtual.email" label="Email" />
+            <v-text-field v-model="clienteAtual.tipoAtendimento" label="Tipo de Atendimento" />
+          </v-form>
+        </template>
+        <template #actions>
+          <v-btn color="green" @click="salvarCliente">Salvar</v-btn>
+          <v-btn color="grey" @click="showModal = false">Cancelar</v-btn>
+        </template>
+      </ModalGenerico>
+
+      <!-- Dialogo de confirmação de inativação -->
+      <v-dialog v-model="dialogConfirmacao" max-width="400">
+        <v-card>
+          <v-card-title class="text-h6">Confirmar inativação</v-card-title>
+          <v-card-text>
+            Tem certeza que deseja inativar o cliente <strong>{{ clienteParaInativar?.nomeCliente }}</strong>?
+          </v-card-text>
+          <v-card-actions>
+            <v-spacer />
+            <v-btn color="grey" variant="text" @click="dialogConfirmacao = false">Cancelar</v-btn>
+            <v-btn color="red" variant="text" @click="inativarCliente">Inativar</v-btn>
+          </v-card-actions>
+        </v-card>
+      </v-dialog>
+    </v-main>
   </v-layout>
 </template>
+
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ClienteService } from '@/services/clienteService'
-import   Cliente from '@/models/Cliente'
+import Cliente from '@/models/Cliente'
 import CalendarioDiario from '@/components/calendario-diario.vue'
 import Todo from '@/components/todo.vue'
 import ModalGenerico from '@/components/ModalGenerico.vue'
 
-const storeCliente = new ClienteService()
+const clienteService = new ClienteService()
 const showModal = ref(false)
 const modoEdicao = ref(false)
 const indexEdicao = ref<number | null>(null)
@@ -117,25 +150,46 @@ const search = ref('')
 const loading = ref(true)
 
 const clienteAtual = ref<Cliente>(new Cliente())
+const clienteParaInativar = ref<Cliente | null>(null)
+const dialogConfirmacao = ref(false)
 
 const abrirModalNovo = () => {
   router.push('/clientes/add')
 }
 
-const clientes = ref<Cliente[]>([])
 
+
+const aprendentes = ref([])
+
+onMounted(async () => {
+  loading.value = true
+  aprendentes.value = await clienteService.loadAprendentes()
+  loading.value = false
+})
+
+const clientes = ref([])
+
+
+function editarAprendente(item: any) {
+  console.log('Editar:', item)
+  // Ação para abrir modal ou redirecionar
+}
+
+function removerAprendente(item: any) {
+  console.log('Remover:', item)
+  // Confirmar e chamar exclusão
+}
 const headers = [
-  { title: 'Nome', key: 'nome_cliente' },
-  { title: 'Telefone', key: 'telefone' },
-  { title: 'Email', key: 'email' },
-  { title: 'Tipo Atendimento', key: 'tipo_atendimento' },
-  { title: 'Ações', key: 'acoes', sortable: false },
+  { title: 'Aprendente', key: 'nomeAprendente' },
+  { title: 'Responsável', key: 'nomeResponsavel' },
+  { title: 'Telefone Responsável', key: 'telefoneResponsavel' },
+  { title: 'Ações', key: 'actions', sortable: false },
 ]
 
 const loadClientes = async () => {
   loading.value = true
   try {
-    clientes.value = await storeCliente.loadClientes()
+    clientes.value = await clienteService.loadClientes()
   } catch (error) {
     console.error('Erro ao carregar clientes:', error)
   } finally {
@@ -143,9 +197,7 @@ const loadClientes = async () => {
   }
 }
 
-onMounted(() => {
-  loadClientes()
-})
+
 
 const abrirModalEdicao = (item: Cliente, index: number) => {
   clienteAtual.value = { ...item }
@@ -153,6 +205,12 @@ const abrirModalEdicao = (item: Cliente, index: number) => {
   modoEdicao.value = true
   showModal.value = true
 }
+// const visualizarCliente = (cliente: Cliente) => {
+//   router.push({
+//     name: 'cliente-detalhes',
+//     params: { id: cliente.id },
+//   })
+// }
 
 const salvarCliente = () => {
   if (modoEdicao.value && indexEdicao.value !== null) {
@@ -165,14 +223,22 @@ const salvarCliente = () => {
   indexEdicao.value = null
 }
 
-const visualizarCliente = (cliente: Cliente) => {
-  console.log('ID do cliente:', cliente.id)
+const visualizarCliente = (cliente) => {
   router.push({
     name: 'cliente-detalhes',
-    params: { id: cliente.id },
+    params: {
+      idResponsavel: cliente.idResponsavel,
+      idAprendente: cliente.idAprendente || undefined, // se for falsy, não envia
+    },
   })
 }
+
+function formatarTelefone(telefone: string): string {
+  return telefone.replace(/^(\d{2})(\d{4,5})(\d{4})$/, '($1) $2-$3')
+}
+
+const confirmarInativacao = (cliente: Cliente) => {
+  clienteParaInativar.value = cliente
+  dialogConfirmacao.value = true
+}
 </script>
-
-
-

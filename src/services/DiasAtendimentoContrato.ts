@@ -9,7 +9,7 @@ export class DiasAtendimentoService {
   async loadDiasAtendimento(contratoId: string): Promise<DiasAtendimentoContrato[]> {
     try {
       const { data, error } = await supabase
-        .from('tb_dias_atendimento')
+        .from('tb_dias_atendimento_contrato')
         .select('*')
         .eq('contrato_id', contratoId)
 
@@ -21,7 +21,9 @@ export class DiasAtendimentoService {
     }
   }
 
-  async addDiasAtendimento(dias: DiasAtendimentoContrato[], contratoId: string): Promise<void> {
+  async addDiasAtendimento(dias, contratoId): Promise<void> {
+    console.log(dias)
+    console.log(contratoId)
     try {
       const payload = dias.map(d => ({
         dia: d.dia,
@@ -29,9 +31,11 @@ export class DiasAtendimentoService {
         fim: d.fim,
         contrato_id: contratoId
       }))
-      const { error } = await supabase
-        .from('tb_dias_atendimento')
-        .insert(payload)
+      const {data,error } = await supabase
+        .from('tb_dias_atendimento_contrato')
+        .insert(payload).select()
+
+      console.log(data)
 
       if (error) throw error
     } catch (err: any) {
@@ -42,7 +46,7 @@ export class DiasAtendimentoService {
   async deleteDiasAtendimentoByContrato(contratoId: string): Promise<void> {
     try {
       const { error } = await supabase
-        .from('tb_dias_atendimento')
+        .from('tb_dias_atendimento_contrato')
         .delete()
         .eq('contrato_id', contratoId)
 
@@ -52,10 +56,10 @@ export class DiasAtendimentoService {
     }
   }
 
-  async updateDiaAtendimento(diaAtendimento: DiasAtendimentoContrato): Promise<void> {
+  async updateDiaAtendimento(diaAtendimento): Promise<void> {
     try {
       const { error } = await supabase
-        .from('tb_dias_atendimento')
+        .from('tb_dias_atendimento_contrato')
         .update({
           dia: diaAtendimento.dia,
           inicio: diaAtendimento.inicio,

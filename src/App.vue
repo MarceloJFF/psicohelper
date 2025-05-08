@@ -7,9 +7,13 @@ import router from '@/router'
 const { show, message, color } = useShowErrorMessage()
 
 supabase.auth.onAuthStateChange((event, session) => {
-  if (!session) {
+  if (event === 'SIGNED_OUT') {
     router.push('/login')
   }
+
+  // if (event === 'SIGNED_IN' && router.currentRoute.value.path === '/login') {
+  //   router.push('/')
+  // }
 })
 
 </script>

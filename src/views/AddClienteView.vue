@@ -6,8 +6,9 @@
           <!-- Coluna principal do formulário -->
           <v-col cols="7" md="8" class="d-flex flex-column w-100">
             <v-card elevation="2" class="pa-6">
-              <v-card-title class="text-h5 font-weight-bold mb-4">Cadastro de Cliente</v-card-title>
+              <v-card-title class="text-h5 font-weight-bold mb-4 text-center">Cadastro de Aprendente</v-card-title>
               <v-form ref="form" v-model="valid">
+                <h3 class="m-6">Dados do Responsável</h3>
                 <v-row dense>
                   <!-- Campos do cliente -->
                   <v-col cols="12" md="6">
@@ -18,49 +19,79 @@
                     />
                   </v-col>
                   <v-col cols="12" md="6">
-                    <v-text-field v-model="cliente.cpf" label="CPF" />
+                    <v-text-field v-model="cliente.cpf" label="CPF"
+                                  :rules="[
+                            v => !!v || 'Campo obrigatório',
+                            v => /^\d{3}\.?\d{3}\.?\d{3}-?\d{2}$/.test(v) || 'CPF inválido'
+                          ]"/>
                   </v-col>
                   <v-col cols="12" md="6">
-                    <v-text-field v-model="cliente.telefone" label="Telefone 1" />
+                    <v-text-field v-model="cliente.telefone" label="Telefone 1" :rules="[
+            v => !!v || 'Campo obrigatório',
+            v => /^\(?\d{2}\)?[\s-]?\d{4,5}-?\d{4}$/.test(v) || 'Telefone inválido'
+          ]" />
                   </v-col>
                   <v-col cols="12" md="6">
-                    <v-text-field v-model="cliente.telefone2" label="Telefone 2" />
+                    <v-text-field v-model="cliente.telefone2" label="Telefone 2"  />
                   </v-col>
                   <v-col cols="12" md="4">
-                    <v-text-field v-model="cliente.cep" label="CEP" />
+                    <v-text-field v-model="cliente.cep" label="CEP" :rules="[
+            v => !!v || 'Campo obrigatório',
+            v => /^\d{5}-?\d{3}$/.test(v) || 'CEP inválido'
+          ]" />
                   </v-col>
                   <v-col cols="12" md="8">
-                    <v-text-field v-model="cliente.endereco" label="Endereço" />
+                    <v-text-field v-model="cliente.logradouro" label="Endereço"            :rules="[v => !!v || 'Campo obrigatório']"
+                    />
                   </v-col>
                   <v-col cols="12" md="4">
-                    <v-text-field v-model="cliente.cidade" label="Cidade" />
+                    <v-text-field v-model="cliente.cidade" label="Cidade"           :rules="[v => !!v || 'Campo obrigatório']"
+                    />
                   </v-col>
                   <v-col cols="12" md="4">
-                    <v-text-field v-model="cliente.estado" label="Estado" />
+                    <v-text-field v-model="cliente.estado" label="Estado"           :rules="[v => !!v || 'Campo obrigatório']"
+                    />
                   </v-col>
                   <v-col cols="12" md="4">
                     <v-text-field
                       v-model="cliente.nascimento"
                       label="Data de Nascimento"
                       type="date"
+                      :rules="[v => !!v || 'Campo obrigatório']"
+
                     />
                   </v-col>
                   <v-col cols="12" md="8">
-                    <v-text-field v-model="cliente.email" label="Email" />
+                    <v-text-field v-model="cliente.email" label="Email"   :rules="[
+            v => !!v || 'Campo obrigatório',
+            v => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v) || 'Email inválido'
+          ]" />
                   </v-col>
                   <v-col cols="12" md="8">
-                    <h4 class="text-h5">O atendimento será para o próprio cliente?</h4>
+                    <h4 class="text-h5">O responsável é o próprio aprendente?</h4>
                     <div class="d-flex ">
-                      <v-checkbox  label="Sim" v-model="cliente.atendimentoProprio" value="true"></v-checkbox>
-                      <v-checkbox label="Não" v-model="cliente.atendimentoProprio" value="false"></v-checkbox>
+                      <v-radio-group
+                        v-model="cliente.atendimentoProprio"
+                        :rules="[v => v !== null || 'Escolha uma opção']"
+                        row
+                      >
+                        <v-radio label="Sim" :value="true"></v-radio>
+                        <v-radio label="Não" :value="false"></v-radio>
+                      </v-radio-group>
                     </div>
                   </v-col>
 
                   <v-col cols="12" md="4">
                     <h4 class="text-h5">Sexo</h4>
                     <div class="d-flex ">
-                      <v-checkbox  label="Masculino" v-model="cliente.sexo" value="M"></v-checkbox>
-                      <v-checkbox label="Feminino" v-model="cliente.sexo" value="F"></v-checkbox>
+                      <v-radio-group
+                        v-model="cliente.sexo"
+                        :rules="[v => !!v || 'Selecione o sexo']"
+                        row
+                      >
+                        <v-radio label="Masculino" value="M"></v-radio>
+                        <v-radio label="Feminino" value="F"></v-radio>
+                      </v-radio-group>
                     </div>
                   </v-col>
                   <v-col cols="12" md="6">
@@ -68,33 +99,45 @@
                       v-model="cliente.tipoAtendimento"
                       :items="['Avulso', 'Contrato']"
                       label="Tipo de Atendimento"
+                      :rules="[v => v !== null || 'Escolha uma opção']"
                     />
                   </v-col>
                 </v-row>
 
                 <!-- Dependentes -->
-                <div class="mt-6">
-                  <h3 class="text-subtitle-1 font-weight-medium mb-2">Dependentes</h3>
+                <div class="mt-6" v-if="cliente.atendimentoProprio === false"
+                >
+                  <h3 class="text-subtitle-1 font-weight-medium mb-2">Aprendentes</h3>
                   <v-row v-for="(dep, i) in cliente.dependentes" :key="i" dense>
                     <v-col cols="6">
-                      <v-text-field v-model="dep.nome" label="Nome do Dependente" />
+                      <v-text-field v-model="dep.nome" label="Nome do Dependente"          :rules="[v => !!v || 'Campo obrigatório']"
+                      />
                     </v-col>
                     <v-col cols="4">
                       <v-text-field
                         v-model="dep.nascimento"
                         label="Nascimento"
                         type="date"
+                        :rules="[v => !!v || 'Campo obrigatório']"
                       />
                     </v-col>
+
                     <v-col cols="2" class="d-flex align-end">
                       <v-btn icon color="red" @click="removerDependente(i)">
                         <v-icon>mdi-delete</v-icon>
                       </v-btn>
                     </v-col>
                   </v-row>
-                  <v-btn class="mt-2" variant="text" color="primary" @click="adicionarDependente">
-                    <v-icon start>mdi-plus</v-icon> Adicionar dependente
+                  <v-btn
+                    v-if="cliente.atendimentoProprio === false"
+                    class="mt-2"
+                    variant="text"
+                    color="primary"
+                    @click="adicionarDependente"
+                  >
+                    <v-icon start>mdi-plus</v-icon> Adicionar Aprendente
                   </v-btn>
+
 
                   <!-- Botão para gerar contrato -->
                   <v-alert
@@ -284,7 +327,7 @@ import Todo from '@/components/todo.vue'
 import CalendarioDiario from '@/components/calendario-diario.vue'
 import { ContratoService } from '@/services/contratoService.ts'
 import { ClienteService } from '@/services/clienteService'
-import { DependenteService } from '@/services/DependenteService'
+import { AprendenteService } from '@/services/AprendenteService.ts'
 
 import Contrato from '@/models/Contrato.ts'
 import type DiasAtendimentoContrato from '@/models/DiasAtendimentoContrato.ts'
@@ -294,7 +337,7 @@ const modalContrato = ref(false)
 const router = useRouter()
 const contratoService = new ContratoService();
 const clienteService = new ClienteService()
-const dependenteService = new DependenteService()
+const dependenteService = new AprendenteService()
 
 const cliente = ref({
   nome: '',
@@ -302,7 +345,7 @@ const cliente = ref({
   telefone: '',
   telefone2: '',
   cep: '',
-  endereco: '',
+  logradouro: '',
   cidade: '',
   estado: '',
   sexo: '',
@@ -310,7 +353,7 @@ const cliente = ref({
   nascimento: '',
   email: '',
   tipoAtendimento: '',
-  dependentes: [] as { nome: string; nascimento: string }[],
+  dependentes: [] as { nome: string; nascimento: string ; }[],
   contrato: null as typeof contrato.value | null
 })
 const contrato = ref(new Contrato());
@@ -355,7 +398,7 @@ const salvarContrato = () => {
     cadastrado: true,
     diasAtendimento: [...novoContrato.value.diasAtendimento], // copiar corretamente
   }
-
+  cliente.value.contrato = contrato.value;
   modalContrato.value = false
 }
 
@@ -369,7 +412,7 @@ const limparClienteState = () => {
     telefone: '',
     telefone2: '',
     cep: '',
-    endereco: '',
+    logradouro: '',
     cidade: '',
     estado: '',
     sexo: '',
@@ -387,10 +430,11 @@ const limparClienteState = () => {
 
 const salvar = () => {
   form.value?.validate().then(async (result: any) => {
+    console.log( cliente.value)
     if (result.valid) {
-      console.log(cliente.value);
+
       if (cliente.value.tipoAtendimento == 'Contrato' && contrato.value.cadastrado) {
-        cliente.value.contrato = contrato.value;
+        //cliente.value.contrato = contrato.value;
         await clienteService.addCliente(cliente.value);
         alert("Cliente salvo com sucesso!");
       } else {

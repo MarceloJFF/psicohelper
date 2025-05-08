@@ -2,8 +2,8 @@
 import { RouterView, RouterLink } from 'vue-router'
 import { ref } from 'vue'
 import logo from '@/assets/logo.jpeg';
-import { useStoreAuth } from '@/stores/storeAuth.js'
-
+import { useStoreAuth } from '@/stores/storeAuth.ts'
+import {useStoreProfissional} from'@/stores/storeProfissional.ts'
 
 const drawer = ref(true)
 const items = [
@@ -18,7 +18,7 @@ const items = [
   { title: 'Sair', icon: 'mdi-logout', to: '/logout' }
 ]
 const storeAuth = useStoreAuth()
-
+const storeProfissional = useStoreProfissional()
 </script>
 
 <template>
@@ -66,7 +66,9 @@ const storeAuth = useStoreAuth()
             <v-avatar size="32">
               <v-img />
             </v-avatar>
-            <span class="ml-2 font-weight-medium"  style="color:purple;">Allana Abreu</span>
+            <span class="ml-2 font-weight-medium"  style="color:purple;">{{storeProfissional.profissionalDetails.nome
+              }}</span>
+
           </v-btn>
         </template>
         <v-list color="#9C27B0">

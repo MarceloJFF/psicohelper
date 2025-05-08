@@ -1,6 +1,11 @@
 <template>
   <v-container class="py-6 w-100">
-    <ResumoCliente></ResumoCliente>
+    <ResumoCliente
+      :idAprendente="idAprendente || idResponsavel"
+      :isAprendente="!!idAprendente"
+      :responsavelDetalhes="responsavelDetalhes"
+
+    />
     <v-row class="w-100">
       <v-col cols="7" md="8" class="w-100">
         <v-card elevation="2" class="w-100">
@@ -26,53 +31,17 @@
                 <div v-if="tab === 'Cadastro'">
                   <v-card-title class="text-h5 font-weight-bold mt-2">
                     <v-icon class="mr-2" color="primary">mdi-account</v-icon>
-                    Detalhes do Cliente
+                    Dados do Responsável
                   </v-card-title>
 
                   <v-divider class="my-4" />
 
-                  <v-row>
+                  <v-row v-if="responsavelDetalhes">
                     <v-col cols="12" md="6" v-for="(label, key) in camposPrincipais" :key="key">
-                      <v-text-field v-model="cliente[key]" :label="label" outlined dense></v-text-field>
-                    </v-col>
-
-                    <v-col cols="12">
-                      <v-card-subtitle class="font-weight-bold">Dependentes:</v-card-subtitle>
-                      <v-row v-for="(dep, index) in cliente.dependentes" :key="index">
-                        <v-col cols="6">
-                          <v-text-field v-model="dep.nome" label="Nome do Dependente" outlined dense></v-text-field>
-                        </v-col>
-                        <v-col cols="6">
-                          <v-text-field v-model="dep.nascimento" label="Nascimento" outlined dense></v-text-field>
-                        </v-col>
-                      </v-row>
-                    </v-col>
-
-                    <v-col cols="12">
-                      <v-card-subtitle class="font-weight-bold">Contrato:</v-card-subtitle>
-                      <div v-if="cliente.contrato">
-                        <v-text-field v-model="cliente.contrato.valorMensal" label="Valor Mensal" outlined dense></v-text-field>
-                        <v-text-field v-model="cliente.contrato.duracao" label="Duração" outlined dense></v-text-field>
-                        <v-text-field v-model="cliente.contrato.vencimento" label="Vencimento" outlined dense></v-text-field>
-                        <v-textarea v-model="cliente.contrato.descricao" label="Descrição" outlined dense></v-textarea>
-                        <v-card-subtitle class="font-weight-bold mt-2">Dias de Atendimento:</v-card-subtitle>
-                        <v-row v-for="(dia, index) in cliente.contrato.diasAtendimento" :key="index">
-                          <v-col cols="4">
-                            <v-text-field v-model="dia.dia" label="Dia" outlined dense></v-text-field>
-                          </v-col>
-                          <v-col cols="4">
-                            <v-text-field v-model="dia.inicio" label="Início" outlined dense></v-text-field>
-                          </v-col>
-                          <v-col cols="4">
-                            <v-text-field v-model="dia.fim" label="Fim" outlined dense></v-text-field>
-                          </v-col>
-                        </v-row>
-                      </div>
-                      <div v-else>
-                        Colocar aqui os dependentes ao clicar mostrar dados do responsável e sessões
-                      </div>
+                      <v-text-field v-model="responsavelDetalhes[key]" :label="label" outlined dense></v-text-field>
                     </v-col>
                   </v-row>
+
                 </div>
                 <div v-else>
                   <p class="mt-4">Conteúdo da aba <strong>{{ tab }}</strong> em construção.</p>
@@ -112,9 +81,24 @@ import { useRoute, useRouter } from 'vue-router'
 import CalendarioDiario from '@/components/calendario-diario.vue'
 import Todo from '@/components/todo.vue'
 import ResumoCliente from '@/components/ResumoCliente.vue'
+import { onMounted } from 'vue'
+import {ClienteService} from '@/services/clienteService.ts'
+
 
 const route = useRoute()
 const router = useRouter()
+
+
+const idResponsavel = route.params.idResponsavel as string
+const idAprendente = route.params.idAprendente as string | undefined
+const clienteService =  new ClienteService();
+const responsavelDetalhes = ref();
+
+onMounted(async()=>{
+  responsavelDetalhes.value = await clienteService.getClienteById(idResponsavel)
+  console.log(responsavelDetalhes.value)
+
+})
 
 const abas = ['Cadastro','Anamnese', 'Contratos', 'Sessões', 'Documentos anexos']
 const abaSelecionada = ref('Cadastro')
@@ -142,7 +126,7 @@ const cliente = ref({
   cidade: '',
   estado: '',
   sexo: '',
-  atendimentoPróprio: '',
+  atendimentoProprio: '',
   nascimento: '',
   email: '',
   tipoAtendimento: '',
@@ -170,19 +154,19 @@ cliente.value = {
 }
 
 const camposPrincipais = {
-  nome: 'Nome',
+  nome_cliente: 'Nome',
   cpf: 'CPF',
-  telefone1: 'Telefone 1',
+  telefone: 'Telefone 1',
   telefone2: 'Telefone 2',
   cep: 'CEP',
-  endereco: 'Endereço',
+  logradouro: 'Endereço',
   cidade: 'Cidade',
   estado: 'Estado',
   sexo: 'Sexo',
-  atendimentoPróprio: 'Atendimento Próprio',
+  atendimento_proprio: 'Atendimento Próprio',
   nascimento: 'Nascimento',
   email: 'Email',
-  tipoAtendimento: 'Tipo de Atendimento',
+  tipo_atendimento: 'Tipo de Atendimento',
 }
 
 const voltar = () => {

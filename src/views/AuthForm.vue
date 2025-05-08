@@ -114,7 +114,7 @@
 
 <script setup>
 import { ref } from 'vue'
-import { useStoreAuth } from '@/stores/storeAuth.js'
+import { useStoreAuth } from '@/stores/storeAuth.ts'
 
 const credentials = ref({
   email: '',
