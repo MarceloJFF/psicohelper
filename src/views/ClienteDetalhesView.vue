@@ -3,8 +3,7 @@
     <ResumoCliente
       :idAprendente="idAprendente || idResponsavel"
       :isAprendente="!!idAprendente"
-      :responsavelDetalhes="responsavelDetalhes"
-
+      :idResponsavel="idResponsavel"
     />
     <v-row class="w-100">
       <v-col cols="7" md="8" class="w-100">
@@ -43,9 +42,42 @@
                   </v-row>
 
                 </div>
-                <div v-else>
-                  <p class="mt-4">Conteúdo da aba <strong>{{ tab }}</strong> em construção.</p>
+                <div v-else-if="tab === 'Contratos'">
+                  <v-card-title class="text-h5 font-weight-bold mt-2">
+                    <v-icon class="mr-2" color="primary">mdi-file-document-outline</v-icon>
+                    Contratos do Aprendente
+                  </v-card-title>
+
+                  <v-divider class="my-4" />
+
+                  <v-alert v-if="contratos.length === 0" type="info" border="start" color="blue lighten-3">
+                    Nenhum contrato encontrado para este aprendente.
+                  </v-alert>
+
+                  <v-timeline align="start" dense>
+                    <v-timeline-item
+                      v-for="(contrato, index) in contratos"
+                      :key="index"
+                      color="green"
+                      icon="mdi-file-document"
+                    >
+                      <v-card class="pa-3" elevation="1">
+                        <strong>Valor:</strong> R$ {{ contrato.valor_mensal }}<br />
+                        <strong>Duração:</strong> {{ contrato.duracao }} meses<br />
+                        <strong>Vencimento:</strong> {{ contrato.vencimento }}<br />
+                        <strong>Descrição:</strong> {{ contrato.descricao_servico }}<br />
+                        <strong>Dias:</strong>
+                        <ul style="list-style-type: none; padding-left: 0;">
+                          <li v-for="dia in contrato.diasAtendimento" :key="dia.dia">
+                            {{ dia.dia }} ({{ dia.inicio }} - {{ dia.fim }})
+                          </li>
+                        </ul>
+
+                      </v-card>
+                    </v-timeline-item>
+                  </v-timeline>
                 </div>
+
               </v-card-text>
             </v-window-item>
           </v-window>
@@ -83,7 +115,8 @@ import Todo from '@/components/todo.vue'
 import ResumoCliente from '@/components/ResumoCliente.vue'
 import { onMounted } from 'vue'
 import {ClienteService} from '@/services/clienteService.ts'
-
+import {ContratoService} from '@/services/contratoService.ts'
+import {DiasAtendimentoService} from '@/services/DiasAtendimentosContratoService.ts'
 
 const route = useRoute()
 const router = useRouter()
@@ -93,12 +126,25 @@ const idResponsavel = route.params.idResponsavel as string
 const idAprendente = route.params.idAprendente as string | undefined
 const clienteService =  new ClienteService();
 const responsavelDetalhes = ref();
-
+const diasAtendimento = new DiasAtendimentoService()
+const contratoService = new ContratoService()
 onMounted(async()=>{
   responsavelDetalhes.value = await clienteService.getClienteById(idResponsavel)
-  console.log(responsavelDetalhes.value)
+  await buscarContratos()
 
 })
+
+const buscarContratos = async () => {
+  if (idAprendente) {
+    contratos.value = await contratoService.loadContratoPorAprendente(idAprendente)
+    console.log(contratos.value)
+    for (const contrato of contratos.value) {
+      const dias = await diasAtendimento.loadDiasAtendimento(contrato.id_contrato)
+      contrato.diasAtendimento = dias
+    }
+  }
+}
+
 
 const abas = ['Cadastro','Anamnese', 'Contratos', 'Sessões', 'Documentos anexos']
 const abaSelecionada = ref('Cadastro')
@@ -187,4 +233,8 @@ const salvarCliente = async () => {
     snackbar.value = true
   }
 }
+
+const contratos = ref<any[]>([])
+
+
 </script>

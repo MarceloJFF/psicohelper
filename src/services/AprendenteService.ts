@@ -21,6 +21,19 @@ export class AprendenteService {
     }
   }
 
+  async  buscarAprendentesPorNome(nome: string) {
+    const { data, error } = await supabase
+      .from('tb_aprendente')
+      .select('id, nome_dependente')
+      .ilike('nome_dependente', `%${nome}%`) // busca por similaridade (case-insensitive)
+
+    if (error) {
+      console.error('Erro ao buscar aprendentes:', error)
+      return []
+    }
+    return data
+  }
+
   async addDependente(dependente): Promise<void> {
     try {
       const { data,error } = await supabase
@@ -30,7 +43,7 @@ export class AprendenteService {
           id_cliente: dependente.idCliente,
           nascimento: dependente.nascimento,
         }]).select()
-      console.log(dependente)
+      return data[0].id
       if (error) throw error
     } catch (err: any) {
       this.showError(err.message || 'Erro ao adicionar dependente')

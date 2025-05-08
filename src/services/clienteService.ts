@@ -2,7 +2,7 @@ import supabase from '/src/config/supabase'
 import { useStoreProfissional } from '/src/stores/storeProfissional'
 import { ContratoService } from '@/services/contratoService.ts'
 import { AprendenteService } from '@/services/AprendenteService.ts'
-import { DiasAtendimentoService } from '@/services/DiasAtendimentoContrato.ts'
+import { DiasAtendimentoService } from '@/services/DiasAtendimentosContratoService.ts'
 
 import { useShowErrorMessage } from '/src/userCases/useShowErrorMessage'
 import Cliente from '@/models/Cliente'
@@ -39,6 +39,17 @@ export class ClienteService {
       return []
     }
   }
+  async getContratosPorResponsavel(idResponsavel: string) {
+    const idProfissional = this.storeProfissional.profissionalDetails?.id || ''
+    const { data, error } = await supabase
+      .from('tb_contrato')
+      .select('*')
+      .eq('id_cliente', idResponsavel)
+      .eq('id_profissional', idProfissional).select()
+  console.log(data)
+    if (error) throw error
+    return data
+  }
 
   async addCliente(cliente: any): Promise<void> {
     try {
@@ -65,18 +76,18 @@ export class ClienteService {
         ]).select()
 
       if (error) throw error
-
+      let idContrato;
+      if (cliente.contrato) {
+        const idCliente = data[0].id;
+         idContrato = await this.contratoService.addContrato(cliente.contrato,idCliente)
+        this.diasAtendimentoService.addDiasAtendimento(cliente.contrato.diasAtendimento, idContrato)
+      }
       if (cliente.dependentes?.length > 0) {
         for (const dependente of cliente.dependentes) {
           dependente.idCliente = data[0].id; // Ajuste se necessário
-          await this.aprendenteService.addDependente(dependente)
+          const dependenteId = await this.aprendenteService.addDependente(dependente)
+          await this.contratoService.adicionarAprendenteAoContrato(idContrato, dependenteId)
         }
-      }
-      if (cliente.contrato) {
-        console.log(cliente)
-        const idCliente = data[0].id;
-        const idContrato = await this.contratoService.addContrato(cliente.contrato,idCliente)
-        this.diasAtendimentoService.addDiasAtendimento(cliente.contrato.diasAtendimento, idContrato)
       }
 
     } catch (err: any) {

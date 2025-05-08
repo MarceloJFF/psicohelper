@@ -140,23 +140,7 @@
 
 
                   <!-- Botão para gerar contrato -->
-                  <v-alert
-                    v-if="cliente.tipoAtendimento === 'Contrato' && !contrato.cadastrado"
-                    type="info"
-                    class="mt-4"
-                  >
-                    Gere o modelo de contrato para o cliente.
-                  </v-alert>
 
-                  <v-btn
-                    v-if="cliente.tipoAtendimento === 'Contrato' && !contrato.cadastrado"
-                    class="mt-2"
-                    variant="text"
-                    color="green"
-                    @click="modalContrato = true"
-                  >
-                    <v-icon start>mdi-plus</v-icon> Gerar Contrato
-                  </v-btn>
 
                   <!-- Exibição do contrato gerado -->
                   <v-divider class="my-6" v-if="contrato.cadastrado" />
@@ -199,6 +183,23 @@
                     </v-list>
                   </div>
                 </div>
+                <v-alert
+                  v-if="cliente.tipoAtendimento === 'Contrato' && !contrato.cadastrado"
+                  type="info"
+                  class="mt-4"
+                >
+                  Gere o modelo de contrato para o cliente.
+                </v-alert>
+
+                <v-btn
+                  v-if="cliente.tipoAtendimento === 'Contrato' && !contrato.cadastrado"
+                  class="mt-2"
+                  variant="text"
+                  color="green"
+                  @click="modalContrato = true"
+                >
+                  <v-icon start>mdi-plus</v-icon> Gerar Contrato
+                </v-btn>
 
                 <!-- Ações finais do formulário -->
                 <v-row class="mt-8">
@@ -370,8 +371,13 @@ novoContrato.value = {
 }
 
 const adicionarDependente = () => {
-  cliente.value.dependentes.push({ nome: '', nascimento: '' })
-}
+  if (cliente.value.dependentes.length >= 1) {
+    alert("Apenas um aprendente pode ser adicionado.");
+    return;
+  }
+
+  cliente.value.dependentes.push({ nome: '', nascimento: '' });
+};
 
 const removerDependente = (index: number) => {
   cliente.value.dependentes.splice(index, 1)
@@ -434,7 +440,6 @@ const salvar = () => {
     if (result.valid) {
 
       if (cliente.value.tipoAtendimento == 'Contrato' && contrato.value.cadastrado) {
-        //cliente.value.contrato = contrato.value;
         await clienteService.addCliente(cliente.value);
         alert("Cliente salvo com sucesso!");
       } else {
