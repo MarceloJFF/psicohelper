@@ -68,11 +68,12 @@ export class ContratoService {
           valor_mensal: contrato.valorMensal,
           duracao: contrato.duracao,
           vencimento: contrato.vencimento,
-          cadastrado: contrato.cadastrado,
+          cadastrado: true,
           descricao_servico: contrato.descricao,
           id_responsavel: idResponsavel,
           id_profissional: contrato.idProfissional,
-          id_aprendente: idAprendente
+          id_aprendente: idAprendente,
+          cancelado: false
           }
         ).select()
       if (error) throw error
@@ -83,15 +84,18 @@ export class ContratoService {
     }
   }
 
-  async deleteContrato(idContrato: string): Promise<void> {
+  async deleteContrato(idContrato: string, motivo: string): Promise<void> {
     try {
       const { error } = await supabase
         .from('tb_contrato')
-        .delete()
+        .update({ 
+          cancelado: true,
+          motivo_cancelamento: motivo
+        })
         .eq('id_contrato', idContrato)
       if (error) throw error
     } catch (err: any) {
-      this.showError(err.message || 'Erro ao remover contrato')
+      this.showError(err.message || 'Erro ao cancelar contrato')
     }
   }
 }

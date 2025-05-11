@@ -43,9 +43,15 @@
 
                 </div>
                 <div v-else-if="tab === 'Contratos'">
-                  <v-card-title class="text-h5 font-weight-bold mt-2">
-                    <v-icon class="mr-2" color="primary">mdi-file-document-outline</v-icon>
-                    Contratos do Aprendente
+                  <v-card-title class="text-h5 font-weight-bold mt-2 d-flex justify-space-between align-center">
+                    <div>
+                      <v-icon class="mr-2" color="primary">mdi-file-document-outline</v-icon>
+                      Contratos do Aprendente
+                    </div>
+                    <v-btn color="primary" @click="abrirModalContrato">
+                      <v-icon left>mdi-plus</v-icon>
+                      Novo Contrato
+                    </v-btn>
                   </v-card-title>
 
                   <v-divider class="my-4" />
@@ -58,21 +64,56 @@
                     <v-timeline-item
                       v-for="(contrato, index) in contratos"
                       :key="index"
-                      color="green"
+                      :color="contrato.cancelado ? 'red' : (contrato.cadastrado ? 'green' : 'grey')"
                       icon="mdi-file-document"
                     >
                       <v-card class="pa-3" elevation="1">
+                        <div class="d-flex justify-space-between align-center mb-2">
+                          <strong>Status:</strong>
+                          <v-chip :color="contrato.cancelado ? 'red' : (contrato.cadastrado ? 'green' : 'grey')" size="small">
+                            {{ contrato.cancelado || contrato.vencido ? 'Cancelado/inativo' : (contrato.cadastrado ? 'Ativo' : 'Inativo') }}
+                          </v-chip>
+                        </div>
                         <strong>Valor:</strong> R$ {{ contrato.valor_mensal }}<br />
                         <strong>Duração:</strong> {{ contrato.duracao }} meses<br />
                         <strong>Vencimento:</strong> {{ contrato.vencimento }}<br />
                         <strong>Descrição:</strong> {{ contrato.descricao_servico }}<br />
-                        <strong>Status:</strong> {{ contrato.cadastrado ? 'Ativo' : 'Inativo' }}<br />
                         <strong>Dias: </strong>
                         <v-chip v-for="dia in contrato.diasAtendimento" :key="dia.dia" class="ma-1">
                           {{ dia.dia }} ({{ dia.inicio }} - {{ dia.fim }})
                         </v-chip>
-                    
-
+                        
+                        <div class="d-flex justify-end mt-3">
+                          <v-btn
+                            v-if="contrato.cadastrado && !contrato.cancelado"
+                            color="error"
+                            size="small"
+                            class="mr-2"
+                            @click="cancelarContrato(contrato)"
+                          >
+                            <v-icon left>mdi-cancel</v-icon>
+                            Cancelar
+                          </v-btn>
+                          <v-btn
+                            v-if="contrato.cadastrado && !contrato.cancelado"
+                            color="warning"
+                            size="small"
+                            class="mr-2"
+                            @click="inativarContrato(contrato)"
+                          >
+                            <v-icon left>mdi-close-circle</v-icon>
+                            Inativar
+                          </v-btn>
+                          <v-btn
+                            v-if="!contrato.cancelado"
+                            color="primary"
+                            size="small"
+                            @click="editarContrato(contrato)"
+                          >
+                            <v-icon left>mdi-pencil</v-icon>
+                            Editar
+                          </v-btn>
+                        </div>
                       </v-card>
                     </v-timeline-item>
                   </v-timeline>
@@ -104,6 +145,46 @@
         <calendario-diario class="flex-grow-1" />
       </v-col>
     </v-row>
+
+    <!-- Modal de Contrato -->
+    <ModalContrato
+      v-model="modalContrato"
+      :contrato-inicial="contratoSelecionado || new Contrato()"
+      @salvar="salvarContrato"
+    />
+
+    <!-- Modal de Cancelamento -->
+    <v-dialog v-model="dialogCancelamento" max-width="500px">
+      <v-card>
+        <v-card-title class="text-h5">
+          {{ modoCancelamento === 'cancelar' ? 'Cancelar' : 'Inativar' }} Contrato
+        </v-card-title>
+        <v-card-text>
+          <v-form ref="formCancelamento" v-model="formCancelamentoValido">
+            <v-textarea
+              v-model="motivoCancelamento"
+              :label="modoCancelamento === 'cancelar' ? 'Motivo do Cancelamento' : 'Motivo da Inativação'"
+              :rules="[v => !!v || 'O motivo é obrigatório']"
+              rows="3"
+              required
+            ></v-textarea>
+          </v-form>
+        </v-card-text>
+        <v-card-actions>
+          <v-spacer></v-spacer>
+          <v-btn color="grey" text @click="dialogCancelamento = false">
+            Voltar
+          </v-btn>
+          <v-btn 
+            color="error" 
+            @click="confirmarAcao"
+            :disabled="!formCancelamentoValido"
+          >
+            Confirmar {{ modoCancelamento === 'cancelar' ? 'Cancelamento' : 'Inativação' }}
+          </v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
   </v-container>
 </template>
 
@@ -113,10 +194,12 @@ import { useRoute, useRouter } from 'vue-router'
 import CalendarioDiario from '@/components/calendario-diario.vue'
 import Todo from '@/components/todo.vue'
 import ResumoCliente from '@/components/ResumoResponsavel.vue'
+import ModalContrato from '@/components/ModalContrato.vue'
 import { onMounted } from 'vue'
 import {ResponsavelService} from '@/services/responsavelService.ts'
 import {ContratoService} from '@/services/contratoService.ts'
 import {DiasAtendimentosContratoService} from '@/services/DiasAtendimentosContratoService'
+import Contrato from '@/models/Contrato'
 
 const route = useRoute()
 const router = useRouter()
@@ -137,7 +220,6 @@ onMounted(async()=>{
 const buscarContratos = async () => {
   if (idAprendente) {
     contratos.value = await contratoService.loadContratoPorAprendente(idAprendente)
-    console.log(contratos.value)
     for (const contrato of contratos.value) {
       const dias = await diasAtendimento.loadDiasAtendimento(contrato.id_contrato)
       contrato.diasAtendimento = dias
@@ -219,12 +301,13 @@ const voltar = () => {
   router.back()
 }
 
-const salvarResponsavel = async () => {
+const salvarCliente = async () => {
   try {
-    // Aqui você pode usar uma chamada de API real (axios ou fetch)
-    console.log('Cliente salvo:', responsavel.value)
-    snackbarMessage.value = 'Dados salvos com sucesso!'
-    snackbarColor.value = 'success'
+    if (responsavelDetalhes.value) {
+      await responsavelService.updateResponsavel(responsavelDetalhes.value)
+      snackbarMessage.value = 'Dados salvos com sucesso!'
+      snackbarColor.value = 'success'
+    }
   } catch (error) {
     console.error(error)
     snackbarMessage.value = 'Erro ao salvar os dados.'
@@ -234,7 +317,98 @@ const salvarResponsavel = async () => {
   }
 }
 
-const contratos = ref<any[]>([])
+const contratos = ref<Contrato[]>([])
 
+const modalContrato = ref(false)
+const contratoSelecionado = ref<Contrato | null>(null)
+const modoEdicao = ref(false)
+
+const abrirModalContrato = () => {
+  contratoSelecionado.value = new Contrato()
+  contratoSelecionado.value.diasAtendimento = [{
+    id: '',
+    dia: '',
+    inicio: '',
+    fim: '',
+    contratoId: ''
+  }]
+  modoEdicao.value = false
+  modalContrato.value = true
+}
+
+const editarContrato = (contrato: Contrato) => {
+  contratoSelecionado.value = { ...contrato }
+  modoEdicao.value = true
+  modalContrato.value = true
+}
+
+const dialogCancelamento = ref(false)
+const motivoCancelamento = ref('')
+const formCancelamentoValido = ref(false)
+const contratoParaCancelar = ref<Contrato | null>(null)
+
+const modoCancelamento = ref<'cancelar' | 'inativar'>('cancelar')
+
+const cancelarContrato = (contrato: Contrato) => {
+  contratoParaCancelar.value = contrato
+  motivoCancelamento.value = ''
+  modoCancelamento.value = 'cancelar'
+  dialogCancelamento.value = true
+}
+
+const inativarContrato = (contrato: Contrato) => {
+  contratoParaCancelar.value = contrato
+  motivoCancelamento.value = ''
+  modoCancelamento.value = 'inativar'
+  dialogCancelamento.value = true
+}
+
+const confirmarAcao = async () => {
+  if (!contratoParaCancelar.value) return
+
+  try {
+    if (modoCancelamento.value === 'cancelar') {
+      await contratoService.deleteContrato(contratoParaCancelar.value.id_contrato, motivoCancelamento.value)
+    } else {
+      await contratoService.inativarContrato(contratoParaCancelar.value.id_contrato, motivoCancelamento.value)
+    }
+    await buscarContratos()
+    snackbarMessage.value = `Contrato ${modoCancelamento.value === 'cancelar' ? 'cancelado' : 'inativado'} com sucesso!`
+    snackbarColor.value = 'success'
+    dialogCancelamento.value = false
+  } catch (error) {
+    console.error(error)
+    snackbarMessage.value = `Erro ao ${modoCancelamento.value === 'cancelar' ? 'cancelar' : 'inativar'} contrato.`
+    snackbarColor.value = 'error'
+  } finally {
+    snackbar.value = true
+  }
+}
+
+const salvarContrato = async (contrato: Contrato) => {
+  try {
+    if (modoEdicao.value && contratoSelecionado.value) {
+      // Implementar atualização do contrato
+      contrato.cadastrado = true
+      await contratoService.updateContrato(contrato)
+    } else {
+      // Adicionar novo contrato
+      const idContrato = await contratoService.addContrato(contrato, idResponsavel, idAprendente || '')
+      if (idContrato) {
+        await diasAtendimento.addDiasAtendimento(contrato.diasAtendimento, idContrato)
+      }
+    }
+    await buscarContratos()
+    snackbarMessage.value = 'Contrato salvo com sucesso!'
+    snackbarColor.value = 'success'
+  } catch (error) {
+    console.error(error)
+    snackbarMessage.value = 'Erro ao salvar contrato.'
+    snackbarColor.value = 'error'
+  } finally {
+    snackbar.value = true
+    modalContrato.value = false
+  }
+}
 
 </script>

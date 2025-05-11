@@ -1,6 +1,13 @@
 <script setup lang="ts">
+import { ref, onMounted } from 'vue'
+import { useStoreProfissional } from '@/stores/storeProfissional'
+import { useStoreAuth } from '@/stores/storeAuth'
+import { useShowErrorMessage } from '@/userCases/useShowErrorMessage'
 
-import { ref } from 'vue'
+const storeProfissional = useStoreProfissional()
+const storeAuth = useStoreAuth()
+const { showError } = useShowErrorMessage()
+
 const formRef = ref(null)
 const perfil = ref({
   nome: '',
@@ -9,7 +16,7 @@ const perfil = ref({
   whatsapp: '',
   profissao: '',
   cnpj: '',
-  numeroConselho: '',
+  nConselho: '',
   endereco: {
     cep: '',
     rua: '',
@@ -26,7 +33,27 @@ const foto = ref(null)
 const fotoUrl = ref(null)
 const exibirEndereco = ref(false)
 const exibirDadosUsuario = ref(false)
+const snackbar = ref(false)
+const snackbarMessage = ref('')
+const snackbarColor = ref('success')
 
+onMounted(async () => {
+  storeProfissional.loadProfissional()
+  if (storeProfissional.profissionalDetails) {
+    perfil.value = {
+      ...storeProfissional.profissionalDetails,
+      email: storeAuth.userDetails.email || '',
+      endereco: {
+        cep: storeProfissional.profissionalDetails.cep || '',
+        rua: storeProfissional.profissionalDetails.logradouro || '',
+        complemento: storeProfissional.profissionalDetails.complemento || '',
+        bairro: storeProfissional.profissionalDetails.bairro || '',
+        cidade: storeProfissional.profissionalDetails.cidade || '',
+        estado: storeProfissional.profissionalDetails.estado || '',
+      }
+    }
+  }
+})
 
 function atualizarFoto(file) {
   if (file) {
@@ -38,21 +65,58 @@ function atualizarFoto(file) {
   }
 }
 
-function salvarPerfil() {
+async function salvarPerfil() {
   if (formRef.value?.validate()) {
-    alert('Perfil salvo com sucesso!')
+    try {
+      const profissionalData = {
+        ...storeProfissional.profissionalDetails,
+        nome: perfil.value.nome,
+        profissao: perfil.value.profissao,
+        cnpj: perfil.value.cnpj,
+        nConselho: perfil.value.nConselho,
+        cep: perfil.value.endereco.cep,
+        logradouro: perfil.value.endereco.rua,
+        cidade: perfil.value.endereco.cidade,
+        estado: perfil.value.endereco.estado,
+        bairro: perfil.value.endereco.bairro,
+        complemento: perfil.value.endereco.complemento
+      }
+
+      await storeProfissional.updateProfissional(profissionalData)
+      snackbarMessage.value = 'Perfil atualizado com sucesso!'
+      snackbarColor.value = 'success'
+    } catch (error) {
+      console.error(error)
+      snackbarMessage.value = 'Erro ao atualizar perfil.'
+      snackbarColor.value = 'error'
+    } finally {
+      snackbar.value = true
+    }
   }
 }
 
-function salvarSenha() {
+async function salvarSenha() {
   if (novaSenha.value.length < 6 || novaSenha.value !== confirmarSenha.value) {
-    alert('Erro: Senhas inválidas.')
+    snackbarMessage.value = 'Erro: Senhas inválidas.'
+    snackbarColor.value = 'error'
+    snackbar.value = true
     return
   }
-  alert('Senha alterada com sucesso!')
-  novaSenha.value = ''
-  confirmarSenha.value = ''
-  modalSenha.value = false
+
+  try {
+    await storeProfissional.updatePassword(novaSenha.value)
+    snackbarMessage.value = 'Senha alterada com sucesso!'
+    snackbarColor.value = 'success'
+    novaSenha.value = ''
+    confirmarSenha.value = ''
+    modalSenha.value = false
+  } catch (error) {
+    console.error(error)
+    snackbarMessage.value = 'Erro ao alterar senha.'
+    snackbarColor.value = 'error'
+  } finally {
+    snackbar.value = true
+  }
 }
 </script>
 
@@ -118,7 +182,7 @@ function salvarSenha() {
           <v-text-field label="Nome Completo" v-model="perfil.nome" required />
         </v-col>
         <v-col cols="12" sm="6">
-          <v-text-field label="Email" v-model="perfil.email" required type="email" />
+          <v-text-field label="Email" v-model="perfil.email" required type="email" disabled />
         </v-col>
         <v-col cols="12" sm="6">
           <v-text-field label="Telefone" v-model="perfil.telefone" type="tel" />
@@ -217,6 +281,15 @@ function salvarSenha() {
       </v-card-actions>
     </v-card>
   </v-dialog>
+
+  <!-- Snackbar para mensagens -->
+  <v-snackbar
+    v-model="snackbar"
+    :color="snackbarColor"
+    timeout="3000"
+  >
+    {{ snackbarMessage }}
+  </v-snackbar>
 </template>
 
 <style scoped>

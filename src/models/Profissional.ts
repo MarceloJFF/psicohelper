@@ -11,6 +11,7 @@ export default class Profissional {
   bairro: string = '';
   complemento: string = '';
   idUSer: string = '';
+  telefone: string = '';
 
   constructor() {}
 }
