@@ -10,51 +10,51 @@
               <v-form ref="form" v-model="valid">
                 <h3 class="m-6">Dados do Responsável</h3>
                 <v-row dense>
-                  <!-- Campos do cliente -->
+                  <!-- Campos do responsavel -->
                   <v-col cols="12" md="6">
                     <v-text-field
-                      v-model="cliente.nome"
+                      v-model="responsavel.nome"
                       label="Nome do Contratante"
                       :rules="[v => !!v || 'Campo obrigatório']"
                     />
                   </v-col>
                   <v-col cols="12" md="6">
-                    <v-text-field v-model="cliente.cpf" label="CPF"
+                    <v-text-field v-model="responsavel.cpf" label="CPF"
                                   :rules="[
                             v => !!v || 'Campo obrigatório',
                             v => /^\d{3}\.?\d{3}\.?\d{3}-?\d{2}$/.test(v) || 'CPF inválido'
                           ]"/>
                   </v-col>
                   <v-col cols="12" md="6">
-                    <v-text-field v-model="cliente.telefone" label="Telefone 1" :rules="[
+                    <v-text-field v-model="responsavel.telefone" label="Telefone 1" :rules="[
             v => !!v || 'Campo obrigatório',
             v => /^\(?\d{2}\)?[\s-]?\d{4,5}-?\d{4}$/.test(v) || 'Telefone inválido'
           ]" />
                   </v-col>
                   <v-col cols="12" md="6">
-                    <v-text-field v-model="cliente.telefone2" label="Telefone 2"  />
+                    <v-text-field v-model="responsavel.telefone2" label="Telefone 2"  />
                   </v-col>
                   <v-col cols="12" md="4">
-                    <v-text-field v-model="cliente.cep" label="CEP" :rules="[
+                    <v-text-field v-model="responsavel.cep" label="CEP" :rules="[
             v => !!v || 'Campo obrigatório',
             v => /^\d{5}-?\d{3}$/.test(v) || 'CEP inválido'
           ]" />
                   </v-col>
                   <v-col cols="12" md="8">
-                    <v-text-field v-model="cliente.logradouro" label="Endereço"            :rules="[v => !!v || 'Campo obrigatório']"
+                    <v-text-field v-model="responsavel.logradouro" label="Endereço"            :rules="[v => !!v || 'Campo obrigatório']"
                     />
                   </v-col>
                   <v-col cols="12" md="4">
-                    <v-text-field v-model="cliente.cidade" label="Cidade"           :rules="[v => !!v || 'Campo obrigatório']"
+                    <v-text-field v-model="responsavel.cidade" label="Cidade"           :rules="[v => !!v || 'Campo obrigatório']"
                     />
                   </v-col>
                   <v-col cols="12" md="4">
-                    <v-text-field v-model="cliente.estado" label="Estado"           :rules="[v => !!v || 'Campo obrigatório']"
+                    <v-text-field v-model="responsavel.estado" label="Estado"           :rules="[v => !!v || 'Campo obrigatório']"
                     />
                   </v-col>
                   <v-col cols="12" md="4">
                     <v-text-field
-                      v-model="cliente.nascimento"
+                      v-model="responsavel.nascimento"
                       label="Data de Nascimento"
                       type="date"
                       :rules="[v => !!v || 'Campo obrigatório']"
@@ -62,7 +62,7 @@
                     />
                   </v-col>
                   <v-col cols="12" md="8">
-                    <v-text-field v-model="cliente.email" label="Email"   :rules="[
+                    <v-text-field v-model="responsavel.email" label="Email"   :rules="[
             v => !!v || 'Campo obrigatório',
             v => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v) || 'Email inválido'
           ]" />
@@ -71,7 +71,7 @@
                     <h4 class="text-h5">O responsável é o próprio aprendente?</h4>
                     <div class="d-flex ">
                       <v-radio-group
-                        v-model="cliente.atendimentoProprio"
+                        v-model="responsavel.atendimentoProprio"
                         :rules="[v => v !== null || 'Escolha uma opção']"
                         row
                       >
@@ -85,7 +85,7 @@
                     <h4 class="text-h5">Sexo</h4>
                     <div class="d-flex ">
                       <v-radio-group
-                        v-model="cliente.sexo"
+                        v-model="responsavel.sexo"
                         :rules="[v => !!v || 'Selecione o sexo']"
                         row
                       >
@@ -96,7 +96,7 @@
                   </v-col>
                   <v-col cols="12" md="6">
                     <v-select
-                      v-model="cliente.tipoAtendimento"
+                      v-model="responsavel.tipoAtendimento"
                       :items="['Avulso', 'Contrato']"
                       label="Tipo de Atendimento"
                       :rules="[v => v !== null || 'Escolha uma opção']"
@@ -105,12 +105,12 @@
                 </v-row>
 
                 <!-- Dependentes -->
-                <div class="mt-6" v-if="cliente.atendimentoProprio === false"
+                <div class="mt-6" v-if="responsavel.atendimentoProprio === false"
                 >
                   <h3 class="text-subtitle-1 font-weight-medium mb-2">Aprendentes</h3>
-                  <v-row v-for="(dep, i) in cliente.dependentes" :key="i" dense>
+                  <v-row v-for="(dep, i) in responsavel.aprendentes" :key="i" dense>
                     <v-col cols="6">
-                      <v-text-field v-model="dep.nome" label="Nome do Dependente"          :rules="[v => !!v || 'Campo obrigatório']"
+                      <v-text-field v-model="dep.nomeAprendente" label="Nome do Aprendente"          :rules="[v => !!v || 'Campo obrigatório']"
                       />
                     </v-col>
                     <v-col cols="4">
@@ -123,17 +123,17 @@
                     </v-col>
 
                     <v-col cols="2" class="d-flex align-end">
-                      <v-btn icon color="red" @click="removerDependente(i)">
+                      <v-btn icon color="red" @click="Aprendente(i)">
                         <v-icon>mdi-delete</v-icon>
                       </v-btn>
                     </v-col>
                   </v-row>
                   <v-btn
-                    v-if="cliente.atendimentoProprio === false"
+                    v-if="responsavel.atendimentoProprio === false"
                     class="mt-2"
                     variant="text"
                     color="primary"
-                    @click="adicionarDependente"
+                    @click="adicionarAprendente"
                   >
                     <v-icon start>mdi-plus</v-icon> Adicionar Aprendente
                   </v-btn>
@@ -184,15 +184,15 @@
                   </div>
                 </div>
                 <v-alert
-                  v-if="cliente.tipoAtendimento === 'Contrato' && !contrato.cadastrado"
+                  v-if="responsavel.tipoAtendimento === 'Contrato' && !contrato.cadastrado"
                   type="info"
                   class="mt-4"
                 >
-                  Gere o modelo de contrato para o cliente.
+                  Gere o modelo de contrato para o responsavel.
                 </v-alert>
 
                 <v-btn
-                  v-if="cliente.tipoAtendimento === 'Contrato' && !contrato.cadastrado"
+                  v-if="responsavel.tipoAtendimento === 'Contrato' && !contrato.cadastrado"
                   class="mt-2"
                   variant="text"
                   color="green"
@@ -205,7 +205,7 @@
                 <v-row class="mt-8">
                   <v-btn text color="red" @click="cancelar">Cancelar</v-btn>
                   <v-spacer />
-                  <v-btn color="primary" @click="salvar">Cadastrar Cliente</v-btn>
+                  <v-btn color="primary" @click="salvar">Cadastrar Responsavel</v-btn>
                 </v-row>
               </v-form>
             </v-card>
@@ -219,103 +219,11 @@
         </v-row>
 
         <!-- Modal para gerar contrato -->
-        <v-dialog v-model="modalContrato" max-width="700">
-          <v-card>
-            <v-card-title class="headline">Gerar Contrato</v-card-title>
-            <v-card-text>
-              <v-row dense>
-                <v-col
-                  cols="12"
-                  v-for="(dia, index) in novoContrato.diasAtendimento"
-                  :key="index"
-                >
-                  <v-row>
-                    <v-col cols="4">
-                      <v-select
-                        v-model="dia.dia"
-                        label="Dia da semana"
-                        :items="['Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado']"
-                      />
-                    </v-col>
-                    <v-col cols="8">
-                      <v-row>
-                        <v-col cols="4">
-                          <v-text-field
-                            v-model="dia.inicio"
-                            type="time"
-                            label="Início"
-                            variant="outlined"
-                            density="compact"
-                            class="grey lighten-3"
-                            hide-details
-                            @change="atualizarHorario(dia)"
-                          />
-                        </v-col>
-                        <v-col cols="4">
-                          <v-text-field
-                            v-model="dia.fim"
-                            type="time"
-                            label="Término"
-                            variant="outlined"
-                            density="compact"
-                            class="grey lighten-3"
-                            hide-details
-                            @change="atualizarHorario(dia)"
-                          />
-                        </v-col>
-                        <v-col cols="2" class="d-flex align-end">
-                          <v-btn icon color="red" @click="removerDiaAtendimento(index)">
-                            <v-icon>mdi-delete</v-icon>
-                          </v-btn>
-                        </v-col>
-                        <v-col cols="2" class="d-flex align-end">
-                          <v-btn icon color="primary" @click="adicionarDiaAtendimento">
-                            <v-icon>mdi-plus</v-icon>
-                          </v-btn>
-                        </v-col>
-                      </v-row>
-                    </v-col>
-                  </v-row>
-                </v-col>
-
-                <v-col cols="6">
-                  <v-text-field
-                    v-model="novoContrato.valorMensal"
-                    label="Valor Mensal (R$)"
-                    type="number"
-                  />
-                </v-col>
-                <v-col cols="6">
-                  <v-text-field
-                    v-model="novoContrato.duracao"
-                    label="Duração (meses)"
-                    type="number"
-                  />
-                </v-col>
-                <v-col cols="6">
-                  <v-text-field
-                    v-model="novoContrato.vencimento"
-                    label="Data de Vencimento"
-                    :disabled="true"
-                  />
-                </v-col>
-                <v-col cols="12">
-                  <v-textarea
-                    v-model="novoContrato.descricao"
-                    label="Descrição do Serviço"
-                    rows="3"
-                  />
-                </v-col>
-              </v-row>
-            </v-card-text>
-            {{novoContrato}}
-            <v-card-actions>
-              <v-spacer />
-              <v-btn color="red" @click="modalContrato = false">Fechar</v-btn>
-              <v-btn color="primary" @click="salvarContrato">Salvar Contrato</v-btn>
-            </v-card-actions>
-          </v-card>
-        </v-dialog>
+        <ModalContrato
+          v-model="modalContrato"
+          :contrato-inicial="novoContrato"
+          @salvar="salvarContrato"
+        />
       </v-container>
     </v-main>
   </v-layout>
@@ -326,10 +234,10 @@ import { ref } from 'vue'
 import {useRouter} from 'vue-router'
 import Todo from '@/components/todo.vue'
 import CalendarioDiario from '@/components/calendario-diario.vue'
+import ModalContrato from '@/components/ModalContrato.vue'
 import { ContratoService } from '@/services/contratoService.ts'
-import { ClienteService } from '@/services/clienteService'
+import { ResponsavelService } from '@/services/responsavelService'
 import { AprendenteService } from '@/services/AprendenteService.ts'
-
 import Contrato from '@/models/Contrato.ts'
 import type DiasAtendimentoContrato from '@/models/DiasAtendimentoContrato.ts'
 const valid = ref(false)
@@ -337,10 +245,10 @@ const form = ref()
 const modalContrato = ref(false)
 const router = useRouter()
 const contratoService = new ContratoService();
-const clienteService = new ClienteService()
-const dependenteService = new AprendenteService()
+const responsavelService = new ResponsavelService()
+const aprendenteService = new AprendenteService()
 
-const cliente = ref({
+const responsavel = ref({
   nome: '',
   cpf: '',
   telefone: '',
@@ -354,7 +262,7 @@ const cliente = ref({
   nascimento: '',
   email: '',
   tipoAtendimento: '',
-  dependentes: [] as { nome: string; nascimento: string ; }[],
+  aprendentes: [] as { nomeAprendente: string; nascimento: string ;  idResponsavel:string}[],
   contrato: null as typeof contrato.value | null
 })
 const contrato = ref(new Contrato());
@@ -370,49 +278,33 @@ novoContrato.value = {
   descricao: '',
 }
 
-const adicionarDependente = () => {
-  if (cliente.value.dependentes.length >= 1) {
+const adicionarAprendente = () => {
+  if (responsavel.value.aprendentes.length >= 1) {
     alert("Apenas um aprendente pode ser adicionado.");
     return;
   }
 
-  cliente.value.dependentes.push({ nome: '', nascimento: '' });
+  responsavel.value.aprendentes.push({ nomeAprendente: '', nascimento: '' ,idResponsavel:''});
 };
 
-const removerDependente = (index: number) => {
-  cliente.value.dependentes.splice(index, 1)
+const removerAprendente = (index: number) => {
+  responsavel.value.aprendentes.splice(index, 1)
 }
 
-const adicionarDiaAtendimento = () => {
-// After:
-  novoContrato?.value.diasAtendimento.push({
-    id: '',
-    dia: '',
-    inicio: '',
-    fim: '',
-    contratoId: '',
-  })}
-
-const removerDiaAtendimento = (index: number) => {
-  novoContrato?.value.diasAtendimento.splice(index, 1)
-}
-
-const salvarContrato = () => {
-
+const salvarContrato = (contratoSalvo: Contrato) => {
   contrato.value = {
-    ...novoContrato.value,
+    ...contratoSalvo,
     cadastrado: true,
-    diasAtendimento: [...novoContrato.value.diasAtendimento], // copiar corretamente
+    diasAtendimento: [...contratoSalvo.diasAtendimento],
   }
-  cliente.value.contrato = contrato.value;
-  modalContrato.value = false
+  responsavel.value.contrato = contrato.value;
 }
 
 const cancelar = () => {
   router.push({ name: 'home' }) // ou use o path: router.push('/')
 }
-const limparClienteState = () => {
-  cliente.value = {
+const limparResponsavelState = () => {
+  responsavel.value = {
     nome: '',
     cpf: '',
     telefone: '',
@@ -426,35 +318,29 @@ const limparClienteState = () => {
     nascimento: '',
     email: '',
     tipoAtendimento: '',
-    dependentes: [] as { nome: string; nascimento: string }[],
+    aprendentes: [] as { nomeAprendente: string; nascimento: string ;  idResponsavel:string}[],
     contrato: null,
   };
   contrato.value = new Contrato();
   contrato.value.cadastrado = false;
   contrato.value.diasAtendimento = [];
+  novoContrato.value = new Contrato();
 };
 
 const salvar = () => {
   form.value?.validate().then(async (result: any) => {
-    console.log( cliente.value)
     if (result.valid) {
+      console.log( responsavel.value)
 
-      if (cliente.value.tipoAtendimento == 'Contrato' && contrato.value.cadastrado) {
-        await clienteService.addCliente(cliente.value);
-        alert("Cliente salvo com sucesso!");
+      if (responsavel.value.tipoAtendimento == 'Contrato' && contrato.value.cadastrado) {
+        await responsavelService.addResponsavel(responsavel.value);
+        alert("responsavel salvo com sucesso!");
       } else {
-        await clienteService.addCliente(cliente.value);
-        alert("Cliente salvo com sucesso com contrato!");
+        await responsavelService.addResponsavel(responsavel.value);
+        alert("responsavel salvo com sucesso com contrato!");
       }
-      limparClienteState();
+      limparResponsavelState();
     }
   });
 };
-
-const atualizarHorario = (dia: { inicio: string, fim: string }) => {
-  // Força a atualização do objeto e pode disparar qualquer lógica adicional
-  dia.inicio = dia.inicio.trim()
-  dia.fim = dia.fim.trim()
-  // Se tiver alguma lógica de validação, invoque aqui
-}
 </script>

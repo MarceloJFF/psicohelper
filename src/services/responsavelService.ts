@@ -2,23 +2,23 @@ import supabase from '/src/config/supabase'
 import { useStoreProfissional } from '/src/stores/storeProfissional'
 import { ContratoService } from '@/services/contratoService.ts'
 import { AprendenteService } from '@/services/AprendenteService.ts'
-import { DiasAtendimentoService } from '@/services/DiasAtendimentoContrato.ts'
+import { DiasAtendimentosContratoService } from '@/services/diasAtendimentosContratoService.ts'
 
-import { useShowErrorMessage } from '/src/userCases/useShowErrorMessage'
+import { useShowErrorMessage } from '@/userCases/useShowErrorMessage'
 import Responsavel from '@/models/Responsavel'
 
-export class ClienteService {
+export class ResponsavelService {
   private showError: (msg: string) => void
   private readonly storeProfissional = useStoreProfissional()
   private contratoService = new ContratoService()
   private aprendenteService = new AprendenteService()
-  private diasAtendimentoService= new DiasAtendimentoService();
+  private diasAtendimentoService= new DiasAtendimentosContratoService();
 
   constructor() {
     this.showError = useShowErrorMessage().showError
   }
 
-  async loadClientes(): Promise<Responsavel[]> {
+  async loadResponsaveis(): Promise<Responsavel[]> {
     try {
       const idProfissional = this.storeProfissional.profissionalDetails?.id
       if (!idProfissional) {
@@ -40,13 +40,13 @@ export class ClienteService {
     }
   }
 
-  async addCliente(responsavel: any): Promise<void> {
+  async addResponsavel(responsavel: any): Promise<void> {
     try {
       responsavel.idProfissional = this.storeProfissional.profissionalDetails?.id || ''
       responsavel.status = true
       const { data, error } = await supabase.from('tb_responsavel').insert([
           {
-            nome_cliente: responsavel.nome,
+            nome: responsavel.nome,
             cpf: responsavel.cpf,
             telefone: responsavel.telefone,
             telefone2: responsavel.telefone2,
@@ -65,18 +65,23 @@ export class ClienteService {
         ]).select()
 
       if (error) throw error
-
-      if (responsavel.dependentes?.length > 0) {
-        for (const dependente of responsavel.dependentes) {
-          dependente.idCliente = data[0].id; // Ajuste se necessário
-          await this.aprendenteService.addDependente(dependente)
+      let idAprendente= '';
+      if (responsavel.aprendentes?.length > 0) {
+        for (const aprendente of responsavel.aprendentes) {
+          aprendente.idResponsavel = data[0].id; // Ajuste se necessário
+          idAprendente = await this.aprendenteService.addAprendente(aprendente)
+          if (!idAprendente) {
+            throw new Error('Erro ao adicionar aprendente')
+          }
         }
       }
       if (responsavel.contrato) {
         console.log(responsavel)
         const idResponsavel = data[0].id;
-        const idContrato = await this.contratoService.addContrato(responsavel.contrato,idResponsavel)
-        this.diasAtendimentoService.addDiasAtendimento(responsavel.contrato.diasAtendimento, idContrato)
+        const idContrato = await this.contratoService.addContrato(responsavel.contrato,idResponsavel,idAprendente)
+        if (idContrato) {
+          this.diasAtendimentoService.addDiasAtendimento(responsavel.contrato.diasAtendimento, idContrato)
+        }
       }
 
     } catch (err: any) {
@@ -93,7 +98,7 @@ export class ClienteService {
 
       const { data: responsaveis, error: erroClientes } = await supabase
         .from('tb_responsavel')
-        .select('id, nome_cliente, telefone, atendimento_proprio')
+        .select('id, nome, telefone, atendimento_proprio')
         .eq('id_profissional', idProfissional)
 
       if (erroClientes) throw erroClientes
@@ -106,7 +111,7 @@ export class ClienteService {
 
       const { data: aprendentes, error: erroAprendentes } = await supabase
         .from('tb_aprendente')
-        .select('id, nome_dependente, id_responsavel')
+        .select('id, nome_aprendente, id_responsavel')
         .in('id_responsavel', idsResponsaveis.length > 0 ? idsResponsaveis : [-1])
 
       if (erroAprendentes) throw erroAprendentes
@@ -124,16 +129,16 @@ export class ClienteService {
             atendimentoProprio:responsavel.atendimento_proprio
           })
         } else {
-          const dependentesDoCliente = aprendentes.filter(dep => dep.id_cliente === responsavel.id)
-          for (const dep of dependentesDoCliente) {
+          const aprendentesDoResponsavel = aprendentes.filter(aprendente => aprendente.id_responsavel === responsavel.id)
+          for (const aprendente of aprendentesDoResponsavel) {
             listaFinal.push({
-              idAprendente: dep.id,
-              nomeAprendente: dep.nome_aprendente,
+              idAprendente: aprendente.id,
+              nomeAprendente: aprendente.nome_aprendente,
               nomeResponsavel: responsavel.nome,
               telefoneResponsavel: responsavel.telefone,
               atendimentoProprio:responsavel.atendimento_proprio,
               idResponsavel:responsavel.id,
-
+              
             })
           }
         }
@@ -150,7 +155,7 @@ export class ClienteService {
 
 
 
-  async updateCliente(responsavel: Responsavel): Promise<void> {
+  async updateResponsavel(responsavel: Responsavel): Promise<void> {
     try {
       const { error } = await supabase
         .from('tb_responsavel')

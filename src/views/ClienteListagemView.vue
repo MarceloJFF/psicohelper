@@ -75,7 +75,7 @@
                     <v-btn icon @click="removerAprendente(item)">
                       <v-icon color="red">mdi-delete</v-icon>
                     </v-btn>
-                    <v-btn icon @click="visualizarCliente(item)">
+                    <v-btn icon @click="visualizarResponsavel(item)">
                       <v-icon color="primary">mdi-eye</v-icon>
                     </v-btn>
                   </template>
@@ -99,17 +99,17 @@
       </v-overlay>
 
       <!-- Modal de cliente -->
-      <ModalGenerico v-model="showModal" :title="modoEdicao ? 'Editar Cliente' : 'Cadastrar Novo Cliente'">
+      <ModalGenerico v-model="showModal" :title="modoEdicao ? 'Editar Responsavel' : 'Cadastrar Novo Responsavel'">
         <template #content>
           <v-form>
-            <v-text-field v-model="clienteAtual.nomeCliente" label="Nome" />
-            <v-text-field v-model="clienteAtual.telefone" label="Telefone" />
-            <v-text-field v-model="clienteAtual.email" label="Email" />
-            <v-text-field v-model="clienteAtual.tipoAtendimento" label="Tipo de Atendimento" />
+            <v-text-field v-model="responsavelAtual.nome" label="Nome" />
+            <v-text-field v-model="responsavelAtual.telefone" label="Telefone" />
+            <v-text-field v-model="responsavelAtual.email" label="Email" />
+            <v-text-field v-model="responsavelAtual.tipoAtendimento" label="Tipo de Atendimento" />
           </v-form>
         </template>
         <template #actions>
-          <v-btn color="green" @click="salvarCliente">Salvar</v-btn>
+          <v-btn color="green" @click="salvarResponsavel">Salvar</v-btn>
           <v-btn color="grey" @click="showModal = false">Cancelar</v-btn>
         </template>
       </ModalGenerico>
@@ -119,7 +119,7 @@
         <v-card>
           <v-card-title class="text-h6">Confirmar inativação</v-card-title>
           <v-card-text>
-            Tem certeza que deseja inativar o cliente <strong>{{ clienteParaInativar?.nomeCliente }}</strong>?
+            Tem certeza que deseja inativar o cliente <strong>{{ responsavelParaInativar?.nome }}</strong>?
           </v-card-text>
           <v-card-actions>
             <v-spacer />
@@ -135,13 +135,13 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { ClienteService } from '@/services/clienteService'
-import Cliente from '@/models/Cliente'
+import { ResponsavelService } from '@/services/responsavelService'
+import Responsavel from '@/models/Responsavel'
 import CalendarioDiario from '@/components/calendario-diario.vue'
 import Todo from '@/components/todo.vue'
 import ModalGenerico from '@/components/ModalGenerico.vue'
 
-const clienteService = new ClienteService()
+const responsavelService = new ResponsavelService()
 const showModal = ref(false)
 const modoEdicao = ref(false)
 const indexEdicao = ref<number | null>(null)
@@ -149,8 +149,8 @@ const router = useRouter()
 const search = ref('')
 const loading = ref(true)
 
-const clienteAtual = ref<Cliente>(new Cliente())
-const clienteParaInativar = ref<Cliente | null>(null)
+const responsavelAtual = ref<Responsavel>(new Responsavel())
+const responsavelParaInativar = ref<Responsavel | null>(null)
 const dialogConfirmacao = ref(false)
 
 const abrirModalNovo = () => {
@@ -163,11 +163,11 @@ const aprendentes = ref([])
 
 onMounted(async () => {
   loading.value = true
-  aprendentes.value = await clienteService.loadAprendentes()
+  aprendentes.value = await responsavelService.loadAprendentes()
   loading.value = false
 })
 
-const clientes = ref([])
+const responsaveis = ref([])
 
 
 function editarAprendente(item: any) {
@@ -186,12 +186,12 @@ const headers = [
   { title: 'Ações', key: 'actions', sortable: false },
 ]
 
-const loadClientes = async () => {
+const loadResponsaveis = async () => {
   loading.value = true
   try {
-    clientes.value = await clienteService.loadClientes()
+    responsaveis.value = await responsavelService.loadResponsaveis()
   } catch (error) {
-    console.error('Erro ao carregar clientes:', error)
+    console.error('Erro ao carregar responsaveis:', error)
   } finally {
     loading.value = false
   }
@@ -199,30 +199,30 @@ const loadClientes = async () => {
 
 
 
-const abrirModalEdicao = (item: Cliente, index: number) => {
-  clienteAtual.value = { ...item }
+const abrirModalEdicao = (item: Responsavel, index: number) => {
+  responsavelAtual.value = { ...item }
   indexEdicao.value = index
   modoEdicao.value = true
   showModal.value = true
 }
 
-const salvarCliente = () => {
+const salvarResponsavel = () => {
   if (modoEdicao.value && indexEdicao.value !== null) {
-    clientes.value[indexEdicao.value] = { ...clienteAtual.value }
+    responsaveis.value[indexEdicao.value] = { ...responsavelAtual.value }
   } else {
-    clientes.value.push({ ...clienteAtual.value })
+    responsaveis.value.push({ ...responsavelAtual.value })
   }
   showModal.value = false
   modoEdicao.value = false
   indexEdicao.value = null
 }
 
-const visualizarCliente = (cliente) => {
+const visualizarResponsavel = (responsavel) => {
   router.push({
     name: 'cliente-detalhes',
     params: {
-      idResponsavel: cliente.idResponsavel,
-      idAprendente: cliente.idAprendente || undefined, // se for falsy, não envia
+      idResponsavel: responsavel.idResponsavel,
+      idAprendente: responsavel.idAprendente || undefined, // se for falsy, não envia
     },
   })
 }
@@ -231,8 +231,8 @@ function formatarTelefone(telefone: string): string {
   return telefone.replace(/^(\d{2})(\d{4,5})(\d{4})$/, '($1) $2-$3')
 }
 
-const confirmarInativacao = (cliente: Cliente) => {
-  clienteParaInativar.value = cliente
+const confirmarInativacao = (responsavel: Responsavel) => {
+  responsavelParaInativar.value = cliente
   dialogConfirmacao.value = true
 }
 </script>

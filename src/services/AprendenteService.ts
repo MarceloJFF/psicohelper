@@ -34,18 +34,19 @@ export class AprendenteService {
     return data
   }
 
-  async addAprendente(aprendente:any): Promise<void> {
+  async addAprendente(aprendente: Aprendente): Promise<string | undefined> {
     try {
-      const { data,error } = await supabase
+      const { data, error } = await supabase
         .from('tb_aprendente')
         .insert([{
           nome_aprendente: aprendente.nomeAprendente,
           id_responsavel: aprendente.idResponsavel,
           nascimento: aprendente.nascimento,
-          sexo: aprendente.sexo,
+          sexo: aprendente.sexo || '',
         }]).select()
-      return data[0].id
       if (error) throw error
+      return data[0].id
+
     } catch (err: any) {
       this.showError(err.message || 'Erro ao adicionar aprendente')
     }

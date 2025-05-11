@@ -66,12 +66,12 @@
                         <strong>Duração:</strong> {{ contrato.duracao }} meses<br />
                         <strong>Vencimento:</strong> {{ contrato.vencimento }}<br />
                         <strong>Descrição:</strong> {{ contrato.descricao_servico }}<br />
-                        <strong>Dias:</strong>
-                        <ul style="list-style-type: none; padding-left: 0;">
-                          <li v-for="dia in contrato.diasAtendimento" :key="dia.dia">
-                            {{ dia.dia }} ({{ dia.inicio }} - {{ dia.fim }})
-                          </li>
-                        </ul>
+                        <strong>Status:</strong> {{ contrato.cadastrado ? 'Ativo' : 'Inativo' }}<br />
+                        <strong>Dias: </strong>
+                        <v-chip v-for="dia in contrato.diasAtendimento" :key="dia.dia" class="ma-1">
+                          {{ dia.dia }} ({{ dia.inicio }} - {{ dia.fim }})
+                        </v-chip>
+                    
 
                       </v-card>
                     </v-timeline-item>
@@ -112,11 +112,11 @@ import { ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import CalendarioDiario from '@/components/calendario-diario.vue'
 import Todo from '@/components/todo.vue'
-import ResumoCliente from '@/components/ResumoCliente.vue'
+import ResumoCliente from '@/components/ResumoResponsavel.vue'
 import { onMounted } from 'vue'
-import {ClienteService} from '@/services/clienteService.ts'
+import {ResponsavelService} from '@/services/responsavelService.ts'
 import {ContratoService} from '@/services/contratoService.ts'
-import {DiasAtendimentoService} from '@/services/DiasAtendimentosContratoService.ts'
+import {DiasAtendimentosContratoService} from '@/services/DiasAtendimentosContratoService'
 
 const route = useRoute()
 const router = useRouter()
@@ -124,12 +124,12 @@ const router = useRouter()
 
 const idResponsavel = route.params.idResponsavel as string
 const idAprendente = route.params.idAprendente as string | undefined
-const clienteService =  new ClienteService();
+const responsavelService =  new ResponsavelService();
 const responsavelDetalhes = ref();
-const diasAtendimento = new DiasAtendimentoService()
+const diasAtendimento = new DiasAtendimentosContratoService()
 const contratoService = new ContratoService()
 onMounted(async()=>{
-  responsavelDetalhes.value = await clienteService.getClienteById(idResponsavel)
+  responsavelDetalhes.value = await responsavelService.getResponsavelById(idResponsavel)
   await buscarContratos()
 
 })
@@ -162,7 +162,7 @@ const contrato = ref({
   descricao: '',
 })
 
-const cliente = ref({
+const responsavel = ref({
   nome: '',
   cpf: '',
   telefone1: '',
@@ -180,11 +180,11 @@ const cliente = ref({
   contrato: contrato.value
 })
 
-cliente.value = {
-  ...cliente.value,
+responsavel.value = {
+  ...responsavel.value,
   nome: route.query.nome as string || '',
   cpf: route.query.cpf as string || '',
-  telefone1: route.query.telefone1 as string || '',
+  telefone: route.query.telefone as string || '',
   telefone2: route.query.telefone2 as string || '',
   cep: route.query.cep as string || '',
   endereco: route.query.endereco as string || '',
@@ -195,12 +195,12 @@ cliente.value = {
   nascimento: route.query.nascimento as string || '',
   email: route.query.email as string || '',
   tipoAtendimento: route.query.tipoAtendimento as string || '',
-  dependentes: JSON.parse(route.query.dependentes as string || '[]'),
+  aprendente: JSON.parse(route.query.aprendente as string || '[]'),
   contrato: JSON.parse(route.query.contrato as string || 'null')
 }
 
 const camposPrincipais = {
-  nome_cliente: 'Nome',
+  nome: 'Nome',
   cpf: 'CPF',
   telefone: 'Telefone 1',
   telefone2: 'Telefone 2',
@@ -219,10 +219,10 @@ const voltar = () => {
   router.back()
 }
 
-const salvarCliente = async () => {
+const salvarResponsavel = async () => {
   try {
     // Aqui você pode usar uma chamada de API real (axios ou fetch)
-    console.log('Cliente salvo:', cliente.value)
+    console.log('Cliente salvo:', responsavel.value)
     snackbarMessage.value = 'Dados salvos com sucesso!'
     snackbarColor.value = 'success'
   } catch (error) {

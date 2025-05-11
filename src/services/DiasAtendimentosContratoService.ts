@@ -3,7 +3,7 @@ import supabase from '@/config/supabase'
 import DiasAtendimentoContrato from '@/models/DiasAtendimentoContrato'
 import { useShowErrorMessage } from '@/userCases/useShowErrorMessage'
 
-export class DiasAtendimentoService {
+export class DiasAtendimentosContratoService {
   private showError = useShowErrorMessage().showError
 
   async loadDiasAtendimento(contratoId: string): Promise<DiasAtendimentoContrato[]> {

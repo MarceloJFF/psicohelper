@@ -1,4 +1,3 @@
-import  Cliente from '@/models/Responsavel'
 import  Profissional from '@/models/Profissional.ts'
 import type DiasAtendimentoContrato from '@/models/DiasAtendimentoContrato.ts'
 
