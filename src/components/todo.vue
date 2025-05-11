@@ -1,8 +1,8 @@
 <template>
   <v-card class="pa-6" elevation="2" width="100%">
-    <v-card-title class="text-h6 font-weight-bold pb-4">Task List</v-card-title>
+    <v-card-title class="text-h6 font-weight-bold pb-4">Tarefas do Dia</v-card-title>
 
-    <div class="mb-2 font-weight-medium">Checklist Items</div>
+    <div class="mb-2 font-weight-medium"> </div>
 
     <!-- Container com scroll -->
     <div class="task-list-container" style="max-height: 300px; overflow-y: auto;">

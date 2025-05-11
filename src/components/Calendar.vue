@@ -66,7 +66,7 @@
                 <v-select
                   label="Tipo de Atendimento"
                   v-model="eventData.tipoAtendimento"
-                  :items="['Avulso', 'Plano Mensal']"
+                  :items="['Avulso', 'Contrato']"
                   required
                 />
               </v-col>
@@ -84,6 +84,13 @@
                 <v-text-field
                   label="Cliente"
                   v-model="eventData.cliente"
+                />
+              </v-col>
+
+              <v-col cols="12">
+                <v-text-field
+                  label="Observações"
+                  v-model="eventData.observacoes"
                 />
               </v-col>
 
@@ -167,7 +174,8 @@ const defaultEventData = () => ({
   cliente: '',
   tipoAtendimento: '',
   valorAtendimentoAvulso: '',
-  color: '#1976d2'
+  color: '#1976d2',
+  observacoes:''
 })
 
 const eventData = ref(defaultEventData())

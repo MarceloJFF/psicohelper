@@ -57,7 +57,7 @@
                 >
                   <!-- Telefone com ícone do WhatsApp -->
                   <template v-slot:item.telefoneResponsavel="{ item }">
-                    {{item}}
+
                     <span>{{ formatarTelefone(item.telefoneResponsavel) }}</span>
                     <a
                       :href="`https://wa.me/55${item.telefoneResponsavel}`"
@@ -205,12 +205,6 @@ const abrirModalEdicao = (item: Cliente, index: number) => {
   modoEdicao.value = true
   showModal.value = true
 }
-// const visualizarCliente = (cliente: Cliente) => {
-//   router.push({
-//     name: 'cliente-detalhes',
-//     params: { id: cliente.id },
-//   })
-// }
 
 const salvarCliente = () => {
   if (modoEdicao.value && indexEdicao.value !== null) {

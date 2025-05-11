@@ -23,7 +23,42 @@ export class ContratoService {
     }
   }
 
-  async addContrato(contrato: Contrato, idResponsavel: string): Promise<void> {
+
+
+
+
+
+  async loadContratoPorAprendente(idAprendente: string): Promise<Contrato | null> {
+    try {
+      const { data, error } = await supabase
+        .from('tb_contrato')
+        .select('*')
+        .eq('id_aprendente', idAprendente).select()
+
+      if (error) throw error
+      return data as Contrato
+    } catch (err: any) {
+      this.showError(err.message || 'Erro ao buscar contrato por aprendente')
+      return null
+    }
+  }
+
+
+  async adicionarAprendenteAoContrato(idContrato: string, idAprendente: string): Promise<void> {
+    try {
+      const { error } = await supabase
+        .from('tb_contrato')
+        .update({ id_aprendente: idAprendente })
+        .eq('id_contrato', idContrato)
+
+      if (error) throw error
+    } catch (err: any) {
+      this.showError(err.message || 'Erro ao associar aprendente ao contrato')
+    }
+  }
+
+
+  async addContrato(contrato: Contrato, idResponsavel:string): Promise<void> {
     try {
       contrato.idProfissional = this.profissionalStore.profissionalDetails?.id || ''
       const {data, error } = await supabase

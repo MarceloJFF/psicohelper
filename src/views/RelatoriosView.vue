@@ -127,6 +127,17 @@
         <v-card-text>
           <v-text-field label="Nome do Arquivo" v-model="novoArquivoNome" />
           <v-file-input label="Selecionar Arquivo" v-model="novoArquivo" />
+          <v-autocomplete
+            v-model="aprendenteSelecionado"
+            :items="aprendentesEncontrados"
+            item-title="nome"
+            item-value="id"
+            label="Escolha o nome do aprendente"
+            clearable
+            return-object
+            @update:search="onBuscaAprendente"
+          />
+
         </v-card-text>
         <v-card-actions>
           <v-spacer />
@@ -138,9 +149,33 @@
   </v-container>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { ref, computed } from 'vue'
+import { AprendenteService } from '@/services/AprendenteService'
+const aprendenteBusca = ref('')
+const aprendentesEncontrados = ref([])
+const aprendenteSelecionado = ref(null)
+const aprendenteService = new AprendenteService()
+const onBuscaAprendente = async (search: string) => {
+  console.log('Termo de busca:', search); // Verifique no console se está sendo chamado
 
+  if (!search || search.length < 3) {
+    aprendentesEncontrados.value = [];
+    return;
+  }
+
+  try {
+    const resultado = await aprendenteService.buscarAprendentesPorNome(search);
+    aprendentesEncontrados.value = resultado.map(a => ({
+      id: a.id,
+      nome: a.nome_dependente
+    }));
+    console.log('Resultados encontrados:', aprendentesEncontrados.value); // Verifique os resultados
+  } catch (error) {
+    console.error('Erro na busca de aprendentes:', error);
+    aprendentesEncontrados.value = [];
+  }
+}
 let idCounter = 1
 const pastas = ref([
   { id: idCounter++, nome: 'Psicopedagogia', parentId: null },
