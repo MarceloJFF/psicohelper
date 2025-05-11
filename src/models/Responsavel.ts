@@ -1,8 +1,8 @@
 import type Profissional from '@/models/Profissional.ts'
 
-export default class Cliente {
+export default class Responsavel {
   id: string = '';
-  nomeCliente: string='';
+  nome: string='';
   cpf: string ='';
   telefone: string ='';
   telefone2: string = '';

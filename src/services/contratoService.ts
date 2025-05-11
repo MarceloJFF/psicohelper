@@ -8,12 +8,12 @@ export class ContratoService {
   private showError = useShowErrorMessage().showError
   private profissionalStore = useStoreProfissional()
 
-  async loadContratos(idCliente: string): Promise<Contrato[]> {
+  async loadContratos(idResponsavel: string): Promise<Contrato[]> {
     try {
       const { data, error } = await supabase
         .from('tb_contrato')
         .select('*')
-        .eq('id_cliente', idCliente)
+        .eq('id_responsavel', idResponsavel)
 
       if (error) throw error
       return data as Contrato[]
@@ -23,7 +23,7 @@ export class ContratoService {
     }
   }
 
-  async addContrato(contrato: Contrato, idCliente): Promise<void> {
+  async addContrato(contrato: Contrato, idResponsavel: string): Promise<void> {
     try {
       contrato.idProfissional = this.profissionalStore.profissionalDetails?.id || ''
       const {data, error } = await supabase
@@ -34,7 +34,7 @@ export class ContratoService {
           vencimento: contrato.vencimento,
           cadastrado: contrato.cadastrado,
           descricao_servico: contrato.descricao,
-          id_cliente: idCliente,
+          id_responsavel: idResponsavel,
           id_profissional: contrato.idProfissional
           }
         ).select()

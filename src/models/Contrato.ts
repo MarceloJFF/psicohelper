@@ -1,4 +1,4 @@
-import  Cliente from '@/models/Cliente.ts'
+import  Cliente from '@/models/Responsavel'
 import  Profissional from '@/models/Profissional.ts'
 import type DiasAtendimentoContrato from '@/models/DiasAtendimentoContrato.ts'
 
@@ -14,8 +14,7 @@ export default class Contrato {
   descricaoServico: string = ''
   idDiasAtendimento:string = ''
   diasAtendimento?:DiasAtendimentoContrato[]
-  idCliente: string = ''
-  cliente?: Cliente
+  idResponsavel: string = ''
   idProfissional: string = ''
   profissional?: Profissional
   cadastrado: boolean = false;

@@ -1,58 +1,59 @@
 // src/services/AprendenteService.ts
 import supabase from '@/config/supabase'
-import Dependente from '@/models/Dependente'
+import Aprendente from '@/models/Aprendente'
 import { useShowErrorMessage } from '@/userCases/useShowErrorMessage'
 
 export class AprendenteService {
   private showError = useShowErrorMessage().showError
 
-  async loadDependentes(idCliente: string): Promise<Dependente[]> {
+  async loadAprendentes(idResponsavel: string): Promise<Aprendente[]> {
     try {
       const { data, error } = await supabase
         .from('tb_aprendente')
         .select('*')
-        .eq('id_cliente', idCliente)
+        .eq('id_responsavel', idResponsavel)
 
       if (error) throw error
-      return data as Dependente[]
+      return data as Aprendente[]
     } catch (err: any) {
-      this.showError(err.message || 'Erro ao carregar dependentes')
+      this.showError(err.message || 'Erro ao carregar aprendentes')
       return []
     }
   }
 
-  async addDependente(dependente): Promise<void> {
+  async addAprendente(aprendente:any): Promise<void> {
     try {
       const { data,error } = await supabase
         .from('tb_aprendente')
         .insert([{
-          nome_dependente: dependente.nome,
-          id_cliente: dependente.idCliente,
-          nascimento: dependente.nascimento,
+          nome_aprendente: aprendente.nomeAprendente,
+          id_responsavel: aprendente.idResponsavel,
+          nascimento: aprendente.nascimento,
+          sexo: aprendente.sexo,
         }]).select()
-      console.log(dependente)
       if (error) throw error
     } catch (err: any) {
-      this.showError(err.message || 'Erro ao adicionar dependente')
+      this.showError(err.message || 'Erro ao adicionar aprendente')
     }
   }
 
-  async updateDependente(dependente: Dependente): Promise<void> {
+  async updateAprendente(aprendente: Aprendente): Promise<void> {
     try {
       const { error } = await supabase
         .from('tb_aprendente')
         .update({
-          nome_dependente: dependente.nomeDependente,
-          nascimento: dependente.nascimento,
+          nome_aprendente: aprendente.nomeAprendente,
+          nascimento: aprendente.nascimento,
+          sexo: aprendente.sexo,
         })
-        .eq('id', dependente.id)
+        .eq('id', aprendente.id)
       if (error) throw error
     } catch (err: any) {
-      this.showError(err.message || 'Erro ao atualizar dependente')
+      this.showError(err.message || 'Erro ao atualizar aprendente')
     }
   }
 
-  async deleteDependente(id: string): Promise<void> {
+  async deleteAprendente(id: string): Promise<void> {
     try {
       const { error } = await supabase
         .from('tb_aprendente')
@@ -60,10 +61,10 @@ export class AprendenteService {
         .eq('id', id)
       if (error) throw error
     } catch (err: any) {
-      this.showError(err.message || 'Erro ao remover dependente')
+      this.showError(err.message || 'Erro ao remover aprendente')
     }
   }
-  async getAprendenteById(id: string): Promise<Dependente | null> {
+  async getAprendenteById(id: string): Promise<Aprendente | null> {
     try {
       const { data, error } = await supabase
         .from('tb_aprendente')
@@ -72,7 +73,7 @@ export class AprendenteService {
         .single()
 
       if (error) throw error
-      return data as Dependente
+      return data as Aprendente
     } catch (err: any) {
       this.showError(err.message || 'Erro ao carregar o aprendente')
       return null

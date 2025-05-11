@@ -1,5 +1,5 @@
-import type Cliente from '@/models/Cliente.ts'
-import type Dependente from '@/models/Dependente.ts'
+import type Cliente from '@/models/Responsavel'
+import type Dependente from '@/models/Aprendente'
 import type Pasta from '@/models/Pasta.ts'
 
 export default interface Documento {

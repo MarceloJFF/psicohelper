@@ -21,9 +21,8 @@ export class DiasAtendimentoService {
     }
   }
 
-  async addDiasAtendimento(dias, contratoId): Promise<void> {
-    console.log(dias)
-    console.log(contratoId)
+  async addDiasAtendimento(dias:any, contratoId:string): Promise<void> {
+ 
     try {
       const payload = dias.map(d => ({
         dia: d.dia,
@@ -35,7 +34,6 @@ export class DiasAtendimentoService {
         .from('tb_dias_atendimento_contrato')
         .insert(payload).select()
 
-      console.log(data)
 
       if (error) throw error
     } catch (err: any) {
@@ -56,7 +54,7 @@ export class DiasAtendimentoService {
     }
   }
 
-  async updateDiaAtendimento(diaAtendimento): Promise<void> {
+  async updateDiaAtendimento(diaAtendimento:any): Promise<void> {
     try {
       const { error } = await supabase
         .from('tb_dias_atendimento_contrato')

@@ -10,7 +10,7 @@ let entriesChannel
 export const useStoreProfissional = defineStore('profissional', () => {
   // State
   const { showError } = useShowErrorMessage()
-  const profissionalDetails = ref(new Profissional())
+  const profissionalDetails = ref<Profissional | null>(new Profissional())
   const profissionalLoaded = ref(false)
 
   // Actions
@@ -22,7 +22,7 @@ export const useStoreProfissional = defineStore('profissional', () => {
       const { data, error } = await supabase
         .from('tb_profissional')
         .select('*')
-        .eq('id_user', storeAuth.userDetails.id)
+        .eq('id', storeAuth.userDetails.id)
 
       if (error) throw error
 
@@ -46,7 +46,7 @@ export const useStoreProfissional = defineStore('profissional', () => {
           nome: profissional.nome,
           profissao: profissional.profissao,
           telefone: profissional.telefone,
-          id_user: idUser
+          id: idUser
         }])
         .select()
 
@@ -67,7 +67,7 @@ export const useStoreProfissional = defineStore('profissional', () => {
         event: '*',
         schema: 'public',
         table: 'tb_profissional',
-        filter: `id_user=eq.${storeAuth.userDetails.id}`
+        filter: `id=eq.${storeAuth.userDetails.id}`
       }, (payload) => {
         if (payload.eventType === 'INSERT' || payload.eventType === 'UPDATE') {
           profissionalDetails.value = payload.new

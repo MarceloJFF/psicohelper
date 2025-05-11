@@ -3,7 +3,7 @@ import { defineStore } from 'pinia'
 import supabase from '/src/config/supabase'
 import { useStoreProfissional } from '/src/stores/storeProfissional'
 import { useShowErrorMessage } from '/src/userCases/useShowErrorMessage'
-import Cliente from '@/models/Cliente'
+import Cliente from '@/models/Responsavel'
 import { useStoreContrato } from '@/stores/storeContrato.ts'
 import { useStoreDependente } from '@/stores/storeDependente.ts'
 

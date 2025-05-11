@@ -2,7 +2,7 @@ import { ref } from 'vue'
 import { defineStore } from 'pinia'
 import supabase from '/src/config/supabase'
 import { useShowErrorMessage } from '/src/userCases/useShowErrorMessage'
-import Dependente from '@/models/Dependente'
+import Dependente from '@/models/Aprendente'
 
 export const useStoreDependente = defineStore('dependente', () => {
   // state
