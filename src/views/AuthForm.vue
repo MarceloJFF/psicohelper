@@ -109,6 +109,35 @@
         </v-card>
       </v-col>
     </v-row>
+
+    <v-snackbar
+      v-model="snackbar.show"
+      :color="snackbar.color"
+      :timeout="3000"
+      location="top"
+      class="custom-snackbar"
+      min-width="400"
+      max-width="600"
+    >
+      <div class="d-flex align-center">
+        <v-icon
+          :icon="snackbar.color === 'error' ? 'mdi-alert-circle' : 'mdi-check-circle'"
+          class="mr-3"
+          size="large"
+        />
+        <span class="text-body-1">{{ snackbar.text }}</span>
+      </div>
+      <template v-slot:actions>
+        <v-btn
+          color="white"
+          variant="text"
+          @click="snackbar.show = false"
+          class="ml-4"
+        >
+          Fechar
+        </v-btn>
+      </template>
+    </v-snackbar>
   </v-container>
 </template>
 
@@ -127,6 +156,12 @@ const profissional = ref({
   telefone: ''
 })
 
+const snackbar = ref({
+  show: false,
+  text: '',
+  color: 'error'
+})
+
 const isLogin = ref(true)
 const rules = {
   required: v => !!v || 'Campo obrigatório',
@@ -138,19 +173,40 @@ const rules = {
 const isFormValid = ref(false)
 const form = ref(null)
 
+const showError = (message: string) => {
+  snackbar.value = {
+    show: true,
+    text: message,
+    color: 'error'
+  }
+}
+
 const toggleMode = () => {
   isLogin.value = !isLogin.value
 }
+
 const handleAuth = async () => {
   const isValid = await form.value?.validate()
-  if (!isValid) return
+  if (!isValid) {
+    showError('Por favor, preencha todos os campos corretamente')
+    return
+  }
 
   const storeAuth = useStoreAuth()
 
   try {
     if (isLogin.value) {
+      if (!credentials.value.email || !credentials.value.password) {
+        showError('Por favor, preencha email e senha')
+        return
+      }
       await storeAuth.loginUser({ email: credentials.value.email, password: credentials.value.password })
     } else {
+      if (!credentials.value.email || !credentials.value.password || 
+          !profissional.value.nome || !profissional.value.profissao || !profissional.value.telefone) {
+        showError('Por favor, preencha todos os campos')
+        return
+      }
       await storeAuth.registerUser({
         email: credentials.value.email,
         password: credentials.value.password,
@@ -158,10 +214,9 @@ const handleAuth = async () => {
     }
     clearState()
   } catch (err) {
-    alert(err.message)
+    showError(err.message)
   }
 }
-
 
 function clearState() {
   credentials.value.email = ''
@@ -236,5 +291,17 @@ function clearState() {
 .v-enter-from,
 .v-leave-to {
   opacity: 0;
+}
+
+.custom-snackbar {
+  padding: 16px 24px;
+}
+
+.custom-snackbar :deep(.v-snackbar__content) {
+  padding: 8px 0;
+}
+
+.custom-snackbar :deep(.v-snackbar__wrapper) {
+  min-height: 64px;
 }
 </style>

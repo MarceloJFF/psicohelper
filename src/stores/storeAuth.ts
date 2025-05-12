@@ -45,7 +45,9 @@ export const useStoreAuth = defineStore('auth', () => {
         // REMOVA O REDIRECIONAMENTO AUTOMÁTICO
       } else if (event === 'SIGNED_OUT') {
         Object.assign(userDetails, userDetailsDefault)
+        sessionLoaded.value = false
         storesProfissional.clearEntries()
+        storeConfig.clearConfig()
         // router.replace('/login')
       }
     })
@@ -56,10 +58,10 @@ export const useStoreAuth = defineStore('auth', () => {
 
     if (data?.user) {
       await storesProfissional.registerProfissional(profissional, data.user.id)
-      await storeConfig.createConfiguracao(data.user.id)
+      await storeConfig.createConfiguracao(storesProfissional.profissionalDetails.value.id)
     }
 
-    if (error) showError(error.message)
+    if (error) showError("Houve um erro ao criar o usuário, tente novamente mais tarde")
   }
 
   const loginUser = async ({ email, password }) => {
@@ -76,7 +78,7 @@ export const useStoreAuth = defineStore('auth', () => {
       router.push('/')
     }
 
-    if (error) showError(error.message)
+    if (error) showError("Login ou senha inválidos")
   }
 
   const logoutUser = async () => {
@@ -85,7 +87,7 @@ export const useStoreAuth = defineStore('auth', () => {
     if (error) {
       showError(error.message)
     } else {
-      storesProfissional.clearEntries()
+     
       router.push('/login')
     }
   }

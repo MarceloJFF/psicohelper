@@ -81,10 +81,27 @@
               </v-col>
 
               <v-col cols="12">
-                <v-text-field
-                  label="Cliente"
+                <v-autocomplete
                   v-model="eventData.cliente"
-                />
+                  :items="filteredClientes"
+                  v-model:search="searchQuery"
+                  label="Cliente"
+                  item-title="displayName"
+                  item-value="id"
+                  :loading="isLoading"
+                  return-object
+                  clearable
+                  :filter="() => true"
+                  :menu-props="{ maxHeight: 400 }"
+                >
+                  <template v-slot:item="{ props, item }">
+                    <v-list-item v-bind="props">
+                      <v-list-item-title>
+                        {{ item.aprendente ? item.aprendente : item.responsavel }}
+                      </v-list-item-title>
+                    </v-list-item>
+                  </template>
+                </v-autocomplete>
               </v-col>
 
               <v-col cols="12">
@@ -145,7 +162,7 @@
 
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, computed, watch } from 'vue'
 import FullCalendar from '@fullcalendar/vue3'
 import dayGridPlugin from '@fullcalendar/daygrid'
 import timeGridPlugin from '@fullcalendar/timegrid'
@@ -153,6 +170,12 @@ import interactionPlugin from '@fullcalendar/interaction'
 import listPlugin from '@fullcalendar/list'
 import ptBr from '@fullcalendar/core/locales/pt-br'
 import AtendimentoModal from '@/components/AtendimentoModal.vue'
+import { useStoreConfig } from '@/stores/storeConfig'
+import { useStoreAuth } from '@/stores/storeAuth'
+import { useShowErrorMessage } from '@/userCases/useShowErrorMessage'
+import { AprendenteService } from '@/services/AprendenteService'
+import { AgendamentoService } from '@/services/AgendamentoService'
+import type Agendamento from '@/models/Agendamento'
 
 const calendarRef = ref()
 const showModal = ref(false)
@@ -162,6 +185,14 @@ const snackbar = ref(false)
 const snackbarText = ref('')
 const snackbarColor = ref('error')
 const events = ref<any[]>([])
+const storeConfig = useStoreConfig()
+const storeAuth = useStoreAuth()
+const { showError } = useShowErrorMessage()
+const isLoading = ref(false)
+const searchQuery = ref('')
+const clientes = ref<any[]>([])
+const aprendenteService = new AprendenteService()
+const agendamentoService = new AgendamentoService()
 
 let calendarApi: any = null
 
@@ -184,8 +215,61 @@ function resetEventData() {
   eventData.value = defaultEventData()
 }
 
-onMounted(() => {
+const loadEvents = async () => {
+  isLoading.value = true
+  try {
+    if (!storeAuth.userDetails.id) {
+      showError('Usuário não autenticado')
+      return
+    }
+
+    // Primeiro carrega a configuração
+    await storeConfig.loadConfiguracao(storeAuth.userDetails.id)
+    
+    if (!storeConfig.configuracao?.id) {
+      showError('Configuração não encontrada')
+      return
+    }
+
+    // Depois carrega os feriados
+    await storeConfig.loadFeriados()
+    console.log('Feriados carregados:', storeConfig.feriados)
+
+    const feriadosEvents = storeConfig.feriados.map(feriado => ({
+      id: `feriado-${feriado.id}`,
+      title: feriado.descricao,
+      start: feriado.data_feriado,
+      allDay: true,
+      backgroundColor: '#ff5252',
+      color:'white',
+      display: 'background',
+      editable: false,
+      selectable: false,
+      classNames: ['feriado-event'],
+      interactive: false // Impede interação com o evento
+    }))
+
+    console.log('Eventos de feriados criados:', feriadosEvents)
+    events.value = [...feriadosEvents]
+    console.log('Events atualizado:', events.value)
+    
+    if (calendarApi) {
+      console.log('Atualizando calendário...')
+      calendarApi.refetchEvents()
+    }
+  } catch (err) {
+    console.error('Erro ao carregar eventos:', err)
+    showError('Erro ao carregar eventos')
+  } finally {
+    isLoading.value = false
+  }
+}
+
+onMounted(async () => {
+  console.log('Iniciando montagem do componente...')
   calendarApi = calendarRef.value?.getApi()
+  console.log('calendarApi inicializado:', !!calendarApi)
+  await loadEvents()
 })
 
 function showMessage(message: string, color = 'error') {
@@ -194,16 +278,31 @@ function showMessage(message: string, color = 'error') {
   snackbar.value = true
 }
 
+function normalizeDate(date: Date): string {
+  return date.toISOString().split('T')[0]
+}
+
+function isDateFeriado(date: Date): boolean {
+  const normalizedDate = normalizeDate(date)
+  return events.value.some(event => {
+    if (event.display === 'background') {
+      const feriadoDate = normalizeDate(new Date(event.start))
+      return feriadoDate === normalizedDate
+    }
+    return false
+  })
+}
+
 function openEventModal() {
   resetEventData()
   showStartButton.value = false
   showModal.value = true
 }
 
-function saveEvent() {
-  const { title, startDate, startTime, duration, tipoAtendimento, valorAtendimentoAvulso, color } = eventData.value
+async function saveEvent() {
+  const { title, startDate, startTime, duration, tipoAtendimento, valorAtendimentoAvulso, color, cliente, observacoes } = eventData.value
 
-  if (!title || !startDate || !startTime || !duration || !tipoAtendimento || (tipoAtendimento === 'Avulso' && !valorAtendimentoAvulso)) {
+  if (!title || !startDate || !startTime || !duration || !tipoAtendimento || (tipoAtendimento === 'Avulso' && !valorAtendimentoAvulso) || !cliente) {
     showMessage('Preencha todos os campos obrigatórios!')
     return
   }
@@ -216,36 +315,78 @@ function saveEvent() {
     return
   }
 
-  const newEvent = {
-    id: eventData.value.id || String(Date.now()),
-    title,
-    start: start.toISOString(),
-    end: end.toISOString(),
-    backgroundColor: color,
-    extendedProps: {
-      cliente: eventData.value.cliente,
-      tipoAtendimento,
-      valorAtendimentoAvulso
+  // Verifica se a data selecionada é um feriado
+  const selectedDate = new Date(`${startDate}T00:00:00`)
+  if (isDateFeriado(selectedDate)) {
+    showMessage('Não é possível salvar atendimentos em dias de feriado.')
+    return
+  }
+
+  try {
+    const agendamento: Agendamento = {
+      id: eventData.value.id || '',
+      titulo: title,
+      dataAgendamento: start,
+      horarioInicio: startTime,
+      duracao: parseInt(duration),
+      clienteId: cliente.id,
+      idDependente: cliente.tipo === 'aprendente' ? cliente.id : '',
+      idProfissional: storeAuth.userDetails.id,
+      tipoAtendimento: tipoAtendimento as 'Avulso' | 'Contrato',
+      valorAtendimento: tipoAtendimento === 'Avulso' ? parseFloat(valorAtendimentoAvulso) : undefined,
+      observacoes: observacoes
     }
-  }
 
-  const existingIndex = events.value.findIndex(e => e.id === newEvent.id)
-  if (existingIndex !== -1) {
-    events.value[existingIndex] = newEvent
-  } else {
-    events.value.push(newEvent)
-  }
+    if (eventData.value.id) {
+      await agendamentoService.updateAgendamento(agendamento)
+    } else {
+      const newId = await agendamentoService.createAgendamento(agendamento)
+      if (!newId) {
+        throw new Error('Erro ao criar agendamento')
+      }
+      agendamento.id = newId
+    }
 
-  calendarApi?.refetchEvents()
-  showModal.value = false
-  showMessage('Evento salvo com sucesso!', 'success')
+    const newEvent = {
+      id: agendamento.id,
+      title,
+      start: start.toISOString(),
+      end: end.toISOString(),
+      backgroundColor: color,
+      extendedProps: {
+        cliente: agendamento.clienteId,
+        tipoAtendimento,
+        valorAtendimentoAvulso
+      }
+    }
+
+    const existingIndex = events.value.findIndex(e => e.id === newEvent.id)
+    if (existingIndex !== -1) {
+      events.value[existingIndex] = newEvent
+    } else {
+      events.value.push(newEvent)
+    }
+
+    calendarApi?.refetchEvents()
+    showModal.value = false
+    showMessage('Evento salvo com sucesso!', 'success')
+  } catch (err: any) {
+    showMessage(err.message || 'Erro ao salvar evento')
+  }
 }
 
-function deleteEvent() {
+async function deleteEvent() {
   if (!eventData.value.id) return
-  events.value = events.value.filter(e => e.id !== eventData.value.id)
-  calendarApi?.refetchEvents()
-  showModal.value = false
+  
+  try {
+    await agendamentoService.deleteAgendamento(eventData.value.id)
+    events.value = events.value.filter(e => e.id !== eventData.value.id)
+    calendarApi?.refetchEvents()
+    showModal.value = false
+    showMessage('Evento excluído com sucesso!', 'success')
+  } catch (err: any) {
+    showMessage(err.message || 'Erro ao excluir evento')
+  }
 }
 
 function startAtendimento() {
@@ -265,6 +406,22 @@ const calendarOptions = ref({
   locale: ptBr,
   editable: true,
   selectable: true,
+  selectConstraint: {
+    startTime: '00:00',
+    endTime: '24:00',
+    dows: [0, 1, 2, 3, 4, 5, 6]
+  },
+  selectAllow: (selectInfo) => {
+    // Verifica se a data selecionada não é um feriado
+    const isFeriado = events.value.some(event => 
+      event.display === 'background' && 
+      new Date(event.start).toDateString() === new Date(selectInfo.start).toDateString()
+    )
+    if (isFeriado) {
+      showMessage('Não é possível agendar em dias de feriado')
+    }
+    return !isFeriado
+  },
   eventSources: [
     (info, successCallback) => {
       const filtered = events.value.filter(event => {
@@ -275,11 +432,22 @@ const calendarOptions = ref({
     }
   ],
   dateClick(info) {
+    const clickedDate = new Date(info.date)
+    if (isDateFeriado(clickedDate)) {
+      showMessage('Não é possível agendar em dias de feriado')
+      return
+    }
+
     resetEventData()
     eventData.value.startDate = info.dateStr
     showModal.value = true
   },
   eventClick(info) {
+    // Não permite clicar em eventos de feriado
+    if (info.event.display === 'background') {
+      return
+    }
+
     const [startDate, startTimeRaw] = info.event.startStr.split('T')
     const start = new Date(info.event.startStr)
     const end = new Date(info.event.endStr)
@@ -291,7 +459,7 @@ const calendarOptions = ref({
       title: info.event.title,
       startDate,
       startTime: startTimeRaw?.slice(0, 5),
-      duration: durationInMinutes.toString(),  // <-- aqui está a duração sendo adicionada
+      duration: durationInMinutes.toString(),
       color: info.event.backgroundColor || '#1976d2',
       tipoAtendimento: info.event.extendedProps.tipoAtendimento || '',
       valorAtendimentoAvulso: info.event.extendedProps.valorAtendimentoAvulso || '',
@@ -300,14 +468,39 @@ const calendarOptions = ref({
 
     showStartButton.value = true
     showModal.value = true
-  }
-  ,
+  },
   eventDidMount(info) {
     info.el.style.backgroundColor = info.event.backgroundColor
     info.el.style.borderRadius = '4px'
     info.el.style.padding = '4px'
+    
+    // Adiciona cursor not-allowed para feriados
+    if (info.event.display === 'background') {
+      info.el.style.cursor = 'not-allowed'
+      info.el.style.pointerEvents = 'none' // Impede qualquer interação com o elemento
+    }
   }
 })
+
+const filteredClientes = ref<any[]>([])
+
+watch(searchQuery, async (newValue) => {
+  if (!newValue) {
+    filteredClientes.value = []
+    return
+  }
+  
+  isLoading.value = true
+  try {
+    const resultados = await aprendenteService.buscarClientesPorNome(newValue)
+    filteredClientes.value = resultados
+  } catch (err) {
+    console.error('Erro na busca:', err)
+    showError('Erro ao buscar clientes')
+  } finally {
+    isLoading.value = false
+  }
+}, { debounce: 300 })
 </script>
 
 

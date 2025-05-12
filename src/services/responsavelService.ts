@@ -1,8 +1,8 @@
-import supabase from '/src/config/supabase'
-import { useStoreProfissional } from '/src/stores/storeProfissional'
-import { ContratoService } from '@/services/contratoService.ts'
-import { AprendenteService } from '@/services/AprendenteService.ts'
-import { DiasAtendimentosContratoService } from '@/services/diasAtendimentosContratoService.ts'
+import supabase from '@/config/supabase'
+import { useStoreProfissional } from '@/stores/storeProfissional'
+import { ContratoService } from '@/services/contratoService'
+import { AprendenteService } from '@/services/AprendenteService'
+import { DiasAtendimentosContratoService } from '@/services/DiasAtendimentosContratoService'
 
 import { useShowErrorMessage } from '@/userCases/useShowErrorMessage'
 import Responsavel from '@/models/Responsavel'
@@ -212,4 +212,23 @@ export class ResponsavelService {
     }
   }
 
+  async checkDuplicateCPF(cpf: string): Promise<boolean> {
+    try {
+      const { data, error } = await supabase
+        .from('tb_responsavel')
+        .select('id')
+        .eq('cpf', cpf)
+        .eq('status', true)
+        .single()
+
+      if (error && error.code !== 'PGRST116') { // PGRST116 is the error code for no rows returned
+        throw error
+      }
+
+      return !!data // Returns true if a responsavel with this CPF exists
+    } catch (err: any) {
+      this.showError(err.message || 'Erro ao verificar CPF duplicado')
+      return false
+    }
+  }
 }

@@ -5,6 +5,7 @@ import supabase from '@/config/supabase'
 import { useStoreAuth } from '@/stores/storeAuth'
 import { useShowErrorMessage } from '@/userCases/useShowErrorMessage'
 import { RealtimeChannel } from '@supabase/supabase-js'
+import type { RealtimePostgresChangesPayload } from '@supabase/supabase-js'
 
 let entriesChannel: RealtimeChannel | null = null
 
@@ -69,13 +70,13 @@ export const useStoreProfissional = defineStore('profissional', () => {
   }
 
   const updateProfissional = async (profissional: Profissional) => {
-    console.log('updateProfissional', profissional)
     try {
       const { data, error } = await supabase
         .from('tb_profissional')
         .update({
           nome: profissional.nome,
           profissao: profissional.profissao,
+          telefone: profissional.telefone,
           cnpj: profissional.cnpj,
           n_conselho: profissional.nConselho,
           cep: profissional.cep,
@@ -126,12 +127,12 @@ export const useStoreProfissional = defineStore('profissional', () => {
         schema: 'public',
         table: 'tb_profissional',
         filter: `id=eq.${storeAuth.userDetails.id}`
-      }, (payload) => {
+      }, (payload: RealtimePostgresChangesPayload<Profissional>) => {
         if (payload.eventType === 'INSERT' || payload.eventType === 'UPDATE') {
           profissionalDetails.value = payload.new as Profissional
         }
         if (payload.eventType === 'DELETE') {
-          profissionalDetails.value = new Profissional()
+          profissionalDetails.value = null
         }
       })
       .subscribe()
@@ -144,7 +145,7 @@ export const useStoreProfissional = defineStore('profissional', () => {
   }
 
   const clearEntries = () => {
-    profissionalDetails.value = new Profissional()
+    profissionalDetails.value = null
     profissionalLoaded.value = false
   }
 

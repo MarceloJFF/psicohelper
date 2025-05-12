@@ -24,7 +24,7 @@ export class DiasAtendimentosContratoService {
   async addDiasAtendimento(dias:any, contratoId:string): Promise<void> {
  
     try {
-      const payload = dias.map(d => ({
+      const payload = dias.map((d:any) => ({
         dia: d.dia,
         inicio: d.inicio,
         fim: d.fim,

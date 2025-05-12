@@ -227,6 +227,25 @@
       </v-container>
     </v-main>
   </v-layout>
+
+  <!-- Snackbar para mensagens de erro -->
+  <v-snackbar
+    v-model="snackbar.show"
+    :color="snackbar.color"
+    :timeout="3000"
+    location="top"
+  >
+    {{ snackbar.text }}
+    <template v-slot:actions>
+      <v-btn
+        color="white"
+        variant="text"
+        @click="snackbar.show = false"
+      >
+        Fechar
+      </v-btn>
+    </template>
+  </v-snackbar>
 </template>
 
 <script setup lang="ts">
@@ -240,6 +259,7 @@ import { ResponsavelService } from '@/services/responsavelService'
 import { AprendenteService } from '@/services/AprendenteService.ts'
 import Contrato from '@/models/Contrato.ts'
 import type DiasAtendimentoContrato from '@/models/DiasAtendimentoContrato.ts'
+
 const valid = ref(false)
 const form = ref()
 const modalContrato = ref(false)
@@ -247,6 +267,13 @@ const router = useRouter()
 const contratoService = new ContratoService();
 const responsavelService = new ResponsavelService()
 const aprendenteService = new AprendenteService()
+
+// Snackbar state
+const snackbar = ref({
+  show: false,
+  text: '',
+  color: 'success'
+})
 
 const responsavel = ref({
   nome: '',
@@ -330,14 +357,31 @@ const limparResponsavelState = () => {
 const salvar = () => {
   form.value?.validate().then(async (result: any) => {
     if (result.valid) {
-      console.log( responsavel.value)
+      // Check for duplicate CPF first
+      const isDuplicate = await responsavelService.checkDuplicateCPF(responsavel.value.cpf);
+      if (isDuplicate) {
+        snackbar.value = {
+          show: true,
+          text: 'Já existe um responsável cadastrado com este CPF!',
+          color: 'error'
+        };
+        return;
+      }
 
       if (responsavel.value.tipoAtendimento == 'Contrato' && contrato.value.cadastrado) {
         await responsavelService.addResponsavel(responsavel.value);
-        alert("responsavel salvo com sucesso!");
+        snackbar.value = {
+          show: true,
+          text: 'Responsável salvo com sucesso!',
+          color: 'success'
+        };
       } else {
         await responsavelService.addResponsavel(responsavel.value);
-        alert("responsavel salvo com sucesso com contrato!");
+        snackbar.value = {
+          show: true,
+          text: 'Responsável salvo com sucesso!',
+          color: 'success'
+        };
       }
       limparResponsavelState();
     }

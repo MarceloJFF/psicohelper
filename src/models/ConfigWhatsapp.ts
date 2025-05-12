@@ -3,4 +3,5 @@ export default class ConfigWhatsapp {
   idConfig: string = ''
   mensagemCobranca: string = ''
   mensagemConfirmacao: string = ''
+  mensagemCancelamento: string = ''
 } 

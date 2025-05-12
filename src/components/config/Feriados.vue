@@ -99,8 +99,6 @@
 import { ref, onMounted } from 'vue'
 import { useStoreConfig } from '@/stores/storeConfig'
 import { useStoreAuth } from '@/stores/storeAuth'
-import { format } from 'date-fns'
-import { ptBR } from 'date-fns/locale'
 import type { VForm } from 'vuetify/components'
 
 interface Feriado {
@@ -141,9 +139,15 @@ const snackbarColor = ref('success')
 async function loadFeriados() {
   loading.value = true
   try {
+    if (!storeConfig.configuracao?.id) {
+      showMessage('Configuração não encontrada. Por favor, configure seu perfil primeiro.', 'error')
+      return
+    }
+
     await storeConfig.loadFeriados()
     feriados.value = storeConfig.feriados
-  } catch (_error) {
+  } catch (error) {
+    console.error('Erro ao carregar feriados:', error)
     showMessage('Erro ao carregar feriados', 'error')
   } finally {
     loading.value = false
@@ -151,15 +155,29 @@ async function loadFeriados() {
 }
 
 onMounted(async () => {
-  console.log('User ID:', storeAuth.userDetails.id)
-  await storeConfig.loadConfiguracao(storeAuth.userDetails.id)
-  console.log('Configuração:', storeConfig.configuracao)
-  await loadFeriados()
-  console.log('Feriados carregados:', feriados.value)
+  try {
+    if (!storeAuth.userDetails.id) {
+      showMessage('Usuário não autenticado', 'error')
+      return
+    }
+
+    await storeConfig.loadConfiguracao(storeAuth.userDetails.id)
+    if (!storeConfig.configuracao?.id) {
+      showMessage('Configuração não encontrada. Por favor, configure seu perfil primeiro.', 'error')
+      return
+    }
+
+    await loadFeriados()
+  } catch (error) {
+    console.error('Erro ao inicializar:', error)
+    showMessage('Erro ao inicializar o componente', 'error')
+  }
 })
 
 function formatDate(date: string) {
-  return format(new Date(date), 'dd/MM/yyyy', { locale: ptBR })
+  if (!date) return ''
+  const [year, month, day] = date.split('-')
+  return `${day}/${month}/${year}`
 }
 
 function openDialog(item: Feriado | null = null) {
@@ -197,18 +215,29 @@ async function submit() {
   const { valid } = await formRef.value.validate()
   if (!valid) return
 
+  if (!storeConfig.configuracao?.id) {
+    showMessage('Configuração não encontrada. Por favor, configure seu perfil primeiro.', 'error')
+    return
+  }
+
   loading.value = true
   try {
-    if (editedItem.value.id) {
-      await storeConfig.updateFeriado(editedItem.value)
+    const feriadoToSave = {
+      ...editedItem.value,
+      id_config: storeConfig.configuracao.id
+    }
+
+    if (feriadoToSave.id) {
+      await storeConfig.updateFeriado(feriadoToSave)
       showMessage('Feriado atualizado com sucesso!', 'success')
     } else {
-      await storeConfig.addFeriado(editedItem.value)
+      await storeConfig.addFeriado(feriadoToSave)
       showMessage('Feriado adicionado com sucesso!', 'success')
     }
     await loadFeriados()
     closeDialog()
-  } catch (_error) {
+  } catch (error) {
+    console.error('Erro ao salvar feriado:', error)
     showMessage('Erro ao salvar feriado', 'error')
   } finally {
     loading.value = false
@@ -216,13 +245,16 @@ async function submit() {
 }
 
 async function deleteFeriado() {
+  if (!feriadoToDelete.value) return
+
   loading.value = true
   try {
     await storeConfig.deleteFeriado(feriadoToDelete.value)
     showMessage('Feriado excluído com sucesso!', 'success')
     dialogDelete.value = false
     await loadFeriados()
-  } catch (_error) {
+  } catch (error) {
+    console.error('Erro ao excluir feriado:', error)
     showMessage('Erro ao excluir feriado', 'error')
   } finally {
     loading.value = false

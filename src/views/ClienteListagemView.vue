@@ -18,9 +18,12 @@
                     density="compact"
                     label="Buscar clientes"
                     prepend-inner-icon="mdi-magnify"
+                    append-inner-icon="mdi-close"
                     variant="solo-filled"
                     hide-details
                     class="bg-white rounded"
+                    @click:append-inner="search = ''"
+                    @update:model-value="handleSearch"
                   />
                 </v-col>
                 <v-col cols="1">
@@ -153,11 +156,15 @@ const responsavelAtual = ref<Responsavel>(new Responsavel())
 const responsavelParaInativar = ref<Responsavel | null>(null)
 const dialogConfirmacao = ref(false)
 
-const abrirModalNovo = () => {
-  router.push('/clientes/add')
+const handleSearch = (value: string) => {
+  if (value.length <= 3) {
+    // Reset the search results or show all items
+    loadResponsaveis()
+    return
+  }
+  // Perform the search with the value
+  // You can implement your search logic here
 }
-
-
 
 const aprendentes = ref([])
 

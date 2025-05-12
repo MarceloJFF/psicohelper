@@ -13,7 +13,7 @@ const items = [
   { title: 'Relatórios', icon: 'mdi-clock', to: '/relatorios' },
   { title: 'Inventario', icon: 'mdi-file-document', to: '/Inventario' },
   { title: 'Atendimentos', icon: 'mdi-account-clock', to: '/atendimentos' },
-  { title: 'Clientes', icon: 'mdi-account-multiple', to: '/clientes' },
+  { title: 'Aprendentes', icon: 'mdi-account-multiple', to: '/clientes' },
   { title: 'Configurações', icon: 'mdi-cog', to: '/configuracoes' },
   { title: 'Sair', icon: 'mdi-logout', action: () => storeAuth.logoutUser() }
 ]
