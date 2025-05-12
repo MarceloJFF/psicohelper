@@ -1,22 +1,17 @@
-import {ref, reactive } from 'vue'
+import { ref, reactive } from 'vue'
 import { useRouter } from 'vue-router'
 import { defineStore } from 'pinia'
-
 import supabase from '/src/config/supabase'
 import { useStoreProfissional } from '/src/stores/storeProfissional'
 import { useShowErrorMessage } from '/src/userCases/useShowErrorMessage'
+import { useStoreConfig } from '/src/stores/storeConfig'
 export const useStoreAuth = defineStore('auth', () => {
 
-  /*
-    state
-  */
   const sessionLoaded = ref(false)
-
   const router = useRouter()
   const { showError } = useShowErrorMessage()
   const storesProfissional = useStoreProfissional()
-
-
+  const storeConfig = useStoreConfig()
   const userDetailsDefault = {
     id: null,
     email: null
@@ -26,16 +21,17 @@ export const useStoreAuth = defineStore('auth', () => {
     ...userDetailsDefault
   })
 
-
   /*
     actions
-  */const init = async () => {
+  */
+  const init = async () => {
     const { data: { session } } = await supabase.auth.getSession()
 
     if (session) {
       userDetails.id = session.user.id
       userDetails.email = session.user.email
       await storesProfissional.loadProfissional()
+      await storeConfig.loadConfiguracao(session.user.id)
     }
 
     sessionLoaded.value = true
@@ -45,37 +41,38 @@ export const useStoreAuth = defineStore('auth', () => {
         userDetails.id = session.user.id
         userDetails.email = session.user.email
         storesProfissional.loadProfissional()
+        storeConfig.loadConfiguracao(session.user.id)
         // REMOVA O REDIRECIONAMENTO AUTOMÁTICO
       } else if (event === 'SIGNED_OUT') {
         Object.assign(userDetails, userDetailsDefault)
         storesProfissional.clearEntries()
-        router.replace('/login')
+        // router.replace('/login')
       }
     })
   }
+
   const registerUser = async ({ email, password }, profissional) => {
-    let { data, error } = await supabase.auth.signUp({
-      email,
-      password
-    })
-    if(data.user){
+    const { data, error } = await supabase.auth.signUp({ email, password })
+
+    if (data?.user) {
       await storesProfissional.registerProfissional(profissional, data.user.id)
+      await storeConfig.createConfiguracao(data.user.id)
     }
 
-    if (error)showError(error.message)
+    if (error) showError(error.message)
   }
 
   const loginUser = async ({ email, password }) => {
-    let { data, error } = await supabase.auth.signInWithPassword({
+    const { data, error } = await supabase.auth.signInWithPassword({
       email,
       password
     })
-    if (data) {
-      console.log(data)
-      userDetails.id = data.user.id;
-      userDetails.email = data.user.email;
-      await storesProfissional.loadProfissional();
 
+    if (data?.user) {
+      userDetails.id = data.user.id
+      userDetails.email = data.user.email
+      await storesProfissional.loadProfissional()
+      await storeConfig.loadConfiguracao(data.user.id)
       router.push('/')
     }
 
@@ -83,28 +80,29 @@ export const useStoreAuth = defineStore('auth', () => {
   }
 
   const logoutUser = async () => {
-    let { error } = await supabase.auth.signOut()
+    const { error } = await supabase.auth.signOut()
 
-    storesProfissional.clearEntries()
-    if (error) showError(error.message)
-    else router.push('/login')
+    if (error) {
+      showError(error.message)
+    } else {
+      storesProfissional.clearEntries()
+      router.push('/login')
+    }
   }
-
-
 
   /*
     return
   */
-
   return {
     // state
     userDetails,
-    useStoreProfissional,
+    sessionLoaded,
+    storesProfissional,
+
     // actions
     init,
     registerUser,
     loginUser,
     logoutUser
   }
-
 })

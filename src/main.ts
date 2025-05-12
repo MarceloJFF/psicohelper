@@ -49,8 +49,8 @@ app.use(createPinia())
 app.use(router)
 app.use(vuetify)
 
-app.mount('#app')
 
 const storeAuth = useStoreAuth()
-storeAuth.init(router)
+await storeAuth.init()
 
+app.mount('#app')

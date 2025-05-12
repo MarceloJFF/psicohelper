@@ -13,6 +13,8 @@ import AtendimentosView from '@/views/AtendimentosView.vue'
 import Configuracao from '@/views/Configuracao.vue'
 import AboutView from '@/views/AboutView.vue'
 import Home from '@/views/Home.vue'
+import { watch } from 'vue'
+
 // Aqui você poderia importar a tela de Login também futuramente.
 
 const router = createRouter({
@@ -110,9 +112,18 @@ const router = createRouter({
 router.beforeEach(async (to, from, next) => {
   const storeAuth = useStoreAuth()
 
+  // Aguarda a sessão carregar
   if (!storeAuth.sessionLoaded) {
-    await storeAuth.init()
+    // Aguarda no máximo 2 segundos para sessionLoaded ficar true
+    const waitForSession = async (timeout = 2000) => {
+      const start = Date.now()
+      while (!storeAuth.sessionLoaded && Date.now() - start < timeout) {
+        await new Promise(r => setTimeout(r, 50))
+      }
+    }
+    await waitForSession()
   }
+  
 
   const isAuthenticated = !!storeAuth.userDetails.id
 
@@ -121,7 +132,7 @@ router.beforeEach(async (to, from, next) => {
   }
 
   if (to.path === '/login' && isAuthenticated) {
-    return next('/') // redireciona somente se ele for para o login
+    return next('/')
   }
 
   next()

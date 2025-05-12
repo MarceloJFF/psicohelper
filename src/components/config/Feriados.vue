@@ -18,10 +18,10 @@
       hide-default-footer
       :loading="loading"
     >
-      <template #item.data="{ item }">
-        {{ formatDate(item.data) }}
+      <template #[`item.data_feriado`]="{ item }">
+        {{ formatDate(item.data_feriado) }}
       </template>
-      <template #item.actions="{ item }">
+      <template #[`item.actions`]="{ item }">
         <v-btn icon color="purple" @click="openDialog(item)">
           <v-icon>mdi-pencil</v-icon>
         </v-btn>
@@ -39,9 +39,9 @@
         </v-card-title>
 
         <v-card-text>
-          <v-form ref="formRef" @submit.prevent="saveFeriado" v-model="valid">
+          <v-form ref="formRef" @submit.prevent="submit" v-model="valid">
             <v-text-field
-              v-model="editedItem.label"
+              v-model="editedItem.descricao"
               label="Nome do Feriado"
               :rules="[v => !!v || 'Campo obrigatório']"
               variant="outlined"
@@ -50,7 +50,7 @@
               rounded
             />
             <v-text-field
-              v-model="editedItem.data"
+              v-model="editedItem.data_feriado"
               label="Data"
               type="date"
               :rules="[v => !!v || 'Campo obrigatório']"
@@ -101,29 +101,36 @@ import { useStoreConfig } from '@/stores/storeConfig'
 import { useStoreAuth } from '@/stores/storeAuth'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
-import supabase from '@/config/supabase'
+import type { VForm } from 'vuetify/components'
+
+interface Feriado {
+  id: string
+  descricao: string
+  data_feriado: string
+  id_config: string
+}
 
 const storeConfig = useStoreConfig()
 const storeAuth = useStoreAuth()
 
 const headers = [
-  { title: 'Nome do Feriado', key: 'label' },
-  { title: 'Data', key: 'data' },
+  { title: 'Nome do Feriado', key: 'descricao' },
+  { title: 'Data', key: 'data_feriado' },
   { title: 'Ações', key: 'actions', sortable: false },
 ]
 
 const dialog = ref(false)
 const dialogDelete = ref(false)
 const valid = ref(false)
-const formRef = ref(null)
+const formRef = ref<VForm | null>(null)
 const loading = ref(false)
 const feriadoToDelete = ref('')
-const feriados = ref([])
+const feriados = ref<Feriado[]>([])
 
-const editedItem = ref({
+const editedItem = ref<Feriado>({
   id: '',
-  label: '',
-  data: '',
+  descricao: '',
+  data_feriado: '',
   id_config: ''
 })
 
@@ -134,14 +141,9 @@ const snackbarColor = ref('success')
 async function loadFeriados() {
   loading.value = true
   try {
-    const { data, error } = await supabase
-      .from('config_feriados')
-      .select('*')
-      .eq('id_config', storeConfig.configuracao?.id)
-
-    if (error) throw error
-    feriados.value = data || []
-  } catch (error) {
+    await storeConfig.loadFeriados()
+    feriados.value = storeConfig.feriados
+  } catch (_error) {
     showMessage('Erro ao carregar feriados', 'error')
   } finally {
     loading.value = false
@@ -149,22 +151,25 @@ async function loadFeriados() {
 }
 
 onMounted(async () => {
+  console.log('User ID:', storeAuth.userDetails.id)
   await storeConfig.loadConfiguracao(storeAuth.userDetails.id)
+  console.log('Configuração:', storeConfig.configuracao)
   await loadFeriados()
+  console.log('Feriados carregados:', feriados.value)
 })
 
 function formatDate(date: string) {
   return format(new Date(date), 'dd/MM/yyyy', { locale: ptBR })
 }
 
-function openDialog(item = null) {
+function openDialog(item: Feriado | null = null) {
   if (item) {
     editedItem.value = { ...item }
   } else {
     editedItem.value = {
       id: '',
-      label: '',
-      data: '',
+      descricao: '',
+      data_feriado: '',
       id_config: storeConfig.configuracao?.id || ''
     }
   }
@@ -175,8 +180,8 @@ function closeDialog() {
   dialog.value = false
   editedItem.value = {
     id: '',
-    label: '',
-    data: '',
+    descricao: '',
+    data_feriado: '',
     id_config: ''
   }
 }
@@ -195,31 +200,15 @@ async function submit() {
   loading.value = true
   try {
     if (editedItem.value.id) {
-      const { error } = await supabase
-        .from('config_feriados')
-        .update({
-          label: editedItem.value.label,
-          data: editedItem.value.data
-        })
-        .eq('id', editedItem.value.id)
-
-      if (error) throw error
+      await storeConfig.updateFeriado(editedItem.value)
       showMessage('Feriado atualizado com sucesso!', 'success')
     } else {
-      const { error } = await supabase
-        .from('config_feriados')
-        .insert([{
-          label: editedItem.value.label,
-          data: editedItem.value.data,
-          id_config: storeConfig.configuracao?.id
-        }])
-
-      if (error) throw error
+      await storeConfig.addFeriado(editedItem.value)
       showMessage('Feriado adicionado com sucesso!', 'success')
     }
     await loadFeriados()
     closeDialog()
-  } catch (error) {
+  } catch (_error) {
     showMessage('Erro ao salvar feriado', 'error')
   } finally {
     loading.value = false
@@ -229,16 +218,11 @@ async function submit() {
 async function deleteFeriado() {
   loading.value = true
   try {
-    const { error } = await supabase
-      .from('config_feriados')
-      .delete()
-      .eq('id', feriadoToDelete.value)
-
-    if (error) throw error
+    await storeConfig.deleteFeriado(feriadoToDelete.value)
     showMessage('Feriado excluído com sucesso!', 'success')
     dialogDelete.value = false
     await loadFeriados()
-  } catch (error) {
+  } catch (_error) {
     showMessage('Erro ao excluir feriado', 'error')
   } finally {
     loading.value = false

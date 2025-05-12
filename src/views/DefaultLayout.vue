@@ -15,7 +15,7 @@ const items = [
   { title: 'Atendimentos', icon: 'mdi-account-clock', to: '/atendimentos' },
   { title: 'Clientes', icon: 'mdi-account-multiple', to: '/clientes' },
   { title: 'Configurações', icon: 'mdi-cog', to: '/configuracoes' },
-  { title: 'Sair', icon: 'mdi-logout', to: '/logout' }
+  { title: 'Sair', icon: 'mdi-logout', action: () => storeAuth.logoutUser() }
 ]
 const storeAuth = useStoreAuth()
 const storeProfissional = useStoreProfissional()
@@ -32,19 +32,24 @@ const storeProfissional = useStoreProfissional()
         rounded-full
       />
       <v-list>
-        <RouterLink
-          v-for="item in items"
-          :key="item.title"
-          :to="item.to"
-          style="text-decoration: none; color: inherit"
-        >
+        <template v-for="item in items" :key="item.title">
           <v-list-item
+            v-if="item.to"
+            :to="item.to"
             :prepend-icon="item.icon"
             :title="item.title"
             link
             class="menu-item font-weight-bold text-uppercase"
           />
-        </RouterLink>
+          <v-list-item
+            v-else
+            @click="item.action"
+            :prepend-icon="item.icon"
+            :title="item.title"
+            link
+            class="menu-item font-weight-bold text-uppercase"
+          />
+        </template>
       </v-list>
     </v-navigation-drawer>
 
@@ -79,9 +84,12 @@ const storeProfissional = useStoreProfissional()
     </v-app-bar>
 
     <v-main class="w-100">
-      <transition name="fade">
-        <RouterView />
-      </transition>
+      <router-view v-slot="{ Component }">
+    <transition name="fade">
+      <component :is="Component" />
+    </transition>
+  </router-view>
+
     </v-main>
   </v-app>
 </template>

@@ -7,7 +7,7 @@
     <v-card-text>
       <v-form @submit.prevent="submit">
         <v-row dense v-for="(question, index) in questions" :key="index" class="mb-4">
-          <v-col cols="12">
+          <v-col cols="11">
             <v-textarea
               v-model="answers[index]"
               :label="question.label"
@@ -17,9 +17,22 @@
               rows="1"
             />
           </v-col>
+          <v-col cols="1" class="d-flex align-center">
+            <v-btn
+              icon
+              color="error"
+              @click="removerPergunta(index)"
+              v-if="index >= defaultQuestions.length"
+            >
+              <v-icon>mdi-delete</v-icon>
+            </v-btn>
+          </v-col>
         </v-row>
 
-        <div class="d-flex justify-end mt-6">
+        <div class="d-flex justify-space-between mt-6">
+          <v-btn color="primary" @click="adicionarPergunta" class="px-6">
+            Adicionar Pergunta
+          </v-btn>
           <v-btn color="success" type="submit" class="px-6">
             Salvar Anamnese
           </v-btn>
@@ -58,39 +71,35 @@
   </v-card>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { ref } from 'vue';
-// Anamnese
-const perguntasAnamnese = ref([])  // Definindo perguntasAnamnese
-const respostasAnamnese = ref([])  // Definindo respostasAnamnese
 
-
-
-const questions = ref([
+const defaultQuestions = [
   { label: 'Qual o motivo principal da sua consulta?' },
   { label: 'Você tem alguma condição médica preexistente?' },
   { label: 'Está fazendo uso de alguma medicação?' },
   { label: 'Possui alergias? Se sim, quais?' },
   { label: 'Pratica atividade física? Com que frequência?' },
-]);
+];
 
+const questions = ref([...defaultQuestions]);
 const answers = ref(Array(questions.value.length).fill(''));
 const dialog = ref(false);
 
 const submit = () => {
+  // Aqui você pode implementar a lógica para salvar as perguntas e respostas
   dialog.value = true;
 };
 
-
-//anamnese
 function adicionarPergunta() {
-  perguntasAnamnese.value.push({ label: '', obrigatorio: false })
-  respostasAnamnese.value.push('')
+  questions.value.push({ label: 'Nova pergunta' });
+  answers.value.push('');
 }
 
-function removerPergunta(index) {
-  perguntasAnamnese.value.splice(index, 1)
-  respostasAnamnese.value.splice(index, 1)
+function removerPergunta(index: number) {
+  if (index >= defaultQuestions.length) {
+    questions.value.splice(index, 1);
+    answers.value.splice(index, 1);
+  }
 }
-
 </script>

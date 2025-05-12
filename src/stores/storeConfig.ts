@@ -5,15 +5,33 @@ import { useShowErrorMessage } from '@/userCases/useShowErrorMessage'
 
 const { showError } = useShowErrorMessage()
 
+interface Feriado {
+  id: string
+  descricao: string
+  data_feriado: string
+  id_config: string
+}
+
+interface Configuracao {
+  id: string
+  id_profissional: string
+}
+
+interface MensagensWhatsapp {
+  id?: string
+  mensagemCobranca: string
+  mensagemConfirmacao: string
+}
+
 export const useStoreConfig = defineStore('config', () => {
   // State
-  const configuracao = ref(null)
-  const feriados = ref([])
+  const configuracao = ref<Configuracao | null>(null)
+  const feriados = ref<Feriado[]>([])
   const mensagensWhatsapp = ref(null)
   const loading = ref(false)
 
   // Actions
-  const createConfiguracao = async (idProfissional) => {
+  const createConfiguracao = async (idProfissional: string) => {
     try {
       const { data, error } = await supabase
         .from('tb_config')
@@ -34,7 +52,7 @@ export const useStoreConfig = defineStore('config', () => {
     }
   }
 
-  const loadConfiguracao = async (idProfissional) => {
+  const loadConfiguracao = async (idProfissional: string) => {
     loading.value = true
     try {
       const { data, error } = await supabase
@@ -53,7 +71,6 @@ export const useStoreConfig = defineStore('config', () => {
 
       configuracao.value = data
       await loadFeriados()
-     // await loadMensagensWhatsapp()
       return data
     } catch (err) {
       if (err instanceof Error) {
@@ -108,14 +125,15 @@ export const useStoreConfig = defineStore('config', () => {
     }
   }
 
-  const addFeriado = async (feriado) => {
+  const addFeriado = async (feriado: Omit<Feriado, 'id'>) => {
     if (!configuracao.value) return null
 
     try {
       const { data, error } = await supabase
-        .from('tb_config_feriado')
+        .from('tb_config_feriados')
         .insert([{
-          ...feriado,
+          descricao: feriado.descricao,
+          data_feriado: feriado.data_feriado,
           id_config: configuracao.value.id
         }])
         .select()
@@ -134,13 +152,13 @@ export const useStoreConfig = defineStore('config', () => {
     }
   }
 
-  const updateFeriado = async (feriado) => {
+  const updateFeriado = async (feriado: Feriado) => {
     try {
       const { data, error } = await supabase
-        .from('tb_config_feriado')
+        .from('tb_config_feriados')
         .update({
-          label: feriado.label,
-          data: feriado.data
+          descricao: feriado.descricao,
+          data_feriado: feriado.data_feriado
         })
         .eq('id', feriado.id)
         .select()
@@ -162,10 +180,10 @@ export const useStoreConfig = defineStore('config', () => {
     }
   }
 
-  const deleteFeriado = async (id) => {
+  const deleteFeriado = async (id: string) => {
     try {
       const { error } = await supabase
-        .from('tb_config_feriado')
+        .from('tb_config_feriados')
         .delete()
         .eq('id', id)
 
@@ -182,7 +200,7 @@ export const useStoreConfig = defineStore('config', () => {
     }
   }
 
-  const updateMensagensWhatsapp = async (mensagens) => {
+  const updateMensagensWhatsapp = async (mensagens: MensagensWhatsapp) => {
     if (!configuracao.value) return null
 
     try {

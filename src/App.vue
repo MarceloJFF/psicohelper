@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { RouterView } from 'vue-router'
-import { useShowErrorMessage } from '@/userCases/useShowErrorMessage'
+import { useShowErrorMessage } from '@/userCases/useShowErrorMessage.js'
 import supabase from '/src/config/supabase'
 import router from '@/router'
 
