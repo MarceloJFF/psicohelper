@@ -201,12 +201,12 @@ const loadEventos = async () => {
     await storeCalendario.loadAgendamentos()
     const agendamentos = storeCalendario.agendamentos.map(agendamento => ({
       id: `agendamento-${agendamento.id}`,
-      title: agendamento.cliente,
+      title: agendamento.titulo,
       start: agendamento.data_agendamento,
       end: agendamento.data_agendamento,
       allDay: true,
       backgroundColor: '#1976d2',
-      color: 'white',
+      color:'#000',
       display: 'background',
       editable: false,
       selectable: false,
@@ -214,7 +214,6 @@ const loadEventos = async () => {
       interactive: false
     }))
     events.value = [...events.value, ...agendamentos]
-    console.log('COISO:', events.value);
     
 
   } catch (err) {
