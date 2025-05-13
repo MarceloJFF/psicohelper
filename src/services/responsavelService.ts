@@ -90,66 +90,42 @@ export class ResponsavelService {
   }
   async loadAprendentes(): Promise<any[]> {
     try {
-      const idProfissional = this.storeProfissional.profissionalDetails?.id
+      const idProfissional = this.storeProfissional.profissionalDetails?.id;
       if (!idProfissional) {
-        this.showError('Profissional não está autenticado')
-        return []
+        this.showError('Profissional não está autenticado');
+        return [];
       }
-
-      const { data: responsaveis, error: erroClientes } = await supabase
-        .from('tb_responsavel')
-        .select('id, nome, telefone, atendimento_proprio')
+  
+      // Agora fazemos apenas UMA consulta à view
+      const { data, error } = await supabase
+        .from('vw_aprendentes_com_responsaveis')
+        .select('*')
         .eq('id_profissional', idProfissional)
-
-      if (erroClientes) throw erroClientes
-      if (!responsaveis || responsaveis.length === 0) {
-        console.warn('Nenhum cliente encontrado')
-        return []
+        .order('nome_exibicao', { ascending: true });
+  
+      if (error) throw error;
+      if (!data || data.length === 0) {
+        console.warn('Nenhum aprendente/responsável encontrado');
+        return [];
       }
-
-      const idsResponsaveis = responsaveis.map(c => c.id)
-
-      const { data: aprendentes, error: erroAprendentes } = await supabase
-        .from('tb_aprendente')
-        .select('id, nome_aprendente, id_responsavel')
-        .in('id_responsavel', idsResponsaveis.length > 0 ? idsResponsaveis : [-1])
-
-      if (erroAprendentes) throw erroAprendentes
-
-      const listaFinal: any[] = []
-
-      for (const responsavel of responsaveis) {
-        if (responsavel.atendimento_proprio) {
-          listaFinal.push({
-            idAprendente: responsavel.id, // pode ser um identificador fictício ou gerar um UUID
-            idResponsavel:responsavel.id,
-            nomeAprendente: responsavel.nome,
-            nomeResponsavel: responsavel.nome,
-            telefoneResponsavel: responsavel.telefone,
-            atendimentoProprio:responsavel.atendimento_proprio
-          })
-        } else {
-          const aprendentesDoResponsavel = aprendentes.filter(aprendente => aprendente.id_responsavel === responsavel.id)
-          for (const aprendente of aprendentesDoResponsavel) {
-            listaFinal.push({
-              idAprendente: aprendente.id,
-              nomeAprendente: aprendente.nome_aprendente,
-              nomeResponsavel: responsavel.nome,
-              telefoneResponsavel: responsavel.telefone,
-              atendimentoProprio:responsavel.atendimento_proprio,
-              idResponsavel:responsavel.id,
-              
-            })
-          }
-        }
-      }
-
-      console.log('Lista final de aprendentes formatada:', listaFinal)
-      return listaFinal
+  
+      // Formatamos os dados conforme necessário
+      const listaFinal = data.map(item => ({
+        idAprendente: item.atendimento_proprio ? item.id_responsavel : item.id_aprendente,
+        idResponsavel: item.id_responsavel,
+        nomeAprendente: item.atendimento_proprio ? item.nome_responsavel : item.nome_aprendente,
+        nomeResponsavel: item.nome_responsavel,
+        telefoneResponsavel: item.telefone_responsavel,
+        atendimentoProprio: item.atendimento_proprio,
+        nomeExibicao: item.nome_exibicao
+      }));
+  
+      console.log('Lista final de aprendentes formatada:', listaFinal);
+      return listaFinal;
     } catch (err: any) {
-      this.showError(err.message || 'Erro ao carregar aprendentes')
-      console.error(err)
-      return []
+      this.showError(err.message || 'Erro ao carregar aprendentes');
+      console.error(err);
+      return [];
     }
   }
 
