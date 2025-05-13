@@ -17,6 +17,8 @@ export const useStoreProfissional = defineStore('profissional', () => {
 
   // Actions
   const loadProfissional = async () => {
+ 
+    
     const storeAuth = useStoreAuth()
     profissionalLoaded.value = false
 
@@ -119,25 +121,27 @@ export const useStoreProfissional = defineStore('profissional', () => {
   }
 
   const subscribeEntries = () => {
+    if (entriesChannel) return
+  
     const storeAuth = useStoreAuth()
-
+    if (!storeAuth.userDetails.id) return
+  
     entriesChannel = supabase.channel('profissional-channel')
       .on('postgres_changes', {
         event: '*',
         schema: 'public',
         table: 'tb_profissional',
         filter: `id=eq.${storeAuth.userDetails.id}`
-      }, (payload: RealtimePostgresChangesPayload<Profissional>) => {
+      }, (payload) => {
         if (payload.eventType === 'INSERT' || payload.eventType === 'UPDATE') {
           profissionalDetails.value = payload.new as Profissional
-        }
-        if (payload.eventType === 'DELETE') {
+        } else if (payload.eventType === 'DELETE') {
           profissionalDetails.value = null
         }
       })
       .subscribe()
   }
-
+  
   const unsubscribeEntries = () => {
     if (entriesChannel) {
       supabase.removeChannel(entriesChannel)
@@ -147,7 +151,9 @@ export const useStoreProfissional = defineStore('profissional', () => {
   const clearEntries = () => {
     profissionalDetails.value = null
     profissionalLoaded.value = false
+    unsubscribeEntries()
   }
+  
 
   // Return exposed state & actions
   return {

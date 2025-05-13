@@ -24,35 +24,26 @@ export const useStoreAuth = defineStore('auth', () => {
   /*
     actions
   */
-  const init = async () => {
-    const { data: { session } } = await supabase.auth.getSession()
-
-    if (session) {
-      userDetails.id = session.user.id
-      userDetails.email = session.user.email
-      await storesProfissional.loadProfissional()
-      await storeConfig.loadConfiguracao(session.user.id)
+    const init = async () => {
+      supabase.auth.onAuthStateChange((event, session) => {
+        if (event === 'SIGNED_IN' || event === 'INITIAL_SESSION') {
+          if (session != null) {
+            userDetails.id = session.user.id
+            userDetails.email = session.user.email
+            storesProfissional.loadProfissional()
+            storeConfig.loadConfiguracao(session.user.id)
+            router.push('/')
+          }
+        } else if (event === 'SIGNED_OUT') {
+          Object.assign(userDetails, userDetailsDefault)
+          sessionLoaded.value = false
+          storesProfissional.clearEntries()
+          storeConfig.clearConfig()
+          router.replace('/login')
+        }
+      })
     }
-
-    sessionLoaded.value = true
-
-    supabase.auth.onAuthStateChange((event, session) => {
-      if (event === 'SIGNED_IN' && session) {
-        userDetails.id = session.user.id
-        userDetails.email = session.user.email
-        storesProfissional.loadProfissional()
-        storeConfig.loadConfiguracao(session.user.id)
-        // REMOVA O REDIRECIONAMENTO AUTOMÁTICO
-      } else if (event === 'SIGNED_OUT') {
-        Object.assign(userDetails, userDetailsDefault)
-        sessionLoaded.value = false
-        storesProfissional.clearEntries()
-        storeConfig.clearConfig()
-        // router.replace('/login')
-      }
-    })
-  }
-
+    
   const registerUser = async ({ email, password }, profissional) => {
     const { data, error } = await supabase.auth.signUp({ email, password })
 
@@ -86,8 +77,7 @@ export const useStoreAuth = defineStore('auth', () => {
 
     if (error) {
       showError(error.message)
-    } else {
-     
+    } else {   
       router.push('/login')
     }
   }
