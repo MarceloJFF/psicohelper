@@ -277,36 +277,56 @@ function openEventModal() {
 }
 
 async function saveEvent() {
-  const { title, startDate, startTime, duration, tipoAtendimento, valorAtendimentoAvulso, color, cliente: aprendente, observacoes } = eventData.value
+  const { title, startDate, startTime, duration, tipoAtendimento, valorAtendimentoAvulso, color, cliente: aprendente, observacoes } = eventData.value;
 
+  // Validate required fields
   if (!title || !startDate || !startTime || !duration || !tipoAtendimento || (tipoAtendimento === 'Avulso' && !valorAtendimentoAvulso) || !aprendente) {
-    showMessage('Preencha todos os campos obrigatórios!')
-    return
+    showMessage('Preencha todos os campos obrigatórios!');
+    return;
   }
 
-  const start = new Date(`${startDate}T${startTime}`)
-  const end = new Date(start.getTime() + parseInt(duration) * 60000)
+  const start = new Date(`${startDate}T${startTime}`);
+  const end = new Date(start.getTime() + parseInt(duration) * 60000);
 
+  // Validate duration
   if (end <= start) {
-    showMessage('A duração deve ser maior que zero.')
-    return
+    showMessage('A duração deve ser maior que zero.');
+    return;
   }
 
-  // Verifica se a data selecionada é um feriado
-  const selectedDate = new Date(`${startDate}T00:00:00`)
+  // Check if the selected date is a feriado
+  const selectedDate = new Date(`${startDate}T00:00:00`);
   if (isDateFeriado(selectedDate)) {
-    showMessage('Não é possível salvar atendimentos em dias de feriado.')
-    return
+    showMessage('Não é possível salvar atendimentos em dias de feriado.');
+    return;
   }
 
-  // busca responsvel pelo id do aprendente
-  const responsavelService = new ResponsavelService()
-  const responsavelId = await responsavelService.getResponsavelIdByAprendenteId(aprendente.id)
+  // Validate aprendente
+  if (!aprendente.id || !aprendente.tipo) {
+    console.error('Invalid aprendente:', aprendente);
+    showMessage('Cliente inválido. Selecione um cliente válido.');
+    return;
+  }
+
+  // Fetch responsavel_id
+  let responsavelId;
+  try {
+    const responsavelService = new ResponsavelService();
+    responsavelId = await responsavelService.getResponsavelIdByAprendenteId(aprendente.id);
+    if (!responsavelId) {
+      showMessage('Responsável não encontrado para o cliente selecionado.');
+      return;
+    }
+  } catch (err) {
+    console.error('Error fetching responsavelId:', err);
+    showMessage('Erro ao buscar responsável do cliente.');
+    return;
+  }
 
   try {
-
+    // Create agendamento object
     const agendamento: Agendamento = {
-      id: eventData.value.id ?? '',
+      id: eventData.value.id || undefined, // Use undefined for new agendamentos
       titulo: title,
       dataAgendamento: start,
       horarioInicio: startTime,
@@ -316,51 +336,64 @@ async function saveEvent() {
       idProfissional: storeAuth.userDetails.id,
       tipoAtendimento: tipoAtendimento as 'Avulso' | 'Contrato',
       valorAtendimento: tipoAtendimento === 'Avulso' ? parseFloat(valorAtendimentoAvulso) : 0,
-      observacoes: observacoes
-    }
+      observacoes,
+      color // Include color if supported by backend
+    };
 
-
-
-    if (eventData.value.id) {
-
-      const { error: agendamentoError } = await agendamentoService.updateAgendamento(agendamento)
-      if (agendamentoError) {
-
-        throw new Error('Erro ao criar agendamento' + agendamentoError.message)
+    let agendamentoId = agendamento.id;
+    if (agendamento.id) {
+      // Update existing agendamento
+      const { error } = await agendamentoService.updateAgendamento(agendamento);
+      if (error) {
+        throw new Error(`Erro ao atualizar agendamento: ${error.message}`);
       }
     } else {
-      console.log('Criando agendamento:', agendamento);
-      const { error: agendamentoError } = await agendamentoService.createAgendamento(agendamento)
-      if (agendamentoError) {
-        throw new Error('Erro ao criar agendamento' + agendamentoError.message)
-      }
+      // Create new agendamento
+       await agendamentoService.createAgendamento(agendamento);
+      
     }
 
+    // Create new event for FullCalendar
     const newEvent = {
-      id: agendamento.id,
+      id: `agendamento-${agendamentoId}`, // Consistent ID format
       title,
       start: start.toISOString(),
       end: end.toISOString(),
-      backgroundColor: color,
+      allDay: false,
+      backgroundColor: color || '#1976d2', // Fallback color
+      textColor: '#fff',
+      editable: true,
+      selectable: true,
+      classNames: ['agendamento-event'],
       extendedProps: {
-        cliente: agendamento.clienteId,
+        cliente: aprendente.id, // Use aprendente.id instead of clienteId
         tipoAtendimento,
-        valorAtendimentoAvulso
+        valorAtendimentoAvulso: tipoAtendimento === 'Avulso' ? parseFloat(valorAtendimentoAvulso) : 0,
+        observacoes
       }
-    }
+    };
 
-    const existingIndex = events.value.findIndex(e => e.id === newEvent.id)
+    // Update events array
+    const existingIndex = events.value.findIndex(e => e.id === newEvent.id);
     if (existingIndex !== -1) {
-      events.value[existingIndex] = newEvent
+      events.value[existingIndex] = newEvent;
     } else {
-      events.value.push(newEvent)
+      events.value.push(newEvent);
     }
 
-    calendarApi?.refetchEvents()
-    showModal.value = false
-    showMessage('Evento salvo com sucesso!', 'success')
+    // Refresh calendar
+    if (calendarApi) {
+      calendarApi.refetchEvents();
+    } else {
+      console.warn('calendarApi not initialized, cannot refresh events');
+    }
+
+    // Close modal and show success message
+    showModal.value = false;
+    showMessage('Evento salvo com sucesso!', 'success');
   } catch (err: any) {
-    showMessage(err.message || 'Erro ao salvar evento')
+    console.error('Error saving event:', err);
+    showMessage(err.message || 'Erro ao salvar evento');
   }
 }
 
