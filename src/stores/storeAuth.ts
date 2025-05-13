@@ -26,7 +26,8 @@ export const useStoreAuth = defineStore('auth', () => {
   */
     const init = async () => {
       if (listenerAttached) return
-      
+      // Adicione esta verificação no seu código de autenticação
+
       listenerAttached = true
     
       // Recuperar a sessão atual (para manter o login mesmo com refresh)
