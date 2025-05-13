@@ -6,7 +6,7 @@ export class AgendamentoService {
   private showError = useShowErrorMessage().showError
 
   async createAgendamento(agendamento: Agendamento): Promise<string | undefined> {
-    
+
     try {
       const { data, error } = await supabase
         .from('tb_agendamento')
@@ -59,7 +59,7 @@ export class AgendamentoService {
 
   async deleteAgendamento(id: string): Promise<void> {
     try {
-      const { error } = await supabase.from('tb_agendamento').delete().eq('id', id)
+      const { error } = await supabase.from('tb_agendamento').delete().eq('id_agendamento', id)
 
       if (error) throw error
     } catch (err: any) {

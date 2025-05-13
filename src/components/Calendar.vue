@@ -5,7 +5,7 @@
       Novo Atendimento
     </v-btn>
     <!-- Calendário -->
-    <FullCalendar :options="calendarOptions" class="mt-4"  />
+    <FullCalendar ref="calendar" :options="calendarOptions" class="mt-4" />
 
     <!-- Modal de Cadastro/Alteração de Evento -->
     <v-dialog v-model="showModal" max-width="600px">
@@ -117,7 +117,7 @@ import { AprendenteService } from '@/services/AprendenteService'
 import { AgendamentoService } from '@/services/AgendamentoService'
 import type Agendamento from '@/models/Agendamento'
 
-const calendarRef = ref()
+const calendar = ref()
 const showModal = ref(false)
 const showAtendimentoModal = ref(false)
 const showStartButton = ref(false)
@@ -135,6 +135,7 @@ const clientes = ref<any[]>([])
 const aprendenteService = new AprendenteService()
 const agendamentoService = new AgendamentoService()
 const eventos = ref<any[]>([])
+const type = ref('month')
 
 let calendarApi: any = null
 
@@ -158,25 +159,23 @@ function resetEventData() {
 }
 
 const loadEventos = async () => {
-  // const agendamentos: Agendamento[] = await agendamentoService.getAllAgendamentos() ?? []
-  isLoading.value = true
+  isLoading.value = true;
   try {
     if (!storeAuth.userDetails.id) {
-      showError('Usuário não autenticado')
-      return
+      showError('Usuário não autenticado');
+      return;
     }
 
-    // Primeiro carrega a configuração
-    await storeConfig.loadConfiguracao(storeAuth.userDetails.id)
-
+    // Load configuration
+    await storeConfig.loadConfiguracao(storeAuth.userDetails.id);
     if (!storeConfig.configuracao?.id) {
-      showError('Configuração não encontrada')
-      return
+      showError('Configuração não encontrada');
+      return;
     }
 
-    // Depois carrega os feriados
-    await storeConfig.loadFeriados()
-    console.log('Feriados carregados:', storeConfig.feriados)
+    // Load feriados
+    await storeConfig.loadFeriados();
+    console.log('Feriados carregados:', storeConfig.feriados);
 
     const feriadosEvents = storeConfig.feriados.map(feriado => ({
       id: `feriado-${feriado.id}`,
@@ -184,50 +183,71 @@ const loadEventos = async () => {
       start: feriado.data_feriado,
       allDay: true,
       backgroundColor: '#ff5252',
-      color: 'white',
+      textColor: 'white',
       display: 'background',
       editable: false,
       selectable: false,
       classNames: ['feriado-event'],
-      interactive: false // Impede interação com o evento
-    }))
-
-    console.log('Eventos de feriados criados:', feriadosEvents)
-    events.value = [...feriadosEvents]
-    console.log('Events atualizado:', events.value)
-
-    await storeCalendario.loadAgendamentos()
-    const agendamentosEvents = storeCalendario.agendamentos.map(agendamento => ({
-      id: `agendamento-${agendamento.id}`,
-      title: agendamento.titulo,
-      start: agendamento.data_agendamento,
-      end: agendamento.data_agendamento,
-      allDay: true,
-      backgroundColor: '#1976d2',
-      color:'#000',
-      display: 'background',
-      editable: false,
-      selectable: false,
-      classNames: ['agendamento-event'],
       interactive: false
-    }))
-    events.value = [...events.value, ...agendamentosEvents]
-    
+    }));
 
+    // Load agendamentos
+    await storeCalendario.loadAgendamentos();
+    const agendamentosEvents = storeCalendario.agendamentos.map(agendamento => {
+      console.log('COISO AGENDAMENTO:', agendamento);
+      
+      const start = new Date(agendamento.data_agendamento);
+      const end = new Date(start.getTime() + (agendamento.duracao || 60) * 60000); // Default to 60 min if no duration
+
+      return {
+        id: agendamento.id_agendamento,
+        title: agendamento.titulo,
+        start: start.toISOString(),
+        end: end.toISOString(),
+        allDay: false, // Agendamentos typically have specific times
+        backgroundColor: agendamento.color || '#1976d2', // Use stored color or default
+        textColor: '#fff',
+        editable: true, // Allow editing for agendamentos
+        selectable: true,
+        classNames: ['agendamento-event'],
+        extendedProps: {
+          cliente: agendamento.clienteId,
+          tipoAtendimento: agendamento.tipoAtendimento,
+          valorAtendimentoAvulso: agendamento.valorAtendimento,
+          observacoes: agendamento.observacoes
+        }
+      };
+    });
+
+    // Combine feriados and agendamentos
+    events.value = [...feriadosEvents, ...agendamentosEvents];
+    console.log('Events populated:', events.value);
+
+    // Refresh calendar
+    if (calendarApi) {
+      calendarApi.refetchEvents();
+    }
   } catch (err) {
-    console.error('Erro ao carregar eventos:', err)
-    showError('Erro ao carregar eventos')
+    console.error('Erro ao carregar eventos:', err);
+    showError('Erro ao carregar eventos');
   } finally {
-    isLoading.value = false
+    isLoading.value = false;
   }
-}
+};
 
 onMounted(async () => {
-  // console.log('Iniciando montagem do componente...')
-  // calendarApi = calendarRef.value?.getApi()
-  // console.log('calendarApi inicializado:', calendarApi.value)
-  await loadEventos()
+  if (calendar.value) {
+    calendarApi = calendar.value.getApi();
+    console.log('calendarApi initialized:', calendarApi);
+  }
+  await loadEventos();
 })
+
+watch(events, () => {
+  if (calendarApi) {
+    calendarApi.refetchEvents();
+  }
+});
 
 function showMessage(message: string, color = 'error') {
   snackbarText.value = message
@@ -242,13 +262,13 @@ function normalizeDate(date: Date): string {
 function isDateFeriado(date: Date): boolean {
   const normalizedDate = normalizeDate(date);
   let isFeriado = false;
-  
+
   storeConfig.feriados.forEach(feriado => {
     if (feriado.data_feriado === normalizedDate) {
       isFeriado = true;
     }
   });
-  return isFeriado; 
+  return isFeriado;
 }
 
 function openEventModal() {
@@ -280,13 +300,11 @@ async function saveEvent() {
     return
   }
 
-
-
-
   try {
     console.log('Criando agendamento:', eventData.value.id);
 
     const agendamento: Agendamento = {
+      id: eventData.value.id ?? '',
       titulo: title,
       dataAgendamento: start,
       horarioInicio: startTime,
@@ -380,46 +398,42 @@ const calendarOptions = ref({
     dows: [0, 1, 2, 3, 4, 5, 6]
   },
   selectAllow: (selectInfo) => {
-    // Verifica se a data selecionada não é um feriado
-    const isFeriado = isDateFeriado(new Date(selectInfo.startStr))
+    const isFeriado = isDateFeriado(new Date(selectInfo.startStr));
     if (isFeriado) {
-      showMessage('Não é possível agendar em dias de feriado')
+      showMessage('Não é possível agendar em dias de feriado');
     }
-    return !isFeriado
+    return !isFeriado;
   },
   eventSources: [
     (info, successCallback) => {
-
       const filtered = events.value.filter(event => {
-        const eventStart = new Date(event.start)
-        return eventStart >= new Date(info.startStr) && eventStart <= new Date(info.endStr)
-      })
-      successCallback(filtered)
+        const eventStart = new Date(event.start);
+        return eventStart >= new Date(info.startStr) && eventStart <= new Date(info.endStr);
+      });
+      successCallback(filtered);
     }
   ],
   dateClick(info) {
-    const clickedDate = new Date(info.date)
+    const clickedDate = new Date(info.date);
     if (isDateFeriado(clickedDate)) {
-      showMessage('Não é possível agendar em dias de feriado')
-      return
+      showMessage('Não é possível agendar em dias de feriado');
+      return;
     }
-
-    resetEventData()
-    eventData.value.startDate = info.dateStr
-    showModal.value = true
+    resetEventData();
+    eventData.value.startDate = info.dateStr.split('T')[0];
+    eventData.value.startTime = info.dateStr.split('T')[1]?.slice(0, 5) || '09:00';
+    showModal.value = true;
   },
   eventClick(info) {
-    // Não permite clicar em eventos de feriado
+    console.log('eventClick', info);
+    
     if (info.event.display === 'background') {
-      return
+      return;
     }
-
-    const [startDate, startTimeRaw] = info.event.startStr.split('T')
-    const start = new Date(info.event.startStr)
-    const end = new Date(info.event.endStr)
-
-    const durationInMinutes = Math.round((end.getTime() - start.getTime()) / 60000)
-
+    const [startDate, startTimeRaw] = info.event.startStr.split('T');
+    const start = new Date(info.event.startStr);
+    const end = new Date(info.event.endStr);
+    const durationInMinutes = Math.round((end.getTime() - start.getTime()) / 60000);
     eventData.value = {
       id: info.event.id,
       title: info.event.title,
@@ -429,25 +443,68 @@ const calendarOptions = ref({
       color: info.event.backgroundColor || '#1976d2',
       tipoAtendimento: info.event.extendedProps.tipoAtendimento || '',
       valorAtendimentoAvulso: info.event.extendedProps.valorAtendimentoAvulso || '',
-      cliente: info.event.extendedProps.cliente || ''
-    }
-
-    showStartButton.value = true
-    showModal.value = true
+      cliente: info.event.extendedProps.cliente || '',
+      observacoes: info.event.extendedProps.observacoes || ''
+    };
+    showStartButton.value = true;
+    showModal.value = true;
   },
   eventDidMount(info) {
-    info.el.style.backgroundColor = info.event.backgroundColor
-    info.el.style.borderRadius = '4px'
-    info.el.style.padding = '4px'
-    info.el.style.cursor = 'pointer'
-
-    // Adiciona cursor not-allowed para feriados
+    info.el.style.backgroundColor = info.event.backgroundColor;
+    info.el.style.borderRadius = '4px';
+    info.el.style.padding = '4px';
+    info.el.style.cursor = 'pointer';
     if (info.event.display === 'background') {
-      info.el.style.cursor = 'not-allowed'
-      info.el.style.pointerEvents = 'none' // Impede qualquer interação com o elemento
+      info.el.style.cursor = 'not-allowed';
+      info.el.style.pointerEvents = 'none';
+    }
+  },
+  eventMouseEnter(info) {
+
+    
+    
+    if (info.event.display === 'background') return;
+    const event = info.event;
+    console.log("COISO: ", event.extendedProps);
+    const el = info.el;
+    const jsEvent = info.jsEvent;
+    el.style.border = '2px solid #5E35B1';
+    el.style.boxShadow = '0 2px 4px rgba(0, 0, 0, 0.2)';
+    const tooltip = document.createElement('div');
+    tooltip.className = 'custom-tooltip';
+    tooltip.innerHTML = `
+    <strong>${event.title}</strong><br>
+    Cliente: ${event.extendedProps.cliente || 'N/A'}<br>
+    Tipo: ${event.extendedProps.tipoAtendimento || 'N/A'}<br>
+    Data: ${new Date(event.start).toLocaleDateString('pt-BR')}<br>
+    Horário: ${new Date(event.start).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}<br>
+    Observações: ${event.extendedProps.observacoes || 'Nenhuma'}
+  `;
+    tooltip.style.position = 'absolute';
+    tooltip.style.background = '#fff';
+    tooltip.style.border = '1px solid #ccc';
+    tooltip.style.padding = '8px';
+    tooltip.style.borderRadius = '4px';
+    tooltip.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.15)';
+    tooltip.style.zIndex = '1000';
+    tooltip.style.left = `${jsEvent.pageX + 10}px`;
+    tooltip.style.top = `${jsEvent.pageY + 10}px`;
+    document.body.appendChild(tooltip);
+    el._tooltip = tooltip; // Store directly on el as a custom property
+  },
+
+  eventMouseLeave(info) {
+    if (info.event.display === 'background') return;
+    const el = info.el;
+    el.style.border = '';
+    el.style.boxShadow = '';
+    const tooltip = el._tooltip;
+    if (tooltip) {
+      tooltip.remove(); // Now works because tooltip is the DOM element
+      delete el._tooltip;
     }
   }
-})
+});
 
 const filteredClientes = ref<any[]>([])
 
