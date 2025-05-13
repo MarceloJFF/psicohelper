@@ -38,7 +38,7 @@ const snackbarMessage = ref('')
 const snackbarColor = ref('success')
 
 onMounted(async () => {
-  
+  storeProfissional.loadProfissional()
   if (storeProfissional.profissionalDetails) {
     perfil.value = {
       ...storeProfissional.profissionalDetails,

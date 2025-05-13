@@ -22,7 +22,7 @@ const storeProfissional = useStoreProfissional()
 </script>
 
 <template>
-  <v-app id="inspire">
+  <v-app id="inspire" v-if="storeProfissional.profissionalDetails">
     <v-navigation-drawer v-model="drawer" app color="#9a20c1" permanent>
       <v-img
         :width="321"
