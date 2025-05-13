@@ -74,15 +74,15 @@
                             {{ contrato.cancelado || contrato.vencido ? 'Cancelado/inativo' : (contrato.cadastrado ? 'Ativo' : 'Inativo') }}
                           </v-chip>
                         </div>
-                        <strong>Valor:</strong> R$ {{ contrato.valor_mensal }}<br />
+                        <strong>Valor:</strong> R$ {{ contrato.valorMensal }}<br />
                         <strong>Duração:</strong> {{ contrato.duracao }} meses<br />
                         <strong>Vencimento:</strong> {{ contrato.vencimento }}<br />
-                        <strong>Descrição:</strong> {{ contrato.descricao_servico }}<br />
+                        <strong>Descrição:</strong> {{ contrato.descricaoServico }}<br />
                         <strong>Dias: </strong>
                         <v-chip v-for="dia in contrato.diasAtendimento" :key="dia.dia" class="ma-1">
                           {{ dia.dia }} ({{ dia.inicio }} - {{ dia.fim }})
                         </v-chip>
-                        
+
                         <div class="d-flex justify-end mt-3">
                           <v-btn
                             v-if="contrato.cadastrado && !contrato.cancelado"
@@ -175,8 +175,8 @@
           <v-btn color="grey" text @click="dialogCancelamento = false">
             Voltar
           </v-btn>
-          <v-btn 
-            color="error" 
+          <v-btn
+            color="error"
             @click="confirmarAcao"
             :disabled="!formCancelamentoValido"
           >
@@ -221,7 +221,7 @@ const buscarContratos = async () => {
   if (idAprendente) {
     contratos.value = await contratoService.loadContratoPorAprendente(idAprendente)
     for (const contrato of contratos.value) {
-      const dias = await diasAtendimento.loadDiasAtendimento(contrato.id_contrato)
+      const dias = await diasAtendimento.loadDiasAtendimento(contrato.idContrato)
       contrato.diasAtendimento = dias
     }
   }
@@ -247,7 +247,7 @@ const contrato = ref({
 const responsavel = ref({
   nome: '',
   cpf: '',
-  telefone1: '',
+  telefone: '',
   telefone2: '',
   cep: '',
   endereco: '',
@@ -258,7 +258,7 @@ const responsavel = ref({
   nascimento: '',
   email: '',
   tipoAtendimento: '',
-  dependentes: [] as { nome: string; nascimento: string }[],
+  aprendente: [] as { nome: string; nascimento: string }[],
   contrato: contrato.value
 })
 
@@ -273,7 +273,7 @@ responsavel.value = {
   cidade: route.query.cidade as string || '',
   estado: route.query.estado as string || '',
   sexo: route.query.sexo as string || '',
-  atendimentoPróprio: route.query.atendimentoProprio as string || '',
+  atendimentoProprio: route.query.atendimentoProprio as string || '',
   nascimento: route.query.nascimento as string || '',
   email: route.query.email as string || '',
   tipoAtendimento: route.query.tipoAtendimento as string || '',
@@ -368,9 +368,9 @@ const confirmarAcao = async () => {
 
   try {
     if (modoCancelamento.value === 'cancelar') {
-      await contratoService.deleteContrato(contratoParaCancelar.value.id_contrato, motivoCancelamento.value)
+      await contratoService.deleteContrato(contratoParaCancelar.value.idContrato, motivoCancelamento.value)
     } else {
-      await contratoService.inativarContrato(contratoParaCancelar.value.id_contrato, motivoCancelamento.value)
+      await contratoService.inativarContrato(contratoParaCancelar.value.idContrato, motivoCancelamento.value)
     }
     await buscarContratos()
     snackbarMessage.value = `Contrato ${modoCancelamento.value === 'cancelar' ? 'cancelado' : 'inativado'} com sucesso!`

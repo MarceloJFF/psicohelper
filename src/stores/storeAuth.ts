@@ -28,11 +28,12 @@ export const useStoreAuth = defineStore('auth', () => {
       supabase.auth.onAuthStateChange((event, session) => {
         if (event === 'SIGNED_IN' || event === 'INITIAL_SESSION') {
           if (session != null) {
+            console.log("Sessao iniciada")
             userDetails.id = session.user.id
             userDetails.email = session.user.email
             storesProfissional.loadProfissional()
             storeConfig.loadConfiguracao(session.user.id)
-            router.push('/')
+            //router.push('/')
           }
         } else if (event === 'SIGNED_OUT') {
           Object.assign(userDetails, userDetailsDefault)
@@ -43,7 +44,7 @@ export const useStoreAuth = defineStore('auth', () => {
         }
       })
     }
-    
+
   const registerUser = async ({ email, password }, profissional) => {
     const { data, error } = await supabase.auth.signUp({ email, password })
 
@@ -52,7 +53,7 @@ export const useStoreAuth = defineStore('auth', () => {
       await storeConfig.createConfiguracao(storesProfissional.profissionalDetails.value.id)
     }
 
-    if (error) showError("Houve um erro ao criar o usuário, tente novamente mais tarde")
+    if (error) showError("Houve um erro ao criar o usuário, tente novamente mais tarde"+error.message)
   }
 
   const loginUser = async ({ email, password }) => {
@@ -77,7 +78,7 @@ export const useStoreAuth = defineStore('auth', () => {
 
     if (error) {
       showError(error.message)
-    } else {   
+    } else {
       router.push('/login')
     }
   }

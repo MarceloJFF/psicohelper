@@ -228,12 +228,13 @@ const salvarResponsavel = () => {
 }
 
 const visualizarResponsavel = (responsavel) => {
+  console.log(responsavel)
   router.push({
     name: 'cliente-detalhes',
     params: {
       idResponsavel: responsavel.idResponsavel,
-      idAprendente: responsavel.idAprendente || undefined, // se for falsy, não envia
-    },
+      idAprendente: responsavel.idAprendente ,
+    }
   })
 }
 
@@ -246,3 +247,15 @@ const confirmarInativacao = (responsavel: Responsavel) => {
   dialogConfirmacao.value = true
 }
 </script>
+
+<style scoped>
+/* Transições suaves de página */
+.router-view {
+  transition: opacity 0.5s ease-in-out;
+  opacity: 0;
+}
+
+.router-view-enter-active, .router-view-leave-active {
+  opacity: 1;
+}
+</style>

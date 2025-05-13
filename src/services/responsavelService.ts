@@ -66,7 +66,7 @@ export class ResponsavelService {
 
       if (error) throw error
       let idAprendente= '';
-      if (responsavel.aprendentes?.length > 0) {
+      if (responsavel.aprendentes?.length > 0 && responsavel.atendimento_proprio!=true) {
         for (const aprendente of responsavel.aprendentes) {
           aprendente.idResponsavel = data[0].id; // Ajuste se necessário
           idAprendente = await this.aprendenteService.addAprendente(aprendente)
@@ -88,6 +88,12 @@ export class ResponsavelService {
       this.showError(err.message || 'Erro ao adicionar cliente')
     }
   }
+
+  async loadResponsaveisAprendentesEAprendentes(): Promise<any[]> {
+
+  }
+
+
   async loadAprendentes(): Promise<any[]> {
     try {
       const idProfissional = this.storeProfissional.profissionalDetails?.id;
@@ -95,20 +101,20 @@ export class ResponsavelService {
         this.showError('Profissional não está autenticado');
         return [];
       }
-  
+
       // Agora fazemos apenas UMA consulta à view
       const { data, error } = await supabase
         .from('vw_aprendentes_com_responsaveis')
         .select('*')
         .eq('id_profissional', idProfissional)
         .order('nome_exibicao', { ascending: true });
-  
+
       if (error) throw error;
       if (!data || data.length === 0) {
         console.warn('Nenhum aprendente/responsável encontrado');
         return [];
       }
-  
+
       // Formatamos os dados conforme necessário
       const listaFinal = data.map(item => ({
         idAprendente: item.atendimento_proprio ? item.id_responsavel : item.id_aprendente,
@@ -116,10 +122,8 @@ export class ResponsavelService {
         nomeAprendente: item.atendimento_proprio ? item.nome_responsavel : item.nome_aprendente,
         nomeResponsavel: item.nome_responsavel,
         telefoneResponsavel: item.telefone_responsavel,
-        atendimentoProprio: item.atendimento_proprio,
-        nomeExibicao: item.nome_exibicao
       }));
-  
+
       console.log('Lista final de aprendentes formatada:', listaFinal);
       return listaFinal;
     } catch (err: any) {

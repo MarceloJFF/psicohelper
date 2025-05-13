@@ -1,8 +1,6 @@
 import { createApp, h } from 'vue'
 import { createPinia } from 'pinia'
 import App from './App.vue'
-import router from './router'
-import { useStoreAuth } from '/src/stores/storeAuth'
 
 // Vuetify
 import 'vuetify/styles'
@@ -12,6 +10,7 @@ import * as directives from 'vuetify/directives'
 import '@mdi/font/css/materialdesignicons.css'
 import '@/assets/main.css'
 import '@vueup/vue-quill/dist/vue-quill.snow.css'
+import router from '@/router'
 
 const app = createApp(App)
 
