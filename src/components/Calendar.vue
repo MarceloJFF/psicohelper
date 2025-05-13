@@ -1,21 +1,11 @@
 <template>
   <v-container>
     <!-- Botão de novo atendimento -->
-    <v-btn
-      color="primary"
-      @click="openEventModal"
-      prepend-icon="mdi-plus"
-    >
+    <v-btn color="primary" @click="openEventModal" prepend-icon="mdi-plus">
       Novo Atendimento
     </v-btn>
     <!-- Calendário -->
-    <FullCalendar
-      ref="calendarRef"
-      :options="calendarOptions"
-      class="mt-4"
-    />
-
-
+    <FullCalendar :options="calendarOptions" class="mt-4"  />
 
     <!-- Modal de Cadastro/Alteração de Evento -->
     <v-dialog v-model="showModal" max-width="600px">
@@ -28,72 +18,35 @@
           <v-container>
             <v-row>
               <v-col cols="12">
-                <v-text-field
-                  label="Título"
-                  v-model="eventData.title"
-                  required
-                />
+                <v-text-field label="Título" v-model="eventData.title" required />
               </v-col>
 
               <v-col cols="6">
-                <v-text-field
-                  label="Data"
-                  v-model="eventData.startDate"
-                  type="date"
-                  required
-                />
+                <v-text-field label="Data" v-model="eventData.startDate" type="date" required />
               </v-col>
 
               <v-col cols="6">
-                <v-text-field
-                  label="Hora"
-                  v-model="eventData.startTime"
-                  type="time"
-                  required
-                />
+                <v-text-field label="Hora" v-model="eventData.startTime" type="time" required />
               </v-col>
 
               <v-col cols="6">
-                <v-text-field
-                  label="Duração (minutos)"
-                  v-model="eventData.duration"
-                  type="number"
-                  required
-                />
+                <v-text-field label="Duração (minutos)" v-model="eventData.duration" type="number" required />
               </v-col>
 
               <v-col cols="6">
-                <v-select
-                  label="Tipo de Atendimento"
-                  v-model="eventData.tipoAtendimento"
-                  :items="['Avulso', 'Contrato']"
-                  required
-                />
+                <v-select label="Tipo de Atendimento" v-model="eventData.tipoAtendimento"
+                  :items="['Avulso', 'Contrato']" required />
               </v-col>
 
               <v-col cols="12" v-if="eventData.tipoAtendimento === 'Avulso'">
-                <v-text-field
-                  label="Valor do Atendimento Avulso"
-                  v-model="eventData.valorAtendimentoAvulso"
-                  prefix="R$"
-                  type="number"
-                />
+                <v-text-field label="Valor do Atendimento Avulso" v-model="eventData.valorAtendimentoAvulso" prefix="R$"
+                  type="number" />
               </v-col>
 
               <v-col cols="12">
-                <v-autocomplete
-                  v-model="eventData.cliente"
-                  :items="filteredClientes"
-                  v-model:search="searchQuery"
-                  label="Cliente"
-                  item-title="displayName"
-                  item-value="id"
-                  :loading="isLoading"
-                  return-object
-                  clearable
-                  :filter="() => true"
-                  :menu-props="{ maxHeight: 400 }"
-                >
+                <v-autocomplete v-model="eventData.cliente" :items="filteredClientes" v-model:search="searchQuery"
+                  label="Cliente" item-title="displayName" item-value="id" :loading="isLoading" return-object clearable
+                  :filter="() => true" :menu-props="{ maxHeight: 400 }">
                   <template v-slot:item="{ props, item }">
                     <v-list-item v-bind="props">
                       <v-list-item-title>
@@ -105,22 +58,12 @@
               </v-col>
 
               <v-col cols="12">
-                <v-text-field
-                  label="Observações"
-                  v-model="eventData.observacoes"
-                />
+                <v-text-field label="Observações" v-model="eventData.observacoes" />
               </v-col>
 
               <v-col cols="12">
-                <v-color-picker
-                  v-model="eventData.color"
-                  label="Cor do Evento"
-                  hide-canvas
-                  hide-inputs
-                  show-swatches
-                  flat
-                  swatches-max-height="120"
-                />
+                <v-color-picker v-model="eventData.color" label="Cor do Evento" hide-canvas hide-inputs show-swatches
+                  flat swatches-max-height="120" />
               </v-col>
             </v-row>
           </v-container>
@@ -134,11 +77,7 @@
           <v-btn color="success" @click="saveEvent">
             Salvar
           </v-btn>
-          <v-btn
-            color="primary"
-            @click="startAtendimento"
-            v-if="showStartButton"
-          >
+          <v-btn color="primary" @click="startAtendimento" v-if="showStartButton">
             Iniciar Atendimento
           </v-btn>
           <v-btn text @click="showModal = false">
@@ -172,6 +111,7 @@ import ptBr from '@fullcalendar/core/locales/pt-br'
 import AtendimentoModal from '@/components/AtendimentoModal.vue'
 import { useStoreConfig } from '@/stores/storeConfig'
 import { useStoreAuth } from '@/stores/storeAuth'
+import { useStoreCalendario } from '@/stores/storeCalendario'
 import { useShowErrorMessage } from '@/userCases/useShowErrorMessage'
 import { AprendenteService } from '@/services/AprendenteService'
 import { AgendamentoService } from '@/services/AgendamentoService'
@@ -187,12 +127,14 @@ const snackbarColor = ref('error')
 const events = ref<any[]>([])
 const storeConfig = useStoreConfig()
 const storeAuth = useStoreAuth()
+const storeCalendario = useStoreCalendario()
 const { showError } = useShowErrorMessage()
 const isLoading = ref(false)
 const searchQuery = ref('')
 const clientes = ref<any[]>([])
 const aprendenteService = new AprendenteService()
 const agendamentoService = new AgendamentoService()
+const eventos = ref<any[]>([])
 
 let calendarApi: any = null
 
@@ -206,7 +148,7 @@ const defaultEventData = () => ({
   tipoAtendimento: '',
   valorAtendimentoAvulso: '',
   color: '#1976d2',
-  observacoes:''
+  observacoes: ''
 })
 
 const eventData = ref(defaultEventData())
@@ -215,7 +157,8 @@ function resetEventData() {
   eventData.value = defaultEventData()
 }
 
-const loadEvents = async () => {
+const loadEventos = async () => {
+  // const agendamentos: Agendamento[] = await agendamentoService.getAllAgendamentos() ?? []
   isLoading.value = true
   try {
     if (!storeAuth.userDetails.id) {
@@ -225,7 +168,7 @@ const loadEvents = async () => {
 
     // Primeiro carrega a configuração
     await storeConfig.loadConfiguracao(storeAuth.userDetails.id)
-    
+
     if (!storeConfig.configuracao?.id) {
       showError('Configuração não encontrada')
       return
@@ -241,7 +184,7 @@ const loadEvents = async () => {
       start: feriado.data_feriado,
       allDay: true,
       backgroundColor: '#ff5252',
-      color:'white',
+      color: 'white',
       display: 'background',
       editable: false,
       selectable: false,
@@ -252,11 +195,28 @@ const loadEvents = async () => {
     console.log('Eventos de feriados criados:', feriadosEvents)
     events.value = [...feriadosEvents]
     console.log('Events atualizado:', events.value)
+
     
-    if (calendarApi) {
-      console.log('Atualizando calendário...')
-      calendarApi.refetchEvents()
-    }
+    // Carrega os agendamentos
+    await storeCalendario.loadAgendamentos()
+    const agendamentos = storeCalendario.agendamentos.map(agendamento => ({
+      id: `agendamento-${agendamento.id}`,
+      title: agendamento.cliente,
+      start: agendamento.data_agendamento,
+      end: agendamento.data_agendamento,
+      allDay: true,
+      backgroundColor: '#1976d2',
+      color: 'white',
+      display: 'background',
+      editable: false,
+      selectable: false,
+      classNames: ['agendamento-event'],
+      interactive: false
+    }))
+    events.value = [...events.value, ...agendamentos]
+    console.log('COISO:', events.value);
+    
+
   } catch (err) {
     console.error('Erro ao carregar eventos:', err)
     showError('Erro ao carregar eventos')
@@ -266,10 +226,10 @@ const loadEvents = async () => {
 }
 
 onMounted(async () => {
-  console.log('Iniciando montagem do componente...')
-  calendarApi = calendarRef.value?.getApi()
-  console.log('calendarApi inicializado:', !!calendarApi)
-  await loadEvents()
+  // console.log('Iniciando montagem do componente...')
+  // calendarApi = calendarRef.value?.getApi()
+  // console.log('calendarApi inicializado:', calendarApi.value)
+  await loadEventos()
 })
 
 function showMessage(message: string, color = 'error') {
@@ -300,9 +260,9 @@ function openEventModal() {
 }
 
 async function saveEvent() {
-  const { title, startDate, startTime, duration, tipoAtendimento, valorAtendimentoAvulso, color, cliente, observacoes } = eventData.value
+  const { title, startDate, startTime, duration, tipoAtendimento, valorAtendimentoAvulso, color, cliente: aprendente, observacoes } = eventData.value
 
-  if (!title || !startDate || !startTime || !duration || !tipoAtendimento || (tipoAtendimento === 'Avulso' && !valorAtendimentoAvulso) || !cliente) {
+  if (!title || !startDate || !startTime || !duration || !tipoAtendimento || (tipoAtendimento === 'Avulso' && !valorAtendimentoAvulso) || !aprendente) {
     showMessage('Preencha todos os campos obrigatórios!')
     return
   }
@@ -322,29 +282,39 @@ async function saveEvent() {
     return
   }
 
+
+
+
   try {
+    console.log('Criando agendamento:', eventData.value.id);
+
     const agendamento: Agendamento = {
-      id: eventData.value.id || '',
       titulo: title,
       dataAgendamento: start,
       horarioInicio: startTime,
       duracao: parseInt(duration),
-      clienteId: cliente.id,
-      idDependente: cliente.tipo === 'aprendente' ? cliente.id : '',
+      //@ts-ignore
+      // id: aprendente.id as string,
+      idDependente: aprendente.tipo === 'aprendente' ? aprendente.id : '',
       idProfissional: storeAuth.userDetails.id,
       tipoAtendimento: tipoAtendimento as 'Avulso' | 'Contrato',
-      valorAtendimento: tipoAtendimento === 'Avulso' ? parseFloat(valorAtendimentoAvulso) : undefined,
+      valorAtendimento: tipoAtendimento === 'Avulso' ? parseFloat(valorAtendimentoAvulso) : 0,
       observacoes: observacoes
     }
 
     if (eventData.value.id) {
-      await agendamentoService.updateAgendamento(agendamento)
-    } else {
-      const newId = await agendamentoService.createAgendamento(agendamento)
-      if (!newId) {
-        throw new Error('Erro ao criar agendamento')
+      console.log('id', eventData.value.id);
+
+      const { error: agendamentoError } = await agendamentoService.updateAgendamento(agendamento)
+      if (agendamentoError) {
+
+        throw new Error('Erro ao criar agendamento' + agendamentoError.message)
       }
-      agendamento.id = newId
+    } else {
+      const { error: agendamentoError } = await agendamentoService.createAgendamento(agendamento)
+      if (agendamentoError) {
+        throw new Error('Erro ao criar agendamento' + agendamentoError.message)
+      }
     }
 
     const newEvent = {
@@ -377,7 +347,7 @@ async function saveEvent() {
 
 async function deleteEvent() {
   if (!eventData.value.id) return
-  
+
   try {
     await agendamentoService.deleteAgendamento(eventData.value.id)
     events.value = events.value.filter(e => e.id !== eventData.value.id)
@@ -413,8 +383,8 @@ const calendarOptions = ref({
   },
   selectAllow: (selectInfo) => {
     // Verifica se a data selecionada não é um feriado
-    const isFeriado = events.value.some(event => 
-      event.display === 'background' && 
+    const isFeriado = events.value.some(event =>
+      event.display === 'background' &&
       new Date(event.start).toDateString() === new Date(selectInfo.start).toDateString()
     )
     if (isFeriado) {
@@ -424,6 +394,7 @@ const calendarOptions = ref({
   },
   eventSources: [
     (info, successCallback) => {
+
       const filtered = events.value.filter(event => {
         const eventStart = new Date(event.start)
         return eventStart >= new Date(info.startStr) && eventStart <= new Date(info.endStr)
@@ -473,7 +444,8 @@ const calendarOptions = ref({
     info.el.style.backgroundColor = info.event.backgroundColor
     info.el.style.borderRadius = '4px'
     info.el.style.padding = '4px'
-    
+    info.el.style.cursor = 'pointer'
+
     // Adiciona cursor not-allowed para feriados
     if (info.event.display === 'background') {
       info.el.style.cursor = 'not-allowed'
@@ -489,7 +461,7 @@ watch(searchQuery, async (newValue) => {
     filteredClientes.value = []
     return
   }
-  
+
   isLoading.value = true
   try {
     const resultados = await aprendenteService.buscarClientesPorNome(newValue)
@@ -517,6 +489,24 @@ watch(searchQuery, async (newValue) => {
   background-color: #FFFFFF;
   color: #0a0a0a;
   font-size: 1rem;
+}
+
+/* Célula do calendário */
+:deep(.fc-daygrid-day) {
+  /* border: 1px solid red !important; */
+}
+
+:deep(.fc-daygrid-day-frame) {
+  /* border: 1px solid red !important; */
+}
+
+:deep(.fc-daygrid-day-frame:hover) {
+  cursor: pointer !important;
+  background-color: #B39DDB !important;
+}
+
+:deep(.fc-daygrid-day-events) {
+  /* border: 1px solid red !important; */
 }
 
 /* Título do calendário */
@@ -550,6 +540,7 @@ watch(searchQuery, async (newValue) => {
 :deep(.fc-button.fc-today-button) {
   background-color: #311B92 !important;
   color: white !important;
+
 }
 
 /* Botão ativo */
@@ -571,13 +562,14 @@ watch(searchQuery, async (newValue) => {
   :deep(.fc-toolbar-title) {
     font-size: 1.2rem;
   }
+
   :deep(.fc-event-main) {
     font-size: 0.8rem;
   }
+
   :deep(.fc-button) {
     font-size: 0.8rem;
     padding: 5px 10px;
   }
 }
 </style>
-
