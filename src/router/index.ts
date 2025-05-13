@@ -111,7 +111,6 @@ const router = createRouter({
 
 router.beforeEach(async (to, from, next) => {
   const storeAuth = useStoreAuth()
-
   // Aguarda a sessão carregar
   if (!storeAuth.sessionLoaded) {
     // Aguarda no máximo 2 segundos para sessionLoaded ficar true

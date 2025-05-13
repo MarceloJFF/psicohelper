@@ -17,8 +17,6 @@ export const useStoreProfissional = defineStore('profissional', () => {
 
   // Actions
   const loadProfissional = async () => {
- 
-    
     const storeAuth = useStoreAuth()
     profissionalLoaded.value = false
 

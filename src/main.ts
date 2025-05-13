@@ -50,7 +50,4 @@ app.use(router)
 app.use(vuetify)
 
 
-const storeAuth = useStoreAuth()
-await storeAuth.init()
-
 app.mount('#app')

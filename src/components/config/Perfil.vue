@@ -38,7 +38,7 @@ const snackbarMessage = ref('')
 const snackbarColor = ref('success')
 
 onMounted(async () => {
-  storeProfissional.loadProfissional()
+  
   if (storeProfissional.profissionalDetails) {
     perfil.value = {
       ...storeProfissional.profissionalDetails,
@@ -91,6 +91,7 @@ async function salvarPerfil() {
       snackbarColor.value = 'error'
     } finally {
       snackbar.value = true
+      storeProfissional.loadProfissional()
     }
   }
 }

@@ -16,7 +16,7 @@ export const useStoreAuth = defineStore('auth', () => {
     id: null,
     email: null
   }
-
+  let listenerAttached = false;
   const userDetails = reactive({
     ...userDetailsDefault
   })
@@ -25,24 +25,50 @@ export const useStoreAuth = defineStore('auth', () => {
     actions
   */
     const init = async () => {
-      supabase.auth.onAuthStateChange((event, session) => {
+      if (listenerAttached) return
+      
+      listenerAttached = true
+    
+      // Recuperar a sessão atual (para manter o login mesmo com refresh)
+      const { data: { session } } = await supabase.auth.getSession()
+      if (session) {
+        userDetails.id = session.user.id
+        userDetails.email = session.user.email
+        await storesProfissional.loadProfissional()
+        await storeConfig.loadConfiguracao(session.user.id)
+      }
+    
+      supabase.auth.onAuthStateChange(async(event, session) => {
         if (event === 'SIGNED_IN' || event === 'INITIAL_SESSION') {
           if (session != null) {
             userDetails.id = session.user.id
             userDetails.email = session.user.email
-            storesProfissional.loadProfissional()
-            storeConfig.loadConfiguracao(session.user.id)
+            await storesProfissional.loadProfissional()
+            await storeConfig.loadConfiguracao(session.user.id)
             router.push('/')
           }
         } else if (event === 'SIGNED_OUT') {
           Object.assign(userDetails, userDetailsDefault)
           sessionLoaded.value = false
-          storesProfissional.clearEntries()
-          storeConfig.clearConfig()
+          await storesProfissional.clearEntries()
+          await storeConfig.clearConfig()
+          listenerAttached = false;
           router.replace('/login')
         }
       })
     }
+
+    const waitForValidSession = async () => {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session) return null
+    
+      const payload = JSON.parse(atob(session.access_token.split('.')[1]))
+      const now = Date.now() / 1000
+      const isValid = payload.exp > now
+    
+      return isValid ? session : null
+    }
+    
     
   const registerUser = async ({ email, password }, profissional) => {
     const { data, error } = await supabase.auth.signUp({ email, password })
