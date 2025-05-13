@@ -195,33 +195,31 @@ const loadEventos = async () => {
       console.log('COISO AGENDAMENTO:', agendamento);
 
       const start = new Date(agendamento.data_agendamento);
-      const end = new Date(start.getTime() + (agendamento.duracao || 60) * 60000); // Default to 60 min if no duration
 
       return {
         id: agendamento.id_agendamento,
         title: agendamento.titulo,
-        start: start.toISOString(),
-        end: end.toISOString(),
+        start: start.toISOString().split('T')[0],
+        end: start.toISOString().split('T')[0],
         allDay: false,
         backgroundColor: agendamento.color || '#1976d2',
         textColor: '#fff',
-        editable: true, // Allow editing for agendamentos
+        editable: true,
         selectable: true,
         classNames: ['agendamento-event'],
         extendedProps: {
-          cliente: agendamento.clienteId,
-          tipoAtendimento: agendamento.tipoAtendimento,
-          valorAtendimentoAvulso: agendamento.valorAtendimento,
-          observacoes: agendamento.observacoes
+          cliente: agendamento.id_aprendente,
+          tipoAtendimento: agendamento.tipo_atendimento,
+          valorAtendimentoAvulso: agendamento.valor_atendimento,
+          observacoes: agendamento.observacoes,
+          horario_inicio: agendamento.horario_inicio,
         }
       };
     });
 
-    // Combine feriados and agendamentos
     events.value = [...feriadosEvents, ...agendamentosEvents];
     console.log('Events populated:', events.value);
 
-    // Refresh calendar
     if (calendarApi) {
       calendarApi.refetchEvents();
     }
@@ -282,7 +280,6 @@ async function saveEvent() {
     showMessage('Preencha todos os campos obrigatórios!');
     return;
   }
-
   const start = new Date(`${startDate}T${startTime}`);
   const end = new Date(start.getTime() + parseInt(duration) * 60000);
 
@@ -318,9 +315,10 @@ async function saveEvent() {
   }
 
   let contratoId;
+  let contrato;
   try {
     const contratoService = new ContratoService();
-    const contrato = await contratoService.loadContratos(responsavelId);
+    contrato = await contratoService.loadContratos(responsavelId);
     contratoId = contrato[0].id_contrato;
   } catch (err) {
     console.error('Error fetching contratoId:', err);
@@ -329,7 +327,7 @@ async function saveEvent() {
   }
 
   try {
-    
+
     // Create agendamento object
     const agendamento: Agendamento = {
       id: eventData.value.id || undefined, // Use undefined for new agendamentos
@@ -347,7 +345,7 @@ async function saveEvent() {
       color: eventData.value.color
     };
     console.log('[Calendar] Evento a ser salvo:', agendamento);
-    
+
     let agendamentoId = agendamento.id;
     if (agendamento.id) {
       const { error } = await agendamentoService.updateAgendamento(agendamento);
@@ -501,12 +499,9 @@ const calendarOptions = ref({
     }
   },
   eventMouseEnter(info) {
-
-
-
     if (info.event.display === 'background') return;
     const event = info.event;
-    console.log("COISO: ", event.extendedProps);
+    console.log("COISO EVENT extendedProps: ", event.extendedProps);
     const el = info.el;
     const jsEvent = info.jsEvent;
     el.style.border = '2px solid #5E35B1';
@@ -518,7 +513,7 @@ const calendarOptions = ref({
     Cliente: ${event.extendedProps.cliente || 'N/A'}<br>
     Tipo: ${event.extendedProps.tipoAtendimento || 'N/A'}<br>
     Data: ${new Date(event.start).toLocaleDateString('pt-BR')}<br>
-    Horário: ${new Date(event.start).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}<br>
+    Horário: ${event.extendedProps.horario_inicio}<br>
     Observações: ${event.extendedProps.observacoes || 'Nenhuma'}
   `;
     tooltip.style.position = 'absolute';
@@ -531,9 +526,8 @@ const calendarOptions = ref({
     tooltip.style.left = `${jsEvent.pageX + 10}px`;
     tooltip.style.top = `${jsEvent.pageY + 10}px`;
     document.body.appendChild(tooltip);
-    el._tooltip = tooltip; // Store directly on el as a custom property
+    el._tooltip = tooltip;
   },
-
   eventMouseLeave(info) {
     if (info.event.display === 'background') return;
     const el = info.el;
@@ -541,7 +535,7 @@ const calendarOptions = ref({
     el.style.boxShadow = '';
     const tooltip = el._tooltip;
     if (tooltip) {
-      tooltip.remove(); // Now works because tooltip is the DOM element
+      tooltip.remove();
       delete el._tooltip;
     }
   }
