@@ -12,7 +12,7 @@ export class ResponsavelService {
   private readonly storeProfissional = useStoreProfissional()
   private contratoService = new ContratoService()
   private aprendenteService = new AprendenteService()
-  private diasAtendimentoService= new DiasAtendimentosContratoService();
+  private diasAtendimentoService = new DiasAtendimentosContratoService()
 
   constructor() {
     this.showError = useShowErrorMessage().showError
@@ -31,10 +31,7 @@ export class ResponsavelService {
       //   .select('*')
       //   .eq('id_profissional', idProfissional)
 
-      const { data, error } = await supabase
-        .from('tb_responsavel')
-        .select('*')
-
+      const { data, error } = await supabase.from('tb_responsavel').select('*')
 
       if (error) throw error
 
@@ -49,7 +46,9 @@ export class ResponsavelService {
     try {
       responsavel.idProfissional = this.storeProfissional.profissionalDetails?.id || ''
       responsavel.status = true
-      const { data, error } = await supabase.from('tb_responsavel').insert([
+      const { data, error } = await supabase
+        .from('tb_responsavel')
+        .insert([
           {
             nome: responsavel.nome,
             cpf: responsavel.cpf,
@@ -67,13 +66,14 @@ export class ResponsavelService {
             email: responsavel.email,
             status: responsavel.status,
           },
-        ]).select()
+        ])
+        .select()
 
       if (error) throw error
-      let idAprendente= '';
+      let idAprendente = ''
       if (responsavel.aprendentes?.length > 0) {
         for (const aprendente of responsavel.aprendentes) {
-          aprendente.idResponsavel = data[0].id; // Ajuste se necessário
+          aprendente.idResponsavel = data[0].id // Ajuste se necessário
           idAprendente = await this.aprendenteService.addAprendente(aprendente)
           if (!idAprendente) {
             throw new Error('Erro ao adicionar aprendente')
@@ -82,17 +82,30 @@ export class ResponsavelService {
       }
       if (responsavel.contrato) {
         console.log(responsavel)
-        const idResponsavel = data[0].id;
-        const idContrato = await this.contratoService.addContrato(responsavel.contrato,idResponsavel,idAprendente)
+        const idResponsavel = data[0].id
+        const idContrato = await this.contratoService.addContrato(
+          responsavel.contrato,
+          idResponsavel,
+          idAprendente,
+        )
         if (idContrato) {
-          this.diasAtendimentoService.addDiasAtendimento(responsavel.contrato.diasAtendimento, idContrato)
+          this.diasAtendimentoService.addDiasAtendimento(
+            responsavel.contrato.diasAtendimento,
+            idContrato,
+          )
         }
       }
-
     } catch (err: any) {
       this.showError(err.message || 'Erro ao adicionar cliente')
     }
   }
+
+  async getResponsavelIdByAprendenteId(aprendenteId: string): Promise<string | null> {
+    const aprendente = await this.aprendenteService.getAprendenteById(aprendenteId)
+    const reponsavelId = aprendente?.id_responsavel
+    return reponsavelId
+  }
+
   async loadAprendentes(): Promise<any[]> {
     try {
       const idProfissional = this.storeProfissional.profissionalDetails?.id
@@ -112,7 +125,7 @@ export class ResponsavelService {
         return []
       }
 
-      const idsResponsaveis = responsaveis.map(c => c.id)
+      const idsResponsaveis = responsaveis.map((c) => c.id)
 
       const { data: aprendentes, error: erroAprendentes } = await supabase
         .from('tb_aprendente')
@@ -127,23 +140,24 @@ export class ResponsavelService {
         if (responsavel.atendimento_proprio) {
           listaFinal.push({
             idAprendente: responsavel.id, // pode ser um identificador fictício ou gerar um UUID
-            idResponsavel:responsavel.id,
+            idResponsavel: responsavel.id,
             nomeAprendente: responsavel.nome,
             nomeResponsavel: responsavel.nome,
             telefoneResponsavel: responsavel.telefone,
-            atendimentoProprio:responsavel.atendimento_proprio
+            atendimentoProprio: responsavel.atendimento_proprio,
           })
         } else {
-          const aprendentesDoResponsavel = aprendentes.filter(aprendente => aprendente.id_responsavel === responsavel.id)
+          const aprendentesDoResponsavel = aprendentes.filter(
+            (aprendente) => aprendente.id_responsavel === responsavel.id,
+          )
           for (const aprendente of aprendentesDoResponsavel) {
             listaFinal.push({
               idAprendente: aprendente.id,
               nomeAprendente: aprendente.nome_aprendente,
               nomeResponsavel: responsavel.nome,
               telefoneResponsavel: responsavel.telefone,
-              atendimentoProprio:responsavel.atendimento_proprio,
-              idResponsavel:responsavel.id,
-              
+              atendimentoProprio: responsavel.atendimento_proprio,
+              idResponsavel: responsavel.id,
             })
           }
         }
@@ -157,8 +171,6 @@ export class ResponsavelService {
       return []
     }
   }
-
-
 
   async updateResponsavel(responsavel: Responsavel): Promise<void> {
     try {
@@ -188,17 +200,13 @@ export class ResponsavelService {
   }
   async inativarResponsavel(id: string): Promise<void> {
     try {
-      const { error } = await supabase
-        .from('tb_responsavel')
-        .update({ status: false })
-        .eq('id', id)
+      const { error } = await supabase.from('tb_responsavel').update({ status: false }).eq('id', id)
 
       if (error) throw error
     } catch (err: any) {
       this.showError(err.message || 'Erro ao inativar Responsavel')
     }
   }
-
 
   async getResponsavelById(id: string): Promise<Responsavel | null> {
     try {
@@ -226,7 +234,8 @@ export class ResponsavelService {
         .eq('status', true)
         .single()
 
-      if (error && error.code !== 'PGRST116') { // PGRST116 is the error code for no rows returned
+      if (error && error.code !== 'PGRST116') {
+        // PGRST116 is the error code for no rows returned
         throw error
       }
 

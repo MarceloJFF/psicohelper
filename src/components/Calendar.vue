@@ -87,12 +87,10 @@
       </v-card>
     </v-dialog>
 
-    <!-- Modal de Atendimento (em andamento) -->
     <v-dialog v-model="showAtendimentoModal" max-width="1200px" min-width="900px">
       <AtendimentoModal v-model="showAtendimentoModal" :title="eventData.title" />
     </v-dialog>
 
-    <!-- Snackbar de mensagens -->
     <v-snackbar v-model="snackbar" :color="snackbarColor" timeout="4000">
       {{ snackbarText }}
     </v-snackbar>
@@ -116,6 +114,7 @@ import { useShowErrorMessage } from '@/userCases/useShowErrorMessage'
 import { AprendenteService } from '@/services/AprendenteService'
 import { AgendamentoService } from '@/services/AgendamentoService'
 import type Agendamento from '@/models/Agendamento'
+import { ResponsavelService } from '@/services/responsavelService'
 
 const calendar = ref()
 const showModal = ref(false)
@@ -195,7 +194,7 @@ const loadEventos = async () => {
     await storeCalendario.loadAgendamentos();
     const agendamentosEvents = storeCalendario.agendamentos.map(agendamento => {
       console.log('COISO AGENDAMENTO:', agendamento);
-      
+
       const start = new Date(agendamento.data_agendamento);
       const end = new Date(start.getTime() + (agendamento.duracao || 60) * 60000); // Default to 60 min if no duration
 
@@ -300,8 +299,11 @@ async function saveEvent() {
     return
   }
 
+  // busca responsvel pelo id do aprendente
+  const responsavelService = new ResponsavelService()
+  const responsavelId = await responsavelService.getResponsavelIdByAprendenteId(aprendente.id)
+
   try {
-    console.log('Criando agendamento:', eventData.value.id);
 
     const agendamento: Agendamento = {
       id: eventData.value.id ?? '',
@@ -309,8 +311,7 @@ async function saveEvent() {
       dataAgendamento: start,
       horarioInicio: startTime,
       duracao: parseInt(duration),
-      //@ts-ignore
-      // id: aprendente.id as string,
+      responsavel_id: responsavelId,
       idDependente: aprendente.tipo === 'aprendente' ? aprendente.id : '',
       idProfissional: storeAuth.userDetails.id,
       tipoAtendimento: tipoAtendimento as 'Avulso' | 'Contrato',
@@ -318,8 +319,9 @@ async function saveEvent() {
       observacoes: observacoes
     }
 
+
+
     if (eventData.value.id) {
-      console.log('id', eventData.value.id);
 
       const { error: agendamentoError } = await agendamentoService.updateAgendamento(agendamento)
       if (agendamentoError) {
@@ -327,6 +329,7 @@ async function saveEvent() {
         throw new Error('Erro ao criar agendamento' + agendamentoError.message)
       }
     } else {
+      console.log('Criando agendamento:', agendamento);
       const { error: agendamentoError } = await agendamentoService.createAgendamento(agendamento)
       if (agendamentoError) {
         throw new Error('Erro ao criar agendamento' + agendamentoError.message)
@@ -425,8 +428,7 @@ const calendarOptions = ref({
     showModal.value = true;
   },
   eventClick(info) {
-    console.log('eventClick', info);
-    
+
     if (info.event.display === 'background') {
       return;
     }
@@ -446,6 +448,7 @@ const calendarOptions = ref({
       cliente: info.event.extendedProps.cliente || '',
       observacoes: info.event.extendedProps.observacoes || ''
     };
+    console.log('eventClick', eventData.value);
     showStartButton.value = true;
     showModal.value = true;
   },
@@ -461,8 +464,8 @@ const calendarOptions = ref({
   },
   eventMouseEnter(info) {
 
-    
-    
+
+
     if (info.event.display === 'background') return;
     const event = info.event;
     console.log("COISO: ", event.extendedProps);

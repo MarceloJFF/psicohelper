@@ -16,7 +16,7 @@ export class AgendamentoService {
             data_agendamento: agendamento.dataAgendamento.toLocaleString(),
             horario_inicio: agendamento.horarioInicio,
             duracao: agendamento.duracao,
-            responsavel_id: agendamento.clienteId,
+            responsavel_id: agendamento.responsavel_id,
             id_aprendente: agendamento.idDependente,
             id_profissional: agendamento.idProfissional,
             tipo_atendimento: agendamento.tipoAtendimento,
