@@ -196,10 +196,8 @@ const loadEventos = async () => {
     events.value = [...feriadosEvents]
     console.log('Events atualizado:', events.value)
 
-    
-    // Carrega os agendamentos
     await storeCalendario.loadAgendamentos()
-    const agendamentos = storeCalendario.agendamentos.map(agendamento => ({
+    const agendamentosEvents = storeCalendario.agendamentos.map(agendamento => ({
       id: `agendamento-${agendamento.id}`,
       title: agendamento.titulo,
       start: agendamento.data_agendamento,
@@ -213,7 +211,7 @@ const loadEventos = async () => {
       classNames: ['agendamento-event'],
       interactive: false
     }))
-    events.value = [...events.value, ...agendamentos]
+    events.value = [...events.value, ...agendamentosEvents]
     
 
   } catch (err) {
@@ -242,14 +240,15 @@ function normalizeDate(date: Date): string {
 }
 
 function isDateFeriado(date: Date): boolean {
-  const normalizedDate = normalizeDate(date)
-  return events.value.some(event => {
-    if (event.display === 'background') {
-      const feriadoDate = normalizeDate(new Date(event.start))
-      return feriadoDate === normalizedDate
+  const normalizedDate = normalizeDate(date);
+  let isFeriado = false;
+  
+  storeConfig.feriados.forEach(feriado => {
+    if (feriado.data_feriado === normalizedDate) {
+      isFeriado = true;
     }
-    return false
-  })
+  });
+  return isFeriado; 
 }
 
 function openEventModal() {
@@ -382,10 +381,7 @@ const calendarOptions = ref({
   },
   selectAllow: (selectInfo) => {
     // Verifica se a data selecionada não é um feriado
-    const isFeriado = events.value.some(event =>
-      event.display === 'background' &&
-      new Date(event.start).toDateString() === new Date(selectInfo.start).toDateString()
-    )
+    const isFeriado = isDateFeriado(new Date(selectInfo.startStr))
     if (isFeriado) {
       showMessage('Não é possível agendar em dias de feriado')
     }
