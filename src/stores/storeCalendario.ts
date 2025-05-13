@@ -4,10 +4,11 @@ import { ref } from 'vue'
 import supabase from '@/config/supabase'
 import { AgendamentoService } from '@/services/AgendamentoService'
 import type Agendamento from '@/models/Agendamento'
+import { ResponsavelService } from '@/services/responsavelService'
 
 const agendamentoService = new AgendamentoService()
-
 export const useStoreCalendario = defineStore('calendario', () => {
+  const responsavelService = new ResponsavelService()
   const loading = ref(false)
   const agendamentos = ref<any[]>([])
 
@@ -15,6 +16,12 @@ export const useStoreCalendario = defineStore('calendario', () => {
     loading.value = true
     try {
       agendamentos.value = (await agendamentoService.getAllAgendamentos()) ?? []
+      const responsaveis = await responsavelService.loadResponsaveis()
+      agendamentos.value.forEach((agendamento: any) => {
+        agendamento.responsavel_id = responsaveis.find(
+          (responsavel) => responsavel.id === agendamento.responsavel_id,
+        )
+      })
     } catch (err) {
       console.log(err)
     } finally {

@@ -26,10 +26,15 @@ export class ResponsavelService {
         return []
       }
 
+      // const { data, error } = await supabase
+      //   .from('tb_responsavel')
+      //   .select('*')
+      //   .eq('id_profissional', idProfissional)
+
       const { data, error } = await supabase
         .from('tb_responsavel')
         .select('*')
-        .eq('id_profissional', idProfissional)
+
 
       if (error) throw error
 
