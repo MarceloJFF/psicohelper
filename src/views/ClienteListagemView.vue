@@ -205,6 +205,9 @@ const loadResponsaveis = async () => {
 }
 
 
+const abrirModalNovo = () => {
+  router.push('/clientes/add')
+}
 
 const abrirModalEdicao = (item: Responsavel, index: number) => {
   responsavelAtual.value = { ...item }
