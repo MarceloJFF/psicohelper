@@ -6,6 +6,7 @@ export class AgendamentoService {
   private showError = useShowErrorMessage().showError
 
   async createAgendamento(agendamento: Agendamento): Promise<string | undefined> {
+    console.log('[Service] Evento a ser salvo:', agendamento);
 
     try {
       const { data, error } = await supabase
@@ -22,6 +23,8 @@ export class AgendamentoService {
             tipo_atendimento: agendamento.tipoAtendimento,
             valor_atendimento: agendamento.valorAtendimento,
             observacoes: agendamento.observacoes,
+            id_contrato: agendamento.idContrato,
+            color: agendamento.color
           },
         ])
         .select()

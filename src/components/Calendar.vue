@@ -115,6 +115,7 @@ import { AprendenteService } from '@/services/AprendenteService'
 import { AgendamentoService } from '@/services/AgendamentoService'
 import type Agendamento from '@/models/Agendamento'
 import { ResponsavelService } from '@/services/responsavelService'
+import { ContratoService } from '@/services/contratoService'
 
 const calendar = ref()
 const showModal = ref(false)
@@ -147,6 +148,7 @@ const defaultEventData = () => ({
   cliente: '',
   tipoAtendimento: '',
   valorAtendimentoAvulso: '',
+  id_contrato: '',
   color: '#1976d2',
   observacoes: ''
 })
@@ -165,14 +167,12 @@ const loadEventos = async () => {
       return;
     }
 
-    // Load configuration
     await storeConfig.loadConfiguracao(storeAuth.userDetails.id);
     if (!storeConfig.configuracao?.id) {
       showError('Configuração não encontrada');
       return;
     }
 
-    // Load feriados
     await storeConfig.loadFeriados();
     console.log('Feriados carregados:', storeConfig.feriados);
 
@@ -190,7 +190,6 @@ const loadEventos = async () => {
       interactive: false
     }));
 
-    // Load agendamentos
     await storeCalendario.loadAgendamentos();
     const agendamentosEvents = storeCalendario.agendamentos.map(agendamento => {
       console.log('COISO AGENDAMENTO:', agendamento);
@@ -203,8 +202,8 @@ const loadEventos = async () => {
         title: agendamento.titulo,
         start: start.toISOString(),
         end: end.toISOString(),
-        allDay: false, // Agendamentos typically have specific times
-        backgroundColor: agendamento.color || '#1976d2', // Use stored color or default
+        allDay: false,
+        backgroundColor: agendamento.color || '#1976d2',
         textColor: '#fff',
         editable: true, // Allow editing for agendamentos
         selectable: true,
@@ -279,7 +278,6 @@ function openEventModal() {
 async function saveEvent() {
   const { title, startDate, startTime, duration, tipoAtendimento, valorAtendimentoAvulso, color, cliente: aprendente, observacoes } = eventData.value;
 
-  // Validate required fields
   if (!title || !startDate || !startTime || !duration || !tipoAtendimento || (tipoAtendimento === 'Avulso' && !valorAtendimentoAvulso) || !aprendente) {
     showMessage('Preencha todos os campos obrigatórios!');
     return;
@@ -288,27 +286,23 @@ async function saveEvent() {
   const start = new Date(`${startDate}T${startTime}`);
   const end = new Date(start.getTime() + parseInt(duration) * 60000);
 
-  // Validate duration
   if (end <= start) {
     showMessage('A duração deve ser maior que zero.');
     return;
   }
 
-  // Check if the selected date is a feriado
   const selectedDate = new Date(`${startDate}T00:00:00`);
   if (isDateFeriado(selectedDate)) {
     showMessage('Não é possível salvar atendimentos em dias de feriado.');
     return;
   }
 
-  // Validate aprendente
   if (!aprendente.id || !aprendente.tipo) {
     console.error('Invalid aprendente:', aprendente);
     showMessage('Cliente inválido. Selecione um cliente válido.');
     return;
   }
 
-  // Fetch responsavel_id
   let responsavelId;
   try {
     const responsavelService = new ResponsavelService();
@@ -323,7 +317,19 @@ async function saveEvent() {
     return;
   }
 
+  let contratoId;
   try {
+    const contratoService = new ContratoService();
+    const contrato = await contratoService.loadContratos(responsavelId);
+    contratoId = contrato[0].id_contrato;
+  } catch (err) {
+    console.error('Error fetching contratoId:', err);
+    showMessage('Erro ao buscar contrato do cliente.');
+    return;
+  }
+
+  try {
+    
     // Create agendamento object
     const agendamento: Agendamento = {
       id: eventData.value.id || undefined, // Use undefined for new agendamentos
@@ -337,36 +343,35 @@ async function saveEvent() {
       tipoAtendimento: tipoAtendimento as 'Avulso' | 'Contrato',
       valorAtendimento: tipoAtendimento === 'Avulso' ? parseFloat(valorAtendimentoAvulso) : 0,
       observacoes,
-      color // Include color if supported by backend
+      id_contrato: contratoId,
+      color: eventData.value.color
     };
-
+    console.log('[Calendar] Evento a ser salvo:', agendamento);
+    
     let agendamentoId = agendamento.id;
     if (agendamento.id) {
-      // Update existing agendamento
       const { error } = await agendamentoService.updateAgendamento(agendamento);
       if (error) {
         throw new Error(`Erro ao atualizar agendamento: ${error.message}`);
       }
     } else {
-      // Create new agendamento
-       await agendamentoService.createAgendamento(agendamento);
-      
+      await agendamentoService.createAgendamento(agendamento);
+
     }
 
-    // Create new event for FullCalendar
     const newEvent = {
-      id: `agendamento-${agendamentoId}`, // Consistent ID format
+      id: `agendamento-${agendamentoId}`,
       title,
       start: start.toISOString(),
       end: end.toISOString(),
       allDay: false,
-      backgroundColor: color || '#1976d2', // Fallback color
+      backgroundColor: color || '#1976d2',
       textColor: '#fff',
       editable: true,
       selectable: true,
       classNames: ['agendamento-event'],
       extendedProps: {
-        cliente: aprendente.id, // Use aprendente.id instead of clienteId
+        cliente: aprendente.id,
         tipoAtendimento,
         valorAtendimentoAvulso: tipoAtendimento === 'Avulso' ? parseFloat(valorAtendimentoAvulso) : 0,
         observacoes
