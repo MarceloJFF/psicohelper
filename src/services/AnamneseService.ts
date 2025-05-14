@@ -88,4 +88,20 @@ export class AnamneseService {
       return null
     }
   }
+
+  async carregarRespostaAnamnese(id_modelo_anamnese: string, id_aprendente: string) {
+    try {
+      const { data, error } = await supabase
+        .from('tb_anamnese_resposta')
+        .select('resposta')
+        .eq('id_modelo_anamnese', id_modelo_anamnese)
+        .eq('id_aprendente', id_aprendente)
+        .maybeSingle()
+      if (error) return null
+      return data
+    } catch (err: any) {
+      this.showError(err.message || 'Erro ao carregar resposta da anamnese')
+      return null
+    }
+  }
 } 
