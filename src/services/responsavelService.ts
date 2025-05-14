@@ -44,6 +44,7 @@ export class ResponsavelService {
     try {
       responsavel.idProfissional = this.storeProfissional.profissionalDetails?.id || ''
       responsavel.status = true
+      console.log(responsavel)
       const { data, error } = await supabase.from('tb_responsavel').insert([
           {
             nome: responsavel.nome,
@@ -78,6 +79,8 @@ export class ResponsavelService {
       if (responsavel.contrato) {
         console.log(responsavel)
         const idResponsavel = data[0].id;
+        console.log("gerando contrato")
+        console.log("Responsavel"+ idResponsavel,"Aprendente"+ idAprendente)
         const idContrato = await this.contratoService.addContrato(responsavel.contrato,idResponsavel,idAprendente)
         if (idContrato) {
           this.diasAtendimentoService.addDiasAtendimento(responsavel.contrato.diasAtendimento, idContrato)

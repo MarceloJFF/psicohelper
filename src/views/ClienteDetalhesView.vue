@@ -219,6 +219,7 @@ import { ResponsavelService } from '@/services/responsavelService.ts'
 import { ContratoService } from '@/services/contratoService.ts'
 import { DiasAtendimentosContratoService } from '@/services/DiasAtendimentosContratoService'
 import Contrato from '@/models/Contrato'
+import { id } from 'vuetify/locale'
 
 const route = useRoute()
 const router = useRouter()
@@ -270,12 +271,17 @@ onMounted(async () => {
 })
 
 const buscarContratos = async () => {
-  if (idAprendente) {
-    contratos.value = await contratoService.loadContratoPorAprendente(idAprendente)
-    for (const contrato of contratos.value) {
-      contrato.diasAtendimento = await diasAtendimento.loadDiasAtendimento(contrato.idContrato)
-    }
+  //O valor caso idAprendente seja  null é idResponsavel
+  if(idAprendente == idResponsavel){
+    contratos.value = await contratoService.loadContratos(idResponsavel);
+  }else{
+    contratos.value = await contratoService.loadContratoPorAprendente(idAprendente);
   }
+
+  for (const contrato of contratos.value) {
+    contrato.diasAtendimento = await diasAtendimento.loadDiasAtendimento(contrato.id_contrato)
+  }
+  console.log(contratos.value)
 }
 
 const abrirModalContrato = () => {
@@ -321,7 +327,8 @@ const confirmarAcao = async () => {
 
 const salvarContrato = async () => {
   modalContrato.value = false
-  await buscarContratos()
+
+
 }
 
 const salvarCliente = () => {

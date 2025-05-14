@@ -105,7 +105,7 @@
                 </v-row>
 
                 <!-- Dependentes -->
-                <div class="mt-6" v-if="responsavel.atendimentoProprio === false"
+                <div class="mt-6" v-if="responsavel.atendimentoProprio == false"
                 >
                   <h3 class="text-subtitle-1 font-weight-medium mb-2">Aprendentes</h3>
                   <v-row v-for="(dep, i) in responsavel.aprendentes" :key="i" dense>
@@ -318,13 +318,14 @@ const removerAprendente = (index: number) => {
   responsavel.value.aprendentes.splice(index, 1)
 }
 
-const salvarContrato = (contratoSalvo: Contrato) => {
+const salvarContrato = async (contratoSalvo: Contrato) => {
   contrato.value = {
     ...contratoSalvo,
     cadastrado: true,
     diasAtendimento: [...contratoSalvo.diasAtendimento],
   }
   responsavel.value.contrato = contrato.value;
+  console.log(responsavel)
 }
 
 const cancelar = () => {
@@ -368,7 +369,7 @@ const salvar = () => {
         return;
       }
 
-      if (responsavel.value.tipoAtendimento == 'Contrato' && contrato.value.cadastrado) {
+      if (responsavel.value.tipoAtendimento == 'Contrato') {
         await responsavelService.addResponsavel(responsavel.value);
         snackbar.value = {
           show: true,

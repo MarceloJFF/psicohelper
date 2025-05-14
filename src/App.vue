@@ -2,8 +2,6 @@
 import { onMounted } from 'vue'
 import { RouterView } from 'vue-router'
 import { useShowErrorMessage } from '@/userCases/useShowErrorMessage.js'
-import supabase from '/src/config/supabase'
-import router from '@/router'
 import { useStoreAuth } from '@/stores/storeAuth'
 
 const { show, message, color } = useShowErrorMessage()
