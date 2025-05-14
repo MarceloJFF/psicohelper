@@ -70,16 +70,20 @@
                     </a>
                   </template>
                   <!-- Ações -->
-                  <template v-slot:item.actions="{ item }" class="d-flex justify-end pa-12">
-                    
+                  <template v-slot:item.actions="{ item }">
+                    <v-btn icon @click="editarAprendente(item)">
+                      <v-icon color="blue">mdi-pencil</v-icon>
+                    </v-btn>
                     <v-btn icon @click="removerAprendente(item)">
                       <v-icon color="red">mdi-delete</v-icon>
                     </v-btn>
-                    <v-btn icon @click="visualizarResponsavel(item)" class="ml-2">
+                    <v-btn icon @click="visualizarResponsavel(item)">
                       <v-icon color="primary">mdi-eye</v-icon>
                     </v-btn>
                   </template>
                 </v-data-table>
+
+
               </template>
             </v-card>
           </v-col>
@@ -179,7 +183,10 @@ const loadAprendentes = async () => {
   }
 }
 
-
+function editarAprendente(item: ViewAprendenteLogadoProfissional) {
+  console.log('Editar:', item)
+  // Implement edit logic
+}
 
 function removerAprendente(item: ViewAprendenteLogadoProfissional) {
   console.log('Remover:', item)

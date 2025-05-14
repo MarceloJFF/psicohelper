@@ -1,10 +1,10 @@
 import { ref, reactive } from 'vue'
 import { useRouter } from 'vue-router'
 import { defineStore } from 'pinia'
-import {supabase} from '@/config/supabase'
-import { useStoreProfissional } from '@/stores/storeProfissional'
-import { useShowErrorMessage } from '@/userCases/useShowErrorMessage'
-import { useStoreConfig } from '@/stores/storeConfig'
+import supabase from '/src/config/supabase'
+import { useStoreProfissional } from '/src/stores/storeProfissional'
+import { useShowErrorMessage } from '/src/userCases/useShowErrorMessage'
+import { useStoreConfig } from '/src/stores/storeConfig'
 export const useStoreAuth = defineStore('auth', () => {
 
   const sessionLoaded = ref(false)
@@ -25,7 +25,7 @@ export const useStoreAuth = defineStore('auth', () => {
     actions
   */
     const init = async () => {
-      supabase.auth.onAuthStateChange((event:any, session:any) => {
+      supabase.auth.onAuthStateChange((event, session) => {
         if (event === 'SIGNED_IN' || event === 'INITIAL_SESSION') {
           if (session != null) {
             console.log("Sessao iniciada")
@@ -45,18 +45,18 @@ export const useStoreAuth = defineStore('auth', () => {
       })
     }
 
-  const registerUser = async ({ email, password }:any, profissional:any) => {
+  const registerUser = async ({ email, password }, profissional) => {
     const { data, error } = await supabase.auth.signUp({ email, password })
 
     if (data?.user) {
       await storesProfissional.registerProfissional(profissional, data.user.id)
-      await storeConfig.createConfiguracao(storesProfissional.profissionalDetails?.id || '')
+      await storeConfig.createConfiguracao(storesProfissional.profissionalDetails.value.id)
     }
 
     if (error) showError("Houve um erro ao criar o usuário, tente novamente mais tarde"+error.message)
   }
 
-  const loginUser = async ({ email, password }:any) => {
+  const loginUser = async ({ email, password }) => {
     const { data, error } = await supabase.auth.signInWithPassword({
       email,
       password

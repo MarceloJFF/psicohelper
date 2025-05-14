@@ -1,7 +1,7 @@
 import supabase from '@/config/supabase'
 
 export class PastaService {
-  async listarPastas(idPai:any = null) {
+  async listarPastas(idPai = null) {
     try {
       let query = supabase
         .from('tb_pasta')
@@ -24,7 +24,7 @@ export class PastaService {
     }
   }
 
-  async criarPasta(nome:any, idPastaPai = null) {
+  async criarPasta(nome, idPastaPai = null) {
     try {
       const { data, error } = await supabase
         .from('tb_pasta')
@@ -44,7 +44,7 @@ export class PastaService {
     }
   }
 
-  async atualizarPasta(idPasta:any, novoNome:any) {
+  async atualizarPasta(idPasta, novoNome) {
     try {
       const { data, error } = await supabase
         .from('tb_pasta')
@@ -60,7 +60,7 @@ export class PastaService {
     }
   }
 
-  async excluirPasta(idPasta:any) {
+  async excluirPasta(idPasta) {
     try {
       // Primeiro, verificar se existem subpastas
       const { data: subpastas, error: errorSubpastas } = await supabase

@@ -1,32 +1,3 @@
-
-<script setup lang="ts">
-import { ref } from 'vue'
-
-const formRef = ref(null)
-const valid = ref(false)
-
-const mensagens = ref({
-  cobranca: 'Olá {{nome}}, lembramos que o pagamento de {{valor}} vence em {{data}}. Qualquer dúvida, estamos à disposição.',
-  confirmacao: 'Olá {{nome}}, confirmamos o recebimento de {{valor}} em {{data}}. Obrigado pelo pagamento!'
-})
-
-const mensagensPadrao = { ...mensagens.value }
-
-function resetMensagens() {
-  mensagens.value = { ...mensagensPadrao }
-}
-
-function submit() {
-  formRef.value?.validate().then((isValid) => {
-    if (isValid) {
-      // Simula salvar no backend ou localStorage
-      console.log('Mensagens salvas:', mensagens.value)
-      alert('Mensagens salvas com sucesso!')
-    }
-  })
-}
-</script>
-
 <template>
   <v-card class="pa-6 max-w-4xl mx-auto mt-10 rounded-xl " color="">
     <v-card-title class="text-h5 font-weight-bold text-purple-darken-3 mb-2">
@@ -69,6 +40,34 @@ function submit() {
     </v-form>
   </v-card>
 </template>
+
+<script setup>
+import { ref } from 'vue'
+
+const formRef = ref(null)
+const valid = ref(false)
+
+const mensagens = ref({
+  cobranca: 'Olá {{nome}}, lembramos que o pagamento de {{valor}} vence em {{data}}. Qualquer dúvida, estamos à disposição.',
+  confirmacao: 'Olá {{nome}}, confirmamos o recebimento de {{valor}} em {{data}}. Obrigado pelo pagamento!'
+})
+
+const mensagensPadrao = { ...mensagens.value }
+
+function resetMensagens() {
+  mensagens.value = { ...mensagensPadrao }
+}
+
+function submit() {
+  formRef.value?.validate().then((isValid) => {
+    if (isValid) {
+      // Simula salvar no backend ou localStorage
+      console.log('Mensagens salvas:', mensagens.value)
+      alert('Mensagens salvas com sucesso!')
+    }
+  })
+}
+</script>
 
 <style scoped>
 code {
