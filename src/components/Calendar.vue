@@ -97,7 +97,6 @@
   </v-container>
 </template>
 
-
 <script setup lang="ts">
 import { ref, onMounted, computed, watch } from 'vue'
 import FullCalendar from '@fullcalendar/vue3'
@@ -136,6 +135,7 @@ const aprendenteService = new AprendenteService()
 const agendamentoService = new AgendamentoService()
 const eventos = ref<any[]>([])
 const type = ref('month')
+const aprendenteCache = new Map()
 
 let calendarApi: any = null
 
@@ -145,7 +145,7 @@ const defaultEventData = () => ({
   startDate: '',
   startTime: '',
   duration: '',
-  cliente: '',
+  cliente: null,
   tipoAtendimento: '',
   valorAtendimentoAvulso: '',
   id_contrato: '',
@@ -191,30 +191,55 @@ const loadEventos = async () => {
     }));
 
     await storeCalendario.loadAgendamentos();
-    const agendamentosEvents = storeCalendario.agendamentos.map(agendamento => {
+    const agendamentosEvents = await Promise.all(
+      storeCalendario.agendamentos.map(async (agendamento) => {
+        const start = new Date(agendamento.data_agendamento + 'T' + agendamento.horario_inicio);
+        const end = new Date(start.getTime() + agendamento.duracao * 60000);
 
-      const start = new Date(agendamento.data_agendamento);
-
-      return {
-        id: agendamento.id_agendamento,
-        title: agendamento.titulo,
-        start: start.toISOString().split('T')[0],
-        end: start.toISOString().split('T')[0],
-        allDay: false,
-        backgroundColor: agendamento.color || '#1976d2',
-        textColor: '#fff',
-        editable: true,
-        selectable: true,
-        classNames: ['agendamento-event'],
-        extendedProps: {
-          cliente: agendamento.id_aprendente,
-          tipoAtendimento: agendamento.tipo_atendimento,
-          valorAtendimentoAvulso: agendamento.valor_atendimento,
-          observacoes: agendamento.observacoes,
-          horario_inicio: agendamento.horario_inicio,
+        let aprendente = null;
+        if (agendamento.id_aprendente) {
+          if (aprendenteCache.has(agendamento.id_aprendente)) {
+            aprendente = aprendenteCache.get(agendamento.id_aprendente);
+          } else {
+            aprendente = await aprendenteService.getAprendenteById(agendamento.id_aprendente);
+            aprendenteCache.set(agendamento.id_aprendente, aprendente);
+          }
         }
-      };
-    });
+
+        const formatDateTime = (date) => {
+          const pad = (num) => String(num).padStart(2, '0');
+          return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`;
+        };
+
+        return {
+          id: agendamento.id_agendamento,
+          title: agendamento.titulo,
+          start: formatDateTime(start),
+          end: formatDateTime(end),
+          allDay: false,
+          backgroundColor: agendamento.color || '#1976d2',
+          textColor: '#fff',
+          editable: true,
+          selectable: true,
+          classNames: ['agendamento-event'],
+          extendedProps: {
+            cliente: aprendente ? {
+              id: agendamento.id_aprendente,
+              id_aprendente: agendamento.id_aprendente,
+              id_responsavel: agendamento.responsavel_id,
+              displayName: aprendente.nome_aprendente,
+              aprendente: aprendente.nome_aprendente,
+              responsavel: aprendente.nome_responsavel
+            } : null,
+            tipoAtendimento: agendamento.tipo_atendimento,
+            valorAtendimentoAvulso: agendamento.valor_atendimento,
+            observacoes: agendamento.observacoes,
+            horario_inicio: agendamento.horario_inicio,
+            nomeAprendente: aprendente?.nome_aprendente || 'N/A'
+          }
+        };
+      })
+    );
 
     events.value = [...feriadosEvents, ...agendamentosEvents];
     console.log('Events populated:', events.value);
@@ -294,7 +319,7 @@ async function saveEvent() {
   }
 
   if (!cliente.id_aprendente) {
-    cliente.id_aprendente = null
+    cliente.id_aprendente = null;
   }
 
   let contratoId;
@@ -304,9 +329,9 @@ async function saveEvent() {
     contrato = await contratoService.loadContratos(cliente.id_responsavel);
 
     if (contrato.length > 0 && tipoAtendimento !== 'Avulso') {
-      contratoId = contrato[0].id_contrato
+      contratoId = contrato[0].id_contrato;
     } else {
-      contratoId = null
+      contratoId = null;
     }
   } catch (err) {
     console.error('Error fetching contratoId:', err);
@@ -315,12 +340,10 @@ async function saveEvent() {
   }
 
   try {
-
-    // Create agendamento object
     const agendamento: Agendamento = {
-      id: eventData.value.id || undefined, // Use undefined for new agendamentos
+      id: eventData.value.id || undefined,
       titulo: title,
-      dataAgendamento: start,
+      dataAgendamento: startDate,
       horarioInicio: startTime,
       duracao: parseInt(duration),
       responsavel_id: cliente.id_responsavel ? cliente.id_responsavel : null,
@@ -332,20 +355,28 @@ async function saveEvent() {
       id_contrato: contratoId,
       color: eventData.value.color
     };
-    console.log('[Calendar] Evento a ser salvo:', agendamento);
 
     let agendamentoId = agendamento.id;
     if (agendamento.id) {
       await agendamentoService.updateAgendamento(agendamento);
     } else {
-      await agendamentoService.createAgendamento(agendamento);
+      const response = await agendamentoService.createAgendamento(agendamento);
+      agendamentoId = response.id;
     }
+
+    console.log('[Calendar] Evento a ser salvo:', agendamento);
+    console.log('[Calendar] Cliente:', cliente);
+
+    const formatDateTime = (date) => {
+      const pad = (num) => String(num).padStart(2, '0');
+      return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`;
+    };
 
     const newEvent = {
       id: `agendamento-${agendamentoId}`,
       title,
-      start: start.toISOString(),
-      end: end.toISOString(),
+      start: formatDateTime(start),
+      end: formatDateTime(end),
       allDay: false,
       backgroundColor: color || '#1976d2',
       textColor: '#fff',
@@ -353,14 +384,15 @@ async function saveEvent() {
       selectable: true,
       classNames: ['agendamento-event'],
       extendedProps: {
-        cliente: cliente.id,
+        cliente: cliente,
         tipoAtendimento,
         valorAtendimentoAvulso: tipoAtendimento === 'Avulso' ? parseFloat(valorAtendimentoAvulso) : 0,
-        observacoes
+        observacoes,
+        horario_inicio: startTime,
+        nomeAprendente: cliente.displayName || cliente.aprendente || 'N/A'
       }
     };
 
-    // Update events array
     const existingIndex = events.value.findIndex(e => e.id === newEvent.id);
     if (existingIndex !== -1) {
       events.value[existingIndex] = newEvent;
@@ -368,14 +400,12 @@ async function saveEvent() {
       events.value.push(newEvent);
     }
 
-    // Refresh calendar
     if (calendarApi) {
       calendarApi.refetchEvents();
     } else {
       console.warn('calendarApi not initialized, cannot refresh events');
     }
 
-    // Close modal and show success message
     showModal.value = false;
     showMessage('Evento salvo com sucesso!', 'success');
   } catch (err: any) {
@@ -413,6 +443,7 @@ const calendarOptions = ref({
     right: 'dayGridMonth,timeGridWeek,timeGridDay,listWeek'
   },
   locale: ptBr,
+  timeZone: 'local',
   editable: true,
   selectable: true,
   selectConstraint: {
@@ -447,11 +478,18 @@ const calendarOptions = ref({
     eventData.value.startTime = info.dateStr.split('T')[1]?.slice(0, 5) || '09:00';
     showModal.value = true;
   },
-  eventClick(info) {
-
+  eventDidMount(info) {
+    info.el.style.backgroundColor = info.event.backgroundColor;
+    info.el.style.borderRadius = '4px';
+    info.el.style.padding = '4px';
+    info.el.style.cursor = 'pointer';
     if (info.event.display === 'background') {
-      return;
+      info.el.style.cursor = 'not-allowed';
+      info.el.style.pointerEvents = 'none';
     }
+  },
+  eventClick(info) {
+    if (info.event.display === 'background') return;
     const [startDate, startTimeRaw] = info.event.startStr.split('T');
     const start = new Date(info.event.startStr);
     const end = new Date(info.event.endStr);
@@ -465,22 +503,11 @@ const calendarOptions = ref({
       color: info.event.backgroundColor || '#1976d2',
       tipoAtendimento: info.event.extendedProps.tipoAtendimento || '',
       valorAtendimentoAvulso: info.event.extendedProps.valorAtendimentoAvulso || '',
-      cliente: info.event.extendedProps.cliente || '',
-      observacoes: info.event.extendedProps.observacoes || ''
+      cliente: info.event.extendedProps.cliente || null,
+      observacoes: info.event.extendedProps.observacoes || '',
     };
-    console.log('eventClick', eventData.value);
     showStartButton.value = true;
     showModal.value = true;
-  },
-  eventDidMount(info) {
-    info.el.style.backgroundColor = info.event.backgroundColor;
-    info.el.style.borderRadius = '4px';
-    info.el.style.padding = '4px';
-    info.el.style.cursor = 'pointer';
-    if (info.event.display === 'background') {
-      info.el.style.cursor = 'not-allowed';
-      info.el.style.pointerEvents = 'none';
-    }
   },
   eventMouseEnter(info) {
     if (info.event.display === 'background') return;
@@ -489,16 +516,19 @@ const calendarOptions = ref({
     const jsEvent = info.jsEvent;
     el.style.border = '2px solid #5E35B1';
     el.style.boxShadow = '0 2px 4px rgba(0, 0, 0, 0.2)';
+
     const tooltip = document.createElement('div');
     tooltip.className = 'custom-tooltip';
     tooltip.innerHTML = `
-    <strong>${event.title}</strong><br>
-    Cliente: ${event.extendedProps.cliente || 'N/A'}<br>
-    Tipo: ${event.extendedProps.tipoAtendimento || 'N/A'}<br>
-    Data: ${new Date(event.start).toLocaleDateString('pt-BR')}<br>
-    Horário: ${event.extendedProps.horario_inicio}<br>
-    Observações: ${event.extendedProps.observacoes || 'Nenhuma'}
-  `;
+      <div class="tooltip-content">
+        <strong>${event.title}</strong><br>
+        Aprendente: ${event.extendedProps.nomeAprendente || 'N/A'}<br>
+        Tipo: ${event.extendedProps.tipoAtendimento || 'N/A'}<br>
+        Data: ${new Date(event.start).toLocaleDateString('pt-BR')}<br>
+        Horário: ${event.extendedProps.horario_inicio}<br>
+        Observações: ${event.extendedProps.observacoes || 'Nenhuma'}
+      </div>
+    `;
     tooltip.style.position = 'absolute';
     tooltip.style.background = '#fff';
     tooltip.style.border = '1px solid #ccc';
@@ -508,17 +538,18 @@ const calendarOptions = ref({
     tooltip.style.zIndex = '1000';
     tooltip.style.left = `${jsEvent.pageX + 10}px`;
     tooltip.style.top = `${jsEvent.pageY + 10}px`;
+
     document.body.appendChild(tooltip);
     el._tooltip = tooltip;
+
   },
   eventMouseLeave(info) {
     if (info.event.display === 'background') return;
     const el = info.el;
     el.style.border = '';
     el.style.boxShadow = '';
-    const tooltip = el._tooltip;
-    if (tooltip) {
-      tooltip.remove();
+    if (el._tooltip) {
+      el._tooltip.remove();
       delete el._tooltip;
     }
   }
@@ -535,8 +566,6 @@ watch(searchQuery, async (newValue) => {
   isLoading.value = true
   try {
     const resultados = await aprendenteService.buscarClientesPorNome(newValue)
-    console.log("RESULTADOS: ", resultados);
-
     filteredClientes.value = resultados
   } catch (err) {
     console.error('Erro na busca:', err)
@@ -547,7 +576,6 @@ watch(searchQuery, async (newValue) => {
 }, { debounce: 300 })
 </script>
 
-
 <style scoped>
 .calendar-container {
   background-color: white;
@@ -555,7 +583,6 @@ watch(searchQuery, async (newValue) => {
   color: #fff;
 }
 
-/* FullCalendar geral */
 :deep(.fc) {
   padding: 1.5%;
   background-color: #FFFFFF;
@@ -563,38 +590,28 @@ watch(searchQuery, async (newValue) => {
   font-size: 1rem;
 }
 
-/* Célula do calendário */
-:deep(.fc-daygrid-day) {
-  /* border: 1px solid red !important; */
-}
+:deep(.fc-daygrid-day) {}
 
-:deep(.fc-daygrid-day-frame) {
-  /* border: 1px solid red !important; */
-}
+:deep(.fc-daygrid-day-frame) {}
 
 :deep(.fc-daygrid-day-frame:hover) {
   cursor: pointer !important;
   background-color: #B39DDB !important;
 }
 
-:deep(.fc-daygrid-day-events) {
-  /* border: 1px solid red !important; */
-}
+:deep(.fc-daygrid-day-events) {}
 
-/* Título do calendário */
 :deep(.fc-toolbar-title) {
   font-size: clamp(1.2rem, 2vw, 2rem);
   font-weight: 600;
 }
 
-/* Evento no calendário */
 :deep(.fc-event-main) {
   height: auto !important;
   min-height: 40px;
   font-size: clamp(0.8rem, 1.5vw, 1rem);
 }
 
-/* Botões do calendário */
 :deep(.fc-button) {
   background-color: white !important;
   color: #4527A0 !important;
@@ -608,28 +625,23 @@ watch(searchQuery, async (newValue) => {
   text-transform: none;
 }
 
-/* Botão "Hoje" */
 :deep(.fc-button.fc-today-button) {
   background-color: #311B92 !important;
   color: white !important;
-
 }
 
-/* Botão ativo */
 :deep(.fc-button.fc-button-active) {
   background-color: #5E35B1 !important;
   color: white !important;
   outline: none;
 }
 
-/* Botão hover */
 :deep(.fc-button:hover) {
   background-color: #B39DDB !important;
   border-color: #B39DDB !important;
   outline: none;
 }
 
-/* Responsividade extra para a tela toda */
 @media (max-width: 600px) {
   :deep(.fc-toolbar-title) {
     font-size: 1.2rem;

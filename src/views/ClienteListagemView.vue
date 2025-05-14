@@ -59,11 +59,10 @@
                   loading-text="Carregando aprendentes..."
                 >
                   <!-- Telefone com ícone do WhatsApp -->
-                  <template v-slot:item.telefoneResponsavel="{ item }">
-
-                    <span>{{ formatarTelefone(item.telefoneResponsavel) }}</span>
+                  <template v-slot:item.telefone="{ item }">
+                    <span>{{ formatarTelefone(item.telefone) }}</span>
                     <a
-                      :href="`https://wa.me/55${item.telefoneResponsavel}`"
+                      :href="`https://wa.me/55${item.telefone}`"
                       target="_blank"
                       rel="noopener noreferrer"
                     >
@@ -143,7 +142,10 @@ import Responsavel from '@/models/Responsavel'
 import CalendarioDiario from '@/components/calendario-diario.vue'
 import Todo from '@/components/todo.vue'
 import ModalGenerico from '@/components/ModalGenerico.vue'
+import { AprendenteService } from '@/services/AprendenteService'
+import ViewAprendenteLogadoProfissional from '@/models/ViewAprendenteLogadoProfissional'
 
+const aprendenteService = new AprendenteService()
 const responsavelService = new ResponsavelService()
 const showModal = ref(false)
 const modoEdicao = ref(false)
@@ -158,52 +160,47 @@ const dialogConfirmacao = ref(false)
 
 const handleSearch = (value: string) => {
   if (value.length <= 3) {
-    // Reset the search results or show all items
-    loadResponsaveis()
+    loadAprendentes()
     return
   }
-  // Perform the search with the value
-  // You can implement your search logic here
+  // Implement search logic here
 }
 
-const aprendentes = ref([])
+const aprendentes = ref<ViewAprendenteLogadoProfissional[]>([])
 
 onMounted(async () => {
-  loading.value = true
-  aprendentes.value = await responsavelService.loadAprendentes()
-  loading.value = false
+  await loadAprendentes()
 })
 
-const responsaveis = ref([])
-
-
-function editarAprendente(item: any) {
-  console.log('Editar:', item)
-  // Ação para abrir modal ou redirecionar
-}
-
-function removerAprendente(item: any) {
-  console.log('Remover:', item)
-  // Confirmar e chamar exclusão
-}
-const headers = [
-  { title: 'Aprendente', key: 'nomeAprendente' },
-  { title: 'Responsável', key: 'nomeResponsavel' },
-  { title: 'Telefone Responsável', key: 'telefoneResponsavel' },
-  { title: 'Ações', key: 'actions', sortable: false },
-]
-
-const loadResponsaveis = async () => {
+const loadAprendentes = async () => {
   loading.value = true
   try {
-    responsaveis.value = await responsavelService.loadResponsaveis()
+    aprendentes.value = await aprendenteService.loadAprendentesPorProfissional()
   } catch (error) {
-    console.error('Erro ao carregar responsaveis:', error)
+    console.error('Erro ao carregar aprendentes:', error)
   } finally {
     loading.value = false
   }
 }
 
+function editarAprendente(item: ViewAprendenteLogadoProfissional) {
+  console.log('Editar:', item)
+  // Implement edit logic
+}
+
+function removerAprendente(item: ViewAprendenteLogadoProfissional) {
+  console.log('Remover:', item)
+  // Implement remove logic
+}
+
+const headers = [
+  { title: 'Aprendente', key: 'nomeAprendente' },
+  { title: 'Responsável', key: 'nomeResponsavel' },
+  { title: 'Telefone', key: 'telefone' },
+  { title: 'Ações', key: 'actions', sortable: false },
+]
+
+const responsaveis = ref([])
 
 const abrirModalNovo = () => {
   router.push('/clientes/add')
@@ -227,13 +224,13 @@ const salvarResponsavel = () => {
   indexEdicao.value = null
 }
 
-const visualizarResponsavel = (responsavel) => {
-  console.log(responsavel)
+const visualizarResponsavel = (aprendente: ViewAprendenteLogadoProfissional) => {
+  console.log(aprendente)
   router.push({
     name: 'cliente-detalhes',
     params: {
-      idResponsavel: responsavel.idResponsavel,
-      idAprendente: responsavel.idAprendente ,
+      idResponsavel: aprendente.idResponsavel,
+      idAprendente: aprendente.id,
     }
   })
 }
@@ -243,8 +240,20 @@ function formatarTelefone(telefone: string): string {
 }
 
 const confirmarInativacao = (responsavel: Responsavel) => {
-  responsavelParaInativar.value = cliente
+  responsavelParaInativar.value = responsavel
   dialogConfirmacao.value = true
+}
+
+const inativarCliente = async () => {
+  if (responsavelParaInativar.value) {
+    try {
+      // Implement inactivation logic here
+      dialogConfirmacao.value = false
+      await loadAprendentes()
+    } catch (error) {
+      console.error('Erro ao inativar cliente:', error)
+    }
+  }
 }
 </script>
 

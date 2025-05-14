@@ -4,8 +4,10 @@ import type Pasta from '@/models/Pasta.ts'
 
 export default interface Documento {
   id: string;
+  id_documento: string;
   nome: string;
   url: string;
+  storage_path: string;
   dataEnvio: Date;
   idPasta: string;
   pasta?: Pasta;

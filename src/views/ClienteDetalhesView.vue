@@ -47,11 +47,79 @@
                       :key="key"
                     >
                       <v-text-field
+                        v-if="key !== 'nascimento'"
                         v-model="responsavelDetalhes[key]"
                         :label="label"
                         outlined
                         dense
                       />
+                      <v-text-field
+                        v-else
+                        v-model="dataNascimentoFormatada"
+                        :label="label"
+                        type="date"
+                        outlined
+                        dense
+                      />
+                    </v-col>
+                  </v-row>
+                </div>
+
+                <!-- Anamnese -->
+                <div v-else-if="tab === 'Anamnese'">
+                  <v-card-title class="text-h5 font-weight-bold mt-2">
+                    <v-icon class="mr-2" color="primary">mdi-clipboard-text</v-icon>
+                    Anamnese do Aprendente
+                  </v-card-title>
+
+                  <v-divider class="my-4" />
+
+                  <v-row v-if="perguntasAnamnese.length > 0">
+                    <v-col cols="12">
+                      <v-form ref="formAnamnese" v-model="formAnamneseValido">
+                        <v-card v-for="(pergunta, index) in perguntasAnamnese" 
+                                :key="pergunta.id" 
+                                class="mb-4 pa-4"
+                                elevation="1">
+                          <v-textarea
+                            v-model="respostasAnamnese[pergunta.id]"
+                            :label="pergunta.texto"
+                            outlined
+                            rows="3"
+                            auto-grow
+                            :rules="[v => !!v || 'Este campo é obrigatório']"
+                          />
+                        </v-card>
+                      </v-form>
+                    </v-col>
+                  </v-row>
+
+                  <v-row v-else class="d-flex justify-center align-center" style="min-height: 200px">
+                    <v-col cols="12" class="text-center">
+                      <v-icon size="64" color="grey-lighten-1">mdi-clipboard-text</v-icon>
+                      <div class="text-h6 text-grey mt-4">Nenhuma pergunta de anamnese encontrada</div>
+                      <v-btn
+                        color="primary"
+                        class="mt-4"
+                        @click="criarAnamnese"
+                      >
+                        <v-icon left>mdi-plus</v-icon>
+                        Criar Anamnese
+                      </v-btn>
+                    </v-col>
+                  </v-row>
+
+                  <v-row v-if="perguntasAnamnese.length > 0" class="mt-4">
+                    <v-col cols="12" class="d-flex justify-end">
+                      <v-btn
+                        color="primary"
+                        @click="salvarAnamnese"
+                        :loading="salvandoAnamnese"
+                        :disabled="!formAnamneseValido"
+                      >
+                        <v-icon left>mdi-content-save</v-icon>
+                        Salvar Anamnese
+                      </v-btn>
                     </v-col>
                   </v-row>
                 </div>
@@ -141,6 +209,48 @@
                     </v-timeline-item>
                   </v-timeline>
                 </div>
+
+                <!-- Documentos anexos -->
+                <div v-else-if="tab === 'Documentos anexos'">
+                  <v-card-title class="text-h5 font-weight-bold mt-2">
+                    <v-icon class="mr-2" color="primary">mdi-file-document-outline</v-icon>
+                    Documentos Anexos
+                  </v-card-title>
+
+                  <v-divider class="my-4" />
+
+                  <v-row v-if="documentos.length === 0" class="d-flex justify-center align-center" style="min-height: 200px">
+                    <v-col cols="12" class="text-center">
+                      <v-icon size="64" color="grey-lighten-1">mdi-file-document-outline</v-icon>
+                      <div class="text-h6 text-grey mt-4">Nenhum documento encontrado</div>
+                    </v-col>
+                  </v-row>
+
+                  <v-row v-else>
+                    <v-col
+                      v-for="documento in documentos"
+                      :key="documento.id_documento"
+                      cols="12"
+                      sm="6"
+                      md="4"
+                    >
+                      <v-card class="pa-4 d-flex flex-column align-center" elevation="1">
+                        <v-icon size="36">mdi-file-document-outline</v-icon>
+                        <div class="text-subtitle-2 mt-2">{{ documento.nome }}</div>
+                        <v-btn
+                          small
+                          class="mt-2"
+                          @click="baixarDocumento(documento)"
+                          color="primary"
+                          variant="outlined"
+                        >
+                          <v-icon left>mdi-download</v-icon>
+                          Baixar
+                        </v-btn>
+                      </v-card>
+                    </v-col>
+                  </v-row>
+                </div>
               </v-card-text>
             </v-window-item>
           </v-window>
@@ -205,11 +315,41 @@
         </v-card-actions>
       </v-card>
     </v-dialog>
+
+    <v-dialog v-model="modalDocumento" max-width="500">
+      <v-card>
+        <v-card-title>Anexar Novo Documento</v-card-title>
+        <v-card-text>
+          <v-text-field 
+            label="Nome do Documento" 
+            v-model="novoDocumentoNome"
+            :error-messages="errorMessage"
+          />
+          <v-file-input 
+            label="Selecionar Arquivo" 
+            v-model="novoDocumento"
+            :error-messages="errorMessage"
+          />
+        </v-card-text>
+        <v-card-actions>
+          <v-spacer />
+          <v-btn text @click="modalDocumento = false">Cancelar</v-btn>
+          <v-btn 
+            color="primary" 
+            @click="anexarDocumento"
+            :loading="uploadLoading"
+            :disabled="!novoDocumento || !novoDocumentoNome"
+          >
+            Anexar
+          </v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
   </v-container>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, computed, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import CalendarioDiario from '@/components/calendario-diario.vue'
 import Todo from '@/components/todo.vue'
@@ -219,20 +359,54 @@ import { ResponsavelService } from '@/services/responsavelService.ts'
 import { ContratoService } from '@/services/contratoService.ts'
 import { DiasAtendimentosContratoService } from '@/services/DiasAtendimentosContratoService'
 import Contrato from '@/models/Contrato'
-import { id } from 'vuetify/locale'
+import { useStoreConfig } from '@/stores/storeConfig'
+import { DocumentoService } from '@/services/DocumentoService'
+import type Documento from '@/models/Documento'
+import { ModeloAnamneseService } from '@/services/ModeloAnamneseService'
+import ModeloPergunta from '@/models/ModeloPergunta'
+import { ModeloPerguntaAnamneseService } from '@/services/ModeloPerguntaAnamneseService'
+import AnamneseResposta from '@/models/AnamneseResposta'
+import RespostaPergunta from '@/models/RespostaPergunta'
+import { AnamneseService } from '@/services/AnamneseService'
+
+interface Anamnese {
+  queixaPrincipal: string
+  historicoFamiliar: string
+  desenvolvimento: string
+  historicoEscolar: string
+  historicoMedico: string
+  observacoes: string
+}
+
+const anamnese = ref<Anamnese | null>(null)
+
+const criarAnamnese = () => {
+  anamnese.value = {
+    queixaPrincipal: '',
+    historicoFamiliar: '',
+    desenvolvimento: '',
+    historicoEscolar: '',
+    historicoMedico: '',
+    observacoes: ''
+  }
+}
 
 const route = useRoute()
 const router = useRouter()
 
+
+const modeloAnamneseService = new ModeloAnamneseService()
 const idResponsavel = route.params.idResponsavel as string
 const idAprendente = route.params.idAprendente as string | undefined
 
 const responsavelService = new ResponsavelService()
 const contratoService = new ContratoService()
 const diasAtendimento = new DiasAtendimentosContratoService()
+const documentoService = new DocumentoService()
 
 const responsavelDetalhes = ref()
 const contratos = ref<Contrato[]>([])
+const documentos = ref<Documento[]>([])
 
 const modalContrato = ref(false)
 const contratoSelecionado = ref<Contrato | null>(null)
@@ -259,16 +433,139 @@ const camposPrincipais = {
   cidade: 'Cidade',
   estado: 'Estado',
   sexo: 'Sexo',
-  atendimento_proprio: 'Atendimento Próprio',
   nascimento: 'Nascimento',
   email: 'Email',
-  tipo_atendimento: 'Tipo de Atendimento',
+}
+
+const menu = ref(false)
+
+const dataNascimentoFormatada = computed({
+  get: () => {
+    if (!responsavelDetalhes.value?.nascimento) return ''
+    const data = new Date(responsavelDetalhes.value.nascimento)
+    return data.toISOString().split('T')[0]
+  },
+  set: (value) => {
+    if (responsavelDetalhes.value) {
+      responsavelDetalhes.value.nascimento = value
+    }
+  }
+})
+
+const modalDocumento = ref(false)
+const novoDocumento = ref(null)
+const novoDocumentoNome = ref('')
+
+const errorMessage = ref('')
+const uploadLoading = ref(false)
+
+const perguntasAnamnese = ref<ModeloPergunta[]>([])
+const respostasAnamnese = ref<Record<string, string>>({})
+const formAnamneseValido = ref(false)
+const salvandoAnamnese = ref(false)
+
+const anamneseService = new AnamneseService()
+const anamneseExistente = ref<AnamneseResposta | null>(null)
+
+const loadDocuments = async () => {
+  try {
+    if (idAprendente) {
+      documentos.value = await documentoService.carregarDocumentosAprendente(idAprendente)
+    }
+  } catch (error) {
+    console.error('Erro ao carregar documentos:', error)
+    snackbarMessage.value = 'Erro ao carregar documentos'
+    snackbarColor.value = 'error'
+    snackbar.value = true
+  }
 }
 
 onMounted(async () => {
   responsavelDetalhes.value = await responsavelService.getResponsavelById(idResponsavel)
   await buscarContratos()
+  await loadDocuments()
+  await carregarPerguntasAnamnese()
 })
+
+const carregarPerguntasAnamnese = async () => {
+  try {
+    const perguntaService = new ModeloPerguntaAnamneseService()
+    const config = useStoreConfig().configuracao
+    if (!config) return
+
+    const modeloAnamneseService = new ModeloAnamneseService()
+    const modelo = await modeloAnamneseService.obterModeloPorConfig(config.id)
+    if (!modelo) return
+
+    perguntasAnamnese.value = await perguntaService.listarPerguntasPorModelo(modelo.id)
+    
+    // Se tiver um aprendente, tenta carregar a anamnese existente
+    if (idAprendente) {
+      const resultado = await anamneseService.carregarAnamnese(idAprendente)
+      if (resultado) {
+        anamneseExistente.value = resultado.anamnese
+        // Preenche as respostas existentes
+        resultado.respostas.forEach(resposta => {
+          respostasAnamnese.value[resposta.idModeloPergunta] = resposta.resposta
+        })
+      }
+    } else {
+      // Inicializa as respostas vazias para cada pergunta
+      perguntasAnamnese.value.forEach(pergunta => {
+        respostasAnamnese.value[pergunta.id] = ''
+      })
+    }
+  } catch (error) {
+    console.error('Erro ao carregar perguntas da anamnese:', error)
+    snackbarMessage.value = 'Erro ao carregar perguntas da anamnese'
+    snackbarColor.value = 'error'
+    snackbar.value = true
+  }
+}
+
+const salvarAnamnese = async () => {
+  try {
+    salvandoAnamnese.value = true
+    const config = useStoreConfig().configuracao
+    if (!config) throw new Error('Configuração não encontrada')
+
+    const modeloAnamneseService = new ModeloAnamneseService()
+    const modelo = await modeloAnamneseService.obterModeloPorConfig(config.id)
+    if (!modelo) throw new Error('Modelo de anamnese não encontrado')
+
+    // Criar a anamnese resposta
+    const anamneseResposta = new AnamneseResposta(
+      anamneseExistente.value?.id || '', // Se for edição, usa o ID existente
+      modelo.id,
+      idResponsavel,
+      config.id_profissional,
+      idAprendente || ''
+    )
+
+    // Criar as respostas para cada pergunta
+    const respostas = perguntasAnamnese.value.map(pergunta => 
+      new RespostaPergunta(
+        '', // id será gerado pelo backend
+        anamneseResposta.id,
+        pergunta.id,
+        respostasAnamnese.value[pergunta.id]
+      )
+    )
+
+    await anamneseService.salvarAnamnese(anamneseResposta, respostas)
+
+    snackbarMessage.value = 'Anamnese salva com sucesso'
+    snackbarColor.value = 'success'
+    snackbar.value = true
+  } catch (error) {
+    console.error('Erro ao salvar anamnese:', error)
+    snackbarMessage.value = 'Erro ao salvar anamnese'
+    snackbarColor.value = 'error'
+    snackbar.value = true
+  } finally {
+    salvandoAnamnese.value = false
+  }
+}
 
 const buscarContratos = async () => {
   //O valor caso idAprendente seja  null é idResponsavel
@@ -344,8 +641,6 @@ const salvarContrato = async (contrato: Contrato) => {
     }
   };
 
-
-
 async function salvarCliente() {
   try {
     if (!responsavelDetalhes.value) return
@@ -359,7 +654,7 @@ async function salvarCliente() {
     }
 
     // Atualiza o responsável existente
-    await responsavelService.updateResponsavel(responsavelDetalhes)
+    await responsavelService.updateResponsavel(responsavelDetalhes.value)
     snackbarMessage.value = 'Responsável atualizado com sucesso!'
     snackbarColor.value = 'success'
     snackbar.value = true
@@ -371,8 +666,83 @@ async function salvarCliente() {
   }
 }
 
-
 const voltar = () => {
   router.back()
+}
+
+const abrirModalDocumento = () => {
+  modalDocumento.value = true
+  novoDocumento.value = null
+  novoDocumentoNome.value = ''
+}
+
+const baixarDocumento = async (documento: Documento) => {
+  try {
+    const { data, error } = await supabase.storage
+      .from('documentos')
+      .download(documento.storage_path)
+
+    if (error) throw error
+
+    const url = window.URL.createObjectURL(data)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = documento.nome
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    window.URL.revokeObjectURL(url)
+  } catch (error) {
+    console.error('Erro ao baixar documento:', error)
+    snackbarMessage.value = 'Erro ao baixar documento'
+    snackbarColor.value = 'error'
+    snackbar.value = true
+  }
+}
+
+const excluirDocumento = async (documento: Documento) => {
+  if (confirm(`Deseja excluir o documento "${documento.nome}"?`)) {
+    try {
+      await documentoService.excluirDocumento(documento.id_documento)
+      await loadDocuments()
+      snackbarMessage.value = 'Documento excluído com sucesso'
+      snackbarColor.value = 'success'
+      snackbar.value = true
+    } catch (error) {
+      console.error('Erro ao excluir documento:', error)
+      snackbarMessage.value = 'Erro ao excluir documento'
+      snackbarColor.value = 'error'
+      snackbar.value = true
+    }
+  }
+}
+
+const anexarDocumento = async () => {
+  try {
+    if (!novoDocumento.value || !novoDocumentoNome.value) {
+      errorMessage.value = 'Por favor, selecione um arquivo e forneça um nome'
+      return
+    }
+
+    uploadLoading.value = true
+    const response = await supabase.storage
+      .from('documentos')
+      .upload(novoDocumentoNome.value, novoDocumento.value)
+
+    if (response.error) throw response.error
+
+    await loadDocuments()
+    snackbarMessage.value = 'Documento anexado com sucesso'
+    snackbarColor.value = 'success'
+    snackbar.value = true
+    modalDocumento.value = false
+  } catch (error) {
+    console.error('Erro ao anexar documento:', error)
+    snackbarMessage.value = 'Erro ao anexar documento'
+    snackbarColor.value = 'error'
+    snackbar.value = true
+  } finally {
+    uploadLoading.value = false
+  }
 }
 </script>

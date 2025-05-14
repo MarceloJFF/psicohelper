@@ -5,4 +5,5 @@ export default class Aprendente {
   nascimento: string = '';
   sexo: string ='';
   corAgendamento: string = '';
-}
+  statusMatricula: boolean = true;
+  }

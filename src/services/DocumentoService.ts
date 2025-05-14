@@ -120,4 +120,20 @@ export class DocumentoService {
       throw error
     }
   }
+
+  async carregarDocumentosAprendente(idAprendente: string) {
+    try {
+      const { data, error } = await supabase
+        .from('tb_documento')
+        .select('*')
+        .eq('id_aprendente', idAprendente)
+        .order('nome')
+
+      if (error) throw error
+      return data
+    } catch (error) {
+      console.error('Erro ao carregar documentos do aprendente:', error)
+      throw error
+    }
+  }
 } 

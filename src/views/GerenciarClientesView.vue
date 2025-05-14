@@ -164,8 +164,11 @@
               <v-col cols="12" md="6">
                 <v-select
                   v-model="responsavelAtual.sexo"
-                  :items="['Masculino', 'Feminino']"
                   label="Sexo"
+                  :items="[
+                    { title: 'Masculino', value: 'M' },
+                    { title: 'Feminino', value: 'F' }
+                  ]"
                   :rules="[v => !!v || 'Sexo é obrigatório']"
                   required
                   variant="outlined"
@@ -378,7 +381,7 @@ onMounted(async () => {
 // Funções
 async function carregarResponsaveis() {
   try {
-    responsaveis.value = await responsavelService.loadResponsaveis()
+    responsaveis.value = await responsavelService.loadResponsaveisGerenciarClientes()
   } catch (error) {
     mostrarMensagem('Erro ao carregar responsáveis', 'error')
   }
@@ -417,6 +420,7 @@ function editarResponsavel(responsavel: Responsavel) {
   modoEdicao.value = true
   responsavelAtual.value = { ...responsavel }
   modalResponsavel.value = true
+  
 }
 
 function editarAprendente(aprendente: Aprendente) {
@@ -431,10 +435,10 @@ async function salvarResponsavel() {
   salvando.value = true
   try {
     if (modoEdicao.value) {
-      await responsavelService.updateResponsavel(responsavelAtual.value as Responsavel)
+      await responsavelService.updateResponsavelGerenciarClientes(responsavelAtual.value as Responsavel)
       mostrarMensagem('Responsável atualizado com sucesso')
     } else {
-      await responsavelService.addResponsavel(responsavelAtual.value)
+      await responsavelService.addResponsavelGerenciarClientes(responsavelAtual.value as Responsavel)
       mostrarMensagem('Responsável cadastrado com sucesso')
     }
     modalResponsavel.value = false
@@ -452,6 +456,8 @@ async function salvarAprendente() {
   salvando.value = true
   console.log(aprendenteAtual.value)
   try {
+    aprendenteAtual.value.statusMatricula = true
+    
     if (modoEdicao.value) {
       await aprendenteService.updateAprendenteComCorAgendamento(aprendenteAtual.value as Aprendente)
       mostrarMensagem('Aprendente atualizado com sucesso')
@@ -522,7 +528,8 @@ function formatarData(data: string | undefined | null): string {
 }
 
 .v-list-item:hover {
-  background-color: rgb(var(--v-theme-surface-variant));
+  background-color: rebeccapurple;
+  color: white;
   transform: translateX(4px);
 }
 

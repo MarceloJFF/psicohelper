@@ -23,17 +23,51 @@ export class ModeloAnamneseService {
       if (modeloExistente) {
         //se o modelo existir, atualiza as perguntas 
         id_modelo = modeloExistente.id_modelo
-        const perguntasData = perguntas.map((p, index) => ({
-          id_modelo_anamnese: id_modelo,
-          texto: p.texto,
-          ordem: index
-        }))
-  
-        const { error: insertError } = await supabase
+
+        // Busca perguntas existentes que já têm respostas
+        const { data: perguntasComRespostas, error: errorPerguntas } = await supabase
           .from('tb_modelo_pergunta')
-          .insert(perguntasData)
-  
-        if (insertError) throw insertError
+          .select('id, texto')
+          .eq('id_modelo_anamnese', id_modelo)
+          .in('id', (
+            await supabase
+              .from('tb_resposta_pergunta')
+              .select('id_modelo_pergunta')
+          ).data?.map(r => r.id_modelo_pergunta) || [])
+
+        if (errorPerguntas) throw errorPerguntas
+
+        // Mapeia as perguntas existentes que têm respostas
+        const perguntasPreservadas = new Map(
+          (perguntasComRespostas || []).map(p => [p.texto, p.id])
+        )
+
+        // Prepara as novas perguntas, mantendo os IDs das que já existem
+        const perguntasData = perguntas.map((p, index) => {
+          const idExistente = perguntasPreservadas.get(p.texto)
+          return {
+            id: idExistente, // Se existir, mantém o ID
+            id_modelo_anamnese: id_modelo,
+            texto: p.texto,
+            ordem: index
+          }
+        })
+
+        // Remove apenas as perguntas que não têm respostas e não estão na nova lista
+        const { error: deleteError } = await supabase
+          .from('tb_modelo_pergunta')
+          .delete()
+          .eq('id_modelo_anamnese', id_modelo)
+          .not('id', 'in', `(${Array.from(perguntasPreservadas.values()).join(',')})`)
+
+        if (deleteError) throw deleteError
+
+        // Insere ou atualiza as perguntas
+        const { error: upsertError } = await supabase
+          .from('tb_modelo_pergunta')
+          .upsert(perguntasData)
+
+        if (upsertError) throw upsertError
       } else {
         //cria o novo modelo
         const { data: modeloCriado, error: insertModeloError } = await supabase
@@ -73,7 +107,8 @@ export class ModeloAnamneseService {
         .maybeSingle()  // Use maybeSingle em vez de single
   
       if (error) throw error
-      return data
+      const modeloAnamnese = new ModeloAnamnese(data.nome, data.id_modelo, data.id_config)
+      return modeloAnamnese
     } catch (err: any) {
       this.showError(err.message || 'Erro ao buscar modelo de anamnese')
       return null

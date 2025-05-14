@@ -3,6 +3,8 @@ import supabase from '@/config/supabase'
 import Aprendente from '@/models/Aprendente'
 import { useShowErrorMessage } from '@/userCases/useShowErrorMessage'
 import { useStoreProfissional } from '@/stores/storeProfissional'
+import ViewAprendenteLogadoProfissional from '@/models/ViewAprendenteLogadoProfissional'
+
 export class AprendenteService {
   private showError = useShowErrorMessage().showError
   private useStoreProfissional = useStoreProfissional()
@@ -35,10 +37,35 @@ export class AprendenteService {
     aprendente.nascimento = data.nascimento;
     aprendente.sexo = data.sexo;
     aprendente.corAgendamento = data.cor_agendamento;
+    aprendente.statusMatricula = data.status_matricula;
     // Adicione outros campos conforme necessário
     return aprendente;
   }
 
+  async loadAprendentesPorProfissional(): Promise<ViewAprendenteLogadoProfissional[]> {
+    try {
+      const idProfissional = this.useStoreProfissional.profissionalDetails?.id
+      const { data, error } = await supabase
+        .from('vw_aprendentes_logado_profissional')
+        .select('*')
+        .eq('id_profissional', idProfissional)      
+      if (error) throw error
+      const aprendentes: ViewAprendenteLogadoProfissional[] = []
+      data.forEach((item: any) => {
+        const aprendente = new ViewAprendenteLogadoProfissional()
+        aprendente.id = item.id
+        aprendente.nomeAprendente = item.nome_aprendente
+        aprendente.idResponsavel = item.id_responsavel
+        aprendente.nomeResponsavel = item.nome_responsavel
+        aprendente.telefone = item.telefone
+        aprendentes.push(aprendente)
+      })
+      return aprendentes
+    } catch (err: any) {
+      this.showError(err.message || 'Erro ao carregar aprendentes')
+      return []
+    }
+  } 
   async  buscarAprendentesPorNome(nome: string) {
     const idProfissional = this.useStoreProfissional.profissionalDetails?.id
     const { data, error } = await supabase
@@ -106,6 +133,7 @@ export class AprendenteService {
   }
 
   async updateAprendenteComCorAgendamento(aprendente: Aprendente): Promise<void> {
+    console.log(aprendente)
     try {
       const { error } = await supabase
         .from('tb_aprendente')
