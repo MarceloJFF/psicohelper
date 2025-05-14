@@ -61,6 +61,7 @@ export class ContratoService {
   async addContrato(contrato: Contrato, idResponsavel:string, idAprendente:string): Promise<string | undefined> {
     try {
       contrato.idProfissional = this.profissionalStore.profissionalDetails?.id || ''
+      console.log(contrato)
       const {data, error } = await supabase
         .from('tb_contrato')
         .insert({

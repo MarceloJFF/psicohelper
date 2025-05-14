@@ -325,15 +325,52 @@ const confirmarAcao = async () => {
   }
 }
 
-const salvarContrato = async () => {
-  modalContrato.value = false
+const salvarContrato = async (contrato: Contrato) => {
+    modalContrato.value = false
+    try {
+      console.log(contrato)
+      // Salva os dados no backend através do ContratoService
+      await contratoService.addContrato(contrato,idResponsavel,idAprendente);
+      // Após salvar, atualiza a lista de contratos
+      await buscarContratos();
+      modalContrato.value = false; // Fecha o modal
+      snackbarMessage.value = 'Contrato salvo com sucesso';
+      snackbarColor.value = 'success';
+      snackbar.value = true;
+    } catch (error) {
+      snackbarMessage.value = 'Erro ao salvar contrato';
+      snackbarColor.value = 'error';
+      snackbar.value = true;
+    }
+  };
 
 
+
+async function salvarCliente() {
+  try {
+    if (!responsavelDetalhes.value) return
+
+    // Validação básica (adicione mais conforme necessário)
+    if (!responsavelDetalhes.value.nome || !responsavelDetalhes.value.cpf) {
+      snackbarMessage.value = 'Nome e CPF são obrigatórios'
+      snackbarColor.value = 'error'
+      snackbar.value = true
+      return
+    }
+
+    // Atualiza o responsável existente
+    await responsavelService.updateResponsavel(responsavelDetalhes)
+    snackbarMessage.value = 'Responsável atualizado com sucesso!'
+    snackbarColor.value = 'success'
+    snackbar.value = true
+  } catch (error) {
+    snackbarMessage.value = 'Erro ao salvar o responsável.'
+    snackbarColor.value = 'error'
+    snackbar.value = true
+    console.error(error)
+  }
 }
 
-const salvarCliente = () => {
-  // TODO: salvar responsável
-}
 
 const voltar = () => {
   router.back()
