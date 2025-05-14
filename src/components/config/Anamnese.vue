@@ -54,11 +54,9 @@
         <v-card-text>
           <v-list dense>
             <v-list-item v-for="(pergunta, index) in perguntas" :key="index">
-              <v-list-item-content>
-                <v-list-item-title class="font-weight-bold">
-                  {{ pergunta.texto }}
-                </v-list-item-title>
-              </v-list-item-content>
+              <v-list-item-title class="font-weight-bold">
+                {{ pergunta.texto }}
+              </v-list-item-title>
             </v-list-item>
           </v-list>
         </v-card-text>
