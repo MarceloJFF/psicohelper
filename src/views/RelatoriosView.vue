@@ -148,139 +148,64 @@
     </v-dialog>
   </v-container>
 </template>
+<script>
+import { onMounted } from 'vue'
+import { PastaService, Pasta } from '@/services/PastaService'
 
-<script setup lang="ts">
-import { ref, computed } from 'vue'
-import { AprendenteService } from '@/services/AprendenteService'
-const aprendenteBusca = ref('')
-const aprendentesEncontrados = ref([])
-const aprendenteSelecionado = ref(null)
-const aprendenteService = new AprendenteService()
-const onBuscaAprendente = async (search: string) => {
-  console.log('Termo de busca:', search); // Verifique no console se está sendo chamado
+const pastaService = new PastaService()
+const pastas = ref<Pasta[]>([])
 
-  if (!search || search.length < 3) {
-    aprendentesEncontrados.value = [];
-    return;
-  }
-
-  try {
-    const resultado = await aprendenteService.buscarAprendentesPorNome(search);
-    aprendentesEncontrados.value = resultado.map(a => ({
-      id: a.id,
-      nome: a.nome_dependente
-    }));
-    console.log('Resultados encontrados:', aprendentesEncontrados.value); // Verifique os resultados
-  } catch (error) {
-    console.error('Erro na busca de aprendentes:', error);
-    aprendentesEncontrados.value = [];
-  }
-}
-let idCounter = 1
-const pastas = ref([
-  { id: idCounter++, nome: 'Psicopedagogia', parentId: null },
-  { id: idCounter++, nome: 'Laudos Técnicos', parentId: null },
-])
-const arquivos = ref([])
-
-const caminhoAtual = ref([])
-
-const modalPasta = ref(false)
-const modalArquivo = ref(false)
-
-const novaPastaNome = ref('')
-const novoArquivo = ref(null)
-const novoArquivoNome = ref('')
-let arquivoArrastado = null
-
-const pastasVisiveis = computed(() => {
+async function carregarPastas(): Promise<void> {
   const parentId = caminhoAtual.value.length
     ? caminhoAtual.value[caminhoAtual.value.length - 1].id
     : null
-  return pastas.value.filter(p => p.parentId === parentId)
-})
-
-const arquivosVisiveis = computed(() => {
-  if (!caminhoAtual.value.length) return []
-  const pastaAtual = caminhoAtual.value[caminhoAtual.value.length - 1]
-  return arquivos.value.filter(arq => arq.pastaId === pastaAtual.id)
-})
-
-function abrirModalPasta() {
-  novaPastaNome.value = ''
-  modalPasta.value = true
+  pastas.value = await pastaService.listarPastas(parentId)
 }
 
-function abrirModalArquivo() {
-  novoArquivoNome.value = ''
-  novoArquivo.value = null
-  modalArquivo.value = true
-}
+onMounted(() => {
+  carregarPastas()
+})
 
-function criarPasta() {
+async function criarPasta(): Promise<void> {
   if (!novaPastaNome.value) return
   const parentId = caminhoAtual.value.length
     ? caminhoAtual.value[caminhoAtual.value.length - 1].id
     : null
-  pastas.value.push({ id: idCounter++, nome: novaPastaNome.value, parentId })
+
+  await pastaService.criarPasta(novaPastaNome.value, parentId)
   modalPasta.value = false
+  await carregarPastas()
 }
 
-function anexarArquivo() {
-  if (!novoArquivoNome.value || !novoArquivo.value) return
-  const pastaAtual = caminhoAtual.value[caminhoAtual.value.length - 1]
-  arquivos.value.push({
-    id: idCounter++,
-    nome: novoArquivoNome.value,
-    link: URL.createObjectURL(novoArquivo.value),
-    pastaId: pastaAtual.id
-  })
-  modalArquivo.value = false
+async function excluirPasta(pasta: Pasta): Promise<void> {
+  await pastaService.excluirPasta(pasta.id)
+  await carregarPastas()
 }
 
-function abrirPasta(pasta) {
-  caminhoAtual.value.push(pasta)
-}
-
-function navegarPara(index) {
-  caminhoAtual.value = caminhoAtual.value.slice(0, index + 1)
-}
-
-function voltarParaRaiz() {
-  caminhoAtual.value = []
-}
-
-function excluirPasta(pasta) {
-  pastas.value = pastas.value.filter(p => p.id !== pasta.id)
-  arquivos.value = arquivos.value.filter(a => a.pastaId !== pasta.id)
-}
-
-function excluirArquivo(arquivo) {
-  arquivos.value = arquivos.value.filter(a => a.id !== arquivo.id)
-}
-
-function renomearPasta(pasta) {
+async function renomearPasta(pasta: Pasta): Promise<void> {
   const novoNome = prompt('Novo nome da pasta:', pasta.nome)
-  if (novoNome) pasta.nome = novoNome
-}
-
-function renomearArquivo(arquivo) {
-  const novoNome = prompt('Novo nome do arquivo:', arquivo.nome)
-  if (novoNome) arquivo.nome = novoNome
-}
-
-function iniciarDragArquivo(arquivo) {
-  arquivoArrastado = arquivo
-}
-
-function soltarArquivoNaPasta(pasta) {
-  if (arquivoArrastado) {
-    arquivoArrastado.pastaId = pasta.id
-    arquivoArrastado = null
+  if (novoNome && novoNome !== pasta.nome) {
+    await pastaService.atualizarPasta(pasta.id, novoNome)
+    await carregarPastas()
   }
 }
-</script>
 
+function abrirPasta(pasta: Pasta): void {
+  caminhoAtual.value.push(pasta)
+  carregarPastas()
+}
+
+function voltarParaRaiz(): void {
+  caminhoAtual.value = []
+  carregarPastas()
+}
+
+function navegarPara(index: number): void {
+  caminhoAtual.value = caminhoAtual.value.slice(0, index + 1)
+  carregarPastas()
+}
+
+</script>
 <style scoped>
 .v-card {
   border-radius: 12px;
