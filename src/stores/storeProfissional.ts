@@ -132,7 +132,7 @@ export const useStoreProfissional = defineStore('profissional', () => {
         schema: 'public',
         table: 'tb_profissional',
         filter: `id=eq.${storeAuth.userDetails.id}`
-      }, (payload) => {
+      }, (payload:any) => {
         if (payload.eventType === 'INSERT' || payload.eventType === 'UPDATE') {
           profissionalDetails.value = payload.new as Profissional
         } else if (payload.eventType === 'DELETE') {
