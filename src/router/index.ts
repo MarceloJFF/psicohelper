@@ -13,6 +13,7 @@ import AtendimentosView from '@/views/AtendimentosView.vue'
 import Configuracao from '@/views/Configuracao.vue'
 import AboutView from '@/views/AboutView.vue'
 import Home from '@/views/Home.vue'
+import GerenciarClientesView from '@/views/GerenciarClientesView.vue'
 import { watch } from 'vue'
 
 // Aqui você poderia importar a tela de Login também futuramente.
@@ -68,6 +69,12 @@ const router = createRouter({
           component: AddClienteView,
           meta: { requiresAuth: true }
 
+        },
+        {
+          path: 'clientes/gerenciar',
+          name: 'gerenciar-clientes',
+          component: GerenciarClientesView,
+          meta: { requiresAuth: true }
         },
         {
           path: '/clientes/:idResponsavel/dependentes/:idAprendente?/detalhes',

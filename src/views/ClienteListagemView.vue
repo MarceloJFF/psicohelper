@@ -9,14 +9,14 @@
                 <v-col cols="6">
                   <div class="text-h6 font-weight-medium d-flex align-center">
                     <v-icon class="mr-2" color="primary">mdi-account-group</v-icon>
-                    Listagem de Clientes
+                    Listagem de Aprendentes
                   </div>
                 </v-col>
                 <v-col cols="5">
                   <v-text-field
                     v-model="search"
                     density="compact"
-                    label="Buscar clientes"
+                    label="Buscar Aprendentes"
                     prepend-inner-icon="mdi-magnify"
                     append-inner-icon="mdi-close"
                     variant="solo-filled"

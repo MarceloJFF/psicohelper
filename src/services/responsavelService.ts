@@ -119,6 +119,7 @@ export class ResponsavelService {
       }
 
       // Formatamos os dados conforme necessário
+      
       const listaFinal = data.map(item => ({
         idAprendente: item.atendimento_proprio ? item.id_responsavel : item.id_aprendente,
         idResponsavel: item.id_responsavel,
