@@ -59,9 +59,9 @@ export class ContratoService {
 
 
   async addContrato(contrato: Contrato, idResponsavel:string, idAprendente:string): Promise<string | undefined> {
-    console.log(idAprendente)
     try {
       contrato.idProfissional = this.profissionalStore.profissionalDetails?.id || ''
+      console.log(contrato)
       const {data, error } = await supabase
         .from('tb_contrato')
         .insert({
@@ -72,12 +72,11 @@ export class ContratoService {
           descricao_servico: contrato.descricao,
           id_responsavel: idResponsavel,
           id_profissional: contrato.idProfissional,
-          id_aprendente: idAprendente,
+          id_aprendente: idAprendente || null,
           cancelado: false
           }
         ).select()
       if (error) throw error
-      console.log(data)
       return data?.[0]?.id_contrato;
     } catch (err: any) {
       this.showError(err.message || 'Erro ao adicionar contrato')
@@ -88,7 +87,7 @@ export class ContratoService {
     try {
       const { error } = await supabase
         .from('tb_contrato')
-        .update({ 
+        .update({
           cancelado: true,
           motivo_cancelamento: motivo
         })

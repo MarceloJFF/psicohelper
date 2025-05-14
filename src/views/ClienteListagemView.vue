@@ -9,14 +9,14 @@
                 <v-col cols="6">
                   <div class="text-h6 font-weight-medium d-flex align-center">
                     <v-icon class="mr-2" color="primary">mdi-account-group</v-icon>
-                    Listagem de Clientes
+                    Listagem de Aprendentes
                   </div>
                 </v-col>
                 <v-col cols="5">
                   <v-text-field
                     v-model="search"
                     density="compact"
-                    label="Buscar clientes"
+                    label="Buscar Aprendentes"
                     prepend-inner-icon="mdi-magnify"
                     append-inner-icon="mdi-close"
                     variant="solo-filled"
@@ -228,12 +228,13 @@ const salvarResponsavel = () => {
 }
 
 const visualizarResponsavel = (responsavel) => {
+  console.log(responsavel)
   router.push({
     name: 'cliente-detalhes',
     params: {
       idResponsavel: responsavel.idResponsavel,
-      idAprendente: responsavel.idAprendente || undefined, // se for falsy, não envia
-    },
+      idAprendente: responsavel.idAprendente ,
+    }
   })
 }
 
@@ -246,3 +247,15 @@ const confirmarInativacao = (responsavel: Responsavel) => {
   dialogConfirmacao.value = true
 }
 </script>
+
+<style scoped>
+/* Transições suaves de página */
+.router-view {
+  transition: opacity 0.5s ease-in-out;
+  opacity: 0;
+}
+
+.router-view-enter-active, .router-view-leave-active {
+  opacity: 1;
+}
+</style>

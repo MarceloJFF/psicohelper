@@ -184,7 +184,6 @@ const showError = (message: string) => {
 const toggleMode = () => {
   isLogin.value = !isLogin.value
 }
-
 const handleAuth = async () => {
   const isValid = await form.value?.validate()
   if (!isValid) {
@@ -200,23 +199,54 @@ const handleAuth = async () => {
         showError('Por favor, preencha email e senha')
         return
       }
-      await storeAuth.loginUser({ email: credentials.value.email, password: credentials.value.password })
+
+      await storeAuth.loginUser({
+        email: credentials.value.email,
+        password: credentials.value.password
+      })
+
     } else {
-      if (!credentials.value.email || !credentials.value.password || 
-          !profissional.value.nome || !profissional.value.profissao || !profissional.value.telefone) {
+      if (
+        !credentials.value.email || !credentials.value.password || 
+        !profissional.value.nome || !profissional.value.profissao || 
+        !profissional.value.telefone
+      ) {
         showError('Por favor, preencha todos os campos')
         return
       }
-      await storeAuth.registerUser({
-        email: credentials.value.email,
-        password: credentials.value.password,
-      }, profissional.value)
+
+      const {error} = await storeAuth.registerUser(
+        {
+          email: credentials.value.email,
+          password: credentials.value.password
+        },
+        profissional.value
+      )
+
+      if(error){
+        showError(error.message)
+        return
+      }else{
+         // Mostrar mensagem de sucesso
+        snackbar.value = {
+          show: true,
+          text: 'Cadastro realizado com sucesso! Faça login para continuar.',
+          color: 'success'
+        }
+
+      }
+     
+    // Trocar para modo de login automaticamente
+//      isLogin.value = true
     }
+
     clearState()
+
   } catch (err) {
-    showError(err.message)
+    showError(err.message || 'Erro inesperado')
   }
 }
+
 
 function clearState() {
   credentials.value.email = ''

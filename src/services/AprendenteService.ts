@@ -2,9 +2,10 @@
 import supabase from '@/config/supabase'
 import Aprendente from '@/models/Aprendente'
 import { useShowErrorMessage } from '@/userCases/useShowErrorMessage'
-
+import { useStoreProfissional } from '@/stores/storeProfissional'
 export class AprendenteService {
   private showError = useShowErrorMessage().showError
+  private useStoreProfissional = useStoreProfissional()
 
   async loadAprendentes(idResponsavel: string): Promise<Aprendente[]> {
     try {
@@ -14,24 +15,41 @@ export class AprendenteService {
         .eq('id_responsavel', idResponsavel)
 
       if (error) throw error
-      return data as Aprendente[]
+      const aprendentes: Aprendente[] = []
+    
+      data.forEach((item: any) => {
+        const aprendente = this.mapAprendente(item)
+        aprendentes.push(aprendente)
+      })
+      return aprendentes
     } catch (err: any) {
       this.showError(err.message || 'Erro ao carregar aprendentes')
       return []
     }
   }
+   mapAprendente(data: any): Aprendente {
+    const aprendente = new Aprendente();
+    aprendente.id = data.id;
+    aprendente.nomeAprendente = data.nome_aprendente;
+    aprendente.idResponsavel = data.id_responsavel;
+    aprendente.nascimento = data.nascimento;
+    aprendente.sexo = data.sexo;
+    aprendente.corAgendamento = data.cor_agendamento;
+    // Adicione outros campos conforme necessário
+    return aprendente;
+  }
 
   async  buscarAprendentesPorNome(nome: string) {
+    const idProfissional = this.useStoreProfissional.profissionalDetails?.id
     const { data, error } = await supabase
-      .from('tb_aprendente')
-      .select('id, nome_dependente')
-      .ilike('nome_dependente', `%${nome}%`) // busca por similaridade (case-insensitive)
+    .from('vw_aprendentes_profissional_logado')
+    .select('*')
+    .eq('id_profissional', idProfissional)
+    .ilike('nome_aprendente', `%${nome}%`)
+    if (error) throw error
 
-    if (error) {
-      console.error('Erro ao buscar aprendentes:', error)
-      return []
-    }
-    return data
+    console.log(data)
+    return data as Aprendente[]
   }
 
   async addAprendente(aprendente: Aprendente): Promise<string | undefined> {
@@ -68,6 +86,43 @@ export class AprendenteService {
     }
   }
 
+  async addAprendenteComCorAgendamento(aprendente: Aprendente): Promise<string | undefined> {
+    console.log(aprendente)
+    try {
+      const { data, error } = await supabase
+        .from('tb_aprendente')
+        .insert([{
+          nome_aprendente: aprendente.nomeAprendente,
+          id_responsavel: aprendente.idResponsavel,
+          nascimento: aprendente.nascimento,
+          sexo: aprendente.sexo,
+          cor_agendamento: aprendente.corAgendamento
+        }]).select()
+      if (error) throw error
+      return data[0].id 
+    } catch (err: any) {  
+      this.showError(err.message || 'Erro ao adicionar aprendente com cor de agendamento')
+    }
+  }
+
+  async updateAprendenteComCorAgendamento(aprendente: Aprendente): Promise<void> {
+    try {
+      const { error } = await supabase
+        .from('tb_aprendente')
+        .update({
+          nome_aprendente: aprendente.nomeAprendente,
+          nascimento: aprendente.nascimento,
+          sexo: aprendente.sexo,
+          cor_agendamento: aprendente.corAgendamento
+        })
+        .eq('id', aprendente.id)
+      if (error) throw error
+    } catch (err: any) {
+      this.showError(err.message || 'Erro ao atualizar aprendente com cor de agendamento')
+    } 
+  }
+  
+  
   async deleteAprendente(id: string): Promise<void> {
     try {
       const { error } = await supabase

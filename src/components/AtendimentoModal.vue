@@ -133,8 +133,8 @@ const menus = ref([
   },
 ])
 function salvar() {
-  const dados = menus.value.reduce((acc, menu) => {
-    acc[menu.label] = menu.value.value
+  const dados = menus.value.reduce((acc:any, menu:any) => {
+    acc[menu.label] = menu.value
     return acc
   }, {})
   console.log('Dados salvos:', dados)

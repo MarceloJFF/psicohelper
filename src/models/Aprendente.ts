@@ -4,4 +4,5 @@ export default class Aprendente {
   idResponsavel: string = '';
   nascimento: string = '';
   sexo: string ='';
+  corAgendamento: string = '';
 }

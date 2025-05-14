@@ -91,6 +91,7 @@ async function salvarPerfil() {
       snackbarColor.value = 'error'
     } finally {
       snackbar.value = true
+      storeProfissional.loadProfissional()
     }
   }
 }

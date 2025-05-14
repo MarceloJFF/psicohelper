@@ -15,5 +15,8 @@
     "module": "ESNext",
     "moduleResolution": "Bundler",
     "types": ["node"]
+  },
+  "build": {
+    "target": "es2022"  // Ou 'chrome92', 'firefox92', etc.
   }
 }

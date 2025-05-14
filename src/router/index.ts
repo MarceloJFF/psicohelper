@@ -13,6 +13,7 @@ import AtendimentosView from '@/views/AtendimentosView.vue'
 import Configuracao from '@/views/Configuracao.vue'
 import AboutView from '@/views/AboutView.vue'
 import Home from '@/views/Home.vue'
+import GerenciarClientesView from '@/views/GerenciarClientesView.vue'
 import { watch } from 'vue'
 
 // Aqui você poderia importar a tela de Login também futuramente.
@@ -70,6 +71,12 @@ const router = createRouter({
 
         },
         {
+          path: 'clientes/gerenciar',
+          name: 'gerenciar-clientes',
+          component: GerenciarClientesView,
+          meta: { requiresAuth: true }
+        },
+        {
           path: '/clientes/:idResponsavel/dependentes/:idAprendente?/detalhes',
           name: 'cliente-detalhes',
           component: ClienteDetalhesView,
@@ -111,7 +118,6 @@ const router = createRouter({
 
 router.beforeEach(async (to, from, next) => {
   const storeAuth = useStoreAuth()
-
   // Aguarda a sessão carregar
   if (!storeAuth.sessionLoaded) {
     // Aguarda no máximo 2 segundos para sessionLoaded ficar true

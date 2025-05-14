@@ -10,10 +10,11 @@ const items = [
   { title: 'Home', icon: 'mdi-home', to: '/' },
   { title: 'Financeiro', icon: 'mdi-currency-usd', to: '/financeiro' },
   { title: 'Calendar', icon: 'mdi-calendar-month', to: '/calendario' },
-  { title: 'Relatórios', icon: 'mdi-clock', to: '/relatorios' },
+  { title: 'Anexos do Aprendente', icon: 'mdi-clock', to: '/relatorios' },
   { title: 'Inventario', icon: 'mdi-file-document', to: '/Inventario' },
   { title: 'Atendimentos', icon: 'mdi-account-clock', to: '/atendimentos' },
   { title: 'Aprendentes', icon: 'mdi-account-multiple', to: '/clientes' },
+  { title: 'Gerenciar Clientes', icon: 'mdi-account-cog', to: '/clientes/gerenciar' },
   { title: 'Configurações', icon: 'mdi-cog', to: '/configuracoes' },
   { title: 'Sair', icon: 'mdi-logout', action: () => storeAuth.logoutUser() }
 ]
@@ -22,7 +23,7 @@ const storeProfissional = useStoreProfissional()
 </script>
 
 <template>
-  <v-app id="inspire">
+  <v-app id="inspire" v-if="storeProfissional.profissionalDetails">
     <v-navigation-drawer v-model="drawer" app color="#9a20c1" permanent>
       <v-img
         :width="321"

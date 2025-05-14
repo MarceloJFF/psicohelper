@@ -1,19 +1,15 @@
 <script setup lang="ts">
+import { onMounted } from 'vue'
 import { RouterView } from 'vue-router'
 import { useShowErrorMessage } from '@/userCases/useShowErrorMessage.js'
-import supabase from '/src/config/supabase'
-import router from '@/router'
+import { useStoreAuth } from '@/stores/storeAuth'
 
 const { show, message, color } = useShowErrorMessage()
 
-supabase.auth.onAuthStateChange((event, session) => {
-  if (event === 'SIGNED_OUT') {
-    router.push('/login')
-  }
+const storeAuth = useStoreAuth()
 
-  // if (event === 'SIGNED_IN' && router.currentRoute.value.path === '/login') {
-  //   router.push('/')
-  // }
+onMounted(async () => {
+  await storeAuth.init()
 })
 
 </script>
