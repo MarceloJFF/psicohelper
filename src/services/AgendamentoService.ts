@@ -6,7 +6,7 @@ export class AgendamentoService {
   private showError = useShowErrorMessage().showError
 
   async createAgendamento(agendamento: Agendamento): Promise<string | undefined> {
-    console.log('[Service] Evento a ser salvo:', agendamento);
+    console.log('[Service] Evento a ser salvo:', agendamento)
 
     try {
       const { data, error } = await supabase
@@ -24,7 +24,7 @@ export class AgendamentoService {
             valor_atendimento: agendamento.valorAtendimento,
             observacoes: agendamento.observacoes,
             id_contrato: agendamento.id_contrato,
-            color: agendamento.color
+            color: agendamento.color,
           },
         ])
         .select()
@@ -42,17 +42,19 @@ export class AgendamentoService {
         .from('tb_agendamento')
         .update({
           titulo: agendamento.titulo,
-          data_agendamento: agendamento.dataAgendamento,
+          data_agendamento: agendamento.dataAgendamento.toLocaleString(),
           horario_inicio: agendamento.horarioInicio,
           duracao: agendamento.duracao,
-          cliente_id: agendamento.clienteId,
-          id_dependente: agendamento.idDependente,
+          responsavel_id: agendamento.responsavel_id,
+          id_aprendente: agendamento.idDependente,
           id_profissional: agendamento.idProfissional,
           tipo_atendimento: agendamento.tipoAtendimento,
           valor_atendimento: agendamento.valorAtendimento,
           observacoes: agendamento.observacoes,
+          id_contrato: agendamento.id_contrato,
+          color: agendamento.color,
         })
-        .eq('id', agendamento.id)
+        .eq('id_agendamento', agendamento.id)
 
       if (error) throw error
     } catch (err: any) {

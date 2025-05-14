@@ -192,7 +192,6 @@ const loadEventos = async () => {
 
     await storeCalendario.loadAgendamentos();
     const agendamentosEvents = storeCalendario.agendamentos.map(agendamento => {
-      console.log('COISO AGENDAMENTO:', agendamento);
 
       const start = new Date(agendamento.data_agendamento);
 
@@ -274,12 +273,12 @@ function openEventModal() {
 }
 
 async function saveEvent() {
-  const { title, startDate, startTime, duration, tipoAtendimento, valorAtendimentoAvulso, color, cliente: aprendente, observacoes } = eventData.value;
-
-  if (!title || !startDate || !startTime || !duration || !tipoAtendimento || (tipoAtendimento === 'Avulso' && !valorAtendimentoAvulso) || !aprendente) {
+  const { title, startDate, startTime, duration, tipoAtendimento, valorAtendimentoAvulso, color, cliente, observacoes } = eventData.value;
+  if (!title || !startDate || !startTime || !duration || !tipoAtendimento || (tipoAtendimento === 'Avulso' && !valorAtendimentoAvulso) || !cliente) {
     showMessage('Preencha todos os campos obrigatórios!');
     return;
   }
+
   const start = new Date(`${startDate}T${startTime}`);
   const end = new Date(start.getTime() + parseInt(duration) * 60000);
 
@@ -294,32 +293,21 @@ async function saveEvent() {
     return;
   }
 
-  if (!aprendente.id || !aprendente.tipo) {
-    console.error('Invalid aprendente:', aprendente);
-    showMessage('Cliente inválido. Selecione um cliente válido.');
-    return;
-  }
-
-  let responsavelId;
-  try {
-    const responsavelService = new ResponsavelService();
-    responsavelId = await responsavelService.getResponsavelIdByAprendenteId(aprendente.id);
-    if (!responsavelId) {
-      showMessage('Responsável não encontrado para o cliente selecionado.');
-      return;
-    }
-  } catch (err) {
-    console.error('Error fetching responsavelId:', err);
-    showMessage('Erro ao buscar responsável do cliente.');
-    return;
+  if (!cliente.id_aprendente) {
+    cliente.id_aprendente = null
   }
 
   let contratoId;
   let contrato;
   try {
     const contratoService = new ContratoService();
-    contrato = await contratoService.loadContratos(responsavelId);
-    contratoId = contrato[0].id_contrato;
+    contrato = await contratoService.loadContratos(cliente.id_responsavel);
+
+    if (contrato.length > 0 && tipoAtendimento !== 'Avulso') {
+      contratoId = contrato[0].id_contrato
+    } else {
+      contratoId = null
+    }
   } catch (err) {
     console.error('Error fetching contratoId:', err);
     showMessage('Erro ao buscar contrato do cliente.');
@@ -335,8 +323,8 @@ async function saveEvent() {
       dataAgendamento: start,
       horarioInicio: startTime,
       duracao: parseInt(duration),
-      responsavel_id: responsavelId,
-      idDependente: aprendente.tipo === 'aprendente' ? aprendente.id : '',
+      responsavel_id: cliente.id_responsavel ? cliente.id_responsavel : null,
+      idDependente: cliente.id_aprendente ? cliente.id_aprendente : null,
       idProfissional: storeAuth.userDetails.id,
       tipoAtendimento: tipoAtendimento as 'Avulso' | 'Contrato',
       valorAtendimento: tipoAtendimento === 'Avulso' ? parseFloat(valorAtendimentoAvulso) : 0,
@@ -348,13 +336,9 @@ async function saveEvent() {
 
     let agendamentoId = agendamento.id;
     if (agendamento.id) {
-      const { error } = await agendamentoService.updateAgendamento(agendamento);
-      if (error) {
-        throw new Error(`Erro ao atualizar agendamento: ${error.message}`);
-      }
+      await agendamentoService.updateAgendamento(agendamento);
     } else {
       await agendamentoService.createAgendamento(agendamento);
-
     }
 
     const newEvent = {
@@ -369,7 +353,7 @@ async function saveEvent() {
       selectable: true,
       classNames: ['agendamento-event'],
       extendedProps: {
-        cliente: aprendente.id,
+        cliente: cliente.id,
         tipoAtendimento,
         valorAtendimentoAvulso: tipoAtendimento === 'Avulso' ? parseFloat(valorAtendimentoAvulso) : 0,
         observacoes
@@ -501,7 +485,6 @@ const calendarOptions = ref({
   eventMouseEnter(info) {
     if (info.event.display === 'background') return;
     const event = info.event;
-    console.log("COISO EVENT extendedProps: ", event.extendedProps);
     const el = info.el;
     const jsEvent = info.jsEvent;
     el.style.border = '2px solid #5E35B1';
@@ -552,6 +535,8 @@ watch(searchQuery, async (newValue) => {
   isLoading.value = true
   try {
     const resultados = await aprendenteService.buscarClientesPorNome(newValue)
+    console.log("RESULTADOS: ", resultados);
+
     filteredClientes.value = resultados
   } catch (err) {
     console.error('Erro na busca:', err)

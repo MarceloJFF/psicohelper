@@ -107,13 +107,14 @@ export class AprendenteService {
   
      
       return data.map((item: any) => ({
-        id: item.id_aprendente ? item.id_aprendente : item.id_responsavel,
+        // id: item.id_aprendente ? item.id_aprendente : item.id_responsavel,
+        id_responsavel: item.id_responsavel,
+        id_aprendente: item.id_aprendente,
         nome: item.nome_aprendente ? item.nome_aprendente : item.nome_responsavel,
-        tipo: 'aprendente',
         responsavel: item.nome_responsavel,
         displayName: `Aprendente: ${item.nome_aprendente ? item.nome_aprendente :item.nome_responsavel } Responsavel: ${item.nome_responsavel}`
       }))
-      console.log(data)
+      // console.log(data)
     } catch (err: any) {
       this.showError(err.message || 'Erro ao buscar clientes')
       return []
