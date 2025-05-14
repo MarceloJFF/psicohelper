@@ -51,9 +51,11 @@
                     <v-list-item v-bind="props">
                       <v-list-item-title>
                         {{ item.aprendente ? item.aprendente : item.responsavel }}
+                        {{ item.id_aprendente === item.id_responsavel ? '(Adulto)' : '' }}
                       </v-list-item-title>
                     </v-list-item>
                   </template>
+
                 </v-autocomplete>
               </v-col>
 
@@ -113,7 +115,6 @@ import { useShowErrorMessage } from '@/userCases/useShowErrorMessage'
 import { AprendenteService } from '@/services/AprendenteService'
 import { AgendamentoService } from '@/services/AgendamentoService'
 import type Agendamento from '@/models/Agendamento'
-import { ResponsavelService } from '@/services/responsavelService'
 import { ContratoService } from '@/services/contratoService'
 
 const calendar = ref()
@@ -133,8 +134,6 @@ const searchQuery = ref('')
 const clientes = ref<any[]>([])
 const aprendenteService = new AprendenteService()
 const agendamentoService = new AgendamentoService()
-const eventos = ref<any[]>([])
-const type = ref('month')
 const aprendenteCache = new Map()
 
 let calendarApi: any = null
@@ -158,6 +157,7 @@ const eventData = ref(defaultEventData())
 function resetEventData() {
   eventData.value = defaultEventData()
 }
+
 
 const loadEventos = async () => {
   isLoading.value = true;
@@ -226,10 +226,10 @@ const loadEventos = async () => {
             cliente: aprendente ? {
               id: agendamento.id_aprendente,
               id_aprendente: agendamento.id_aprendente,
-              id_responsavel: agendamento.responsavel_id,
-              displayName: aprendente.nome_aprendente,
-              aprendente: aprendente.nome_aprendente,
-              responsavel: aprendente.nome_responsavel
+              id_responsavel: aprendente.id_responsavel || null,
+              displayName: aprendente.nome_aprendente || 'N/A',
+              aprendente: aprendente.nome_aprendente || 'N/A',
+              responsavel: aprendente.nome_responsavel || 'N/A'
             } : null,
             tipoAtendimento: agendamento.tipo_atendimento,
             valorAtendimentoAvulso: agendamento.valor_atendimento,
@@ -318,27 +318,6 @@ async function saveEvent() {
     return;
   }
 
-  if (!cliente.id_aprendente) {
-    cliente.id_aprendente = null;
-  }
-
-  let contratoId;
-  let contrato;
-  try {
-    const contratoService = new ContratoService();
-    contrato = await contratoService.loadContratos(cliente.id_responsavel);
-
-    if (contrato.length > 0 && tipoAtendimento !== 'Avulso') {
-      contratoId = contrato[0].id_contrato;
-    } else {
-      contratoId = null;
-    }
-  } catch (err) {
-    console.error('Error fetching contratoId:', err);
-    showMessage('Erro ao buscar contrato do cliente.');
-    return;
-  }
-
   try {
     const agendamento: Agendamento = {
       id: eventData.value.id || undefined,
@@ -346,22 +325,33 @@ async function saveEvent() {
       dataAgendamento: startDate,
       horarioInicio: startTime,
       duracao: parseInt(duration),
-      responsavel_id: cliente.id_responsavel ? cliente.id_responsavel : null,
-      idDependente: cliente.id_aprendente ? cliente.id_aprendente : null,
+      responsavel_id: cliente.id_responsavel || null,
+      idDependente: cliente.id_aprendente || cliente.id_responsavel || null,
       idProfissional: storeAuth.userDetails.id,
       tipoAtendimento: tipoAtendimento as 'Avulso' | 'Contrato',
       valorAtendimento: tipoAtendimento === 'Avulso' ? parseFloat(valorAtendimentoAvulso) : 0,
       observacoes,
-      id_contrato: contratoId,
+      id_contrato: null,
       color: eventData.value.color
     };
+
+    if (tipoAtendimento === 'Contrato' && cliente.id_responsavel) {
+      const contratoService = new ContratoService();
+      const contratos = await contratoService.loadContratos(cliente.id_responsavel);
+      if (contratos.length > 0) {
+        agendamento.id_contrato = contratos[0].id_contrato;
+      } else {
+        showMessage('Nenhum contrato ativo encontrado para o responsável.');
+        return;
+      }
+    }
 
     let agendamentoId = agendamento.id;
     if (agendamento.id) {
       await agendamentoService.updateAgendamento(agendamento);
     } else {
       const response = await agendamentoService.createAgendamento(agendamento);
-      agendamentoId = response.id;
+      agendamentoId = response;
     }
 
     console.log('[Calendar] Evento a ser salvo:', agendamento);
@@ -389,7 +379,7 @@ async function saveEvent() {
         valorAtendimentoAvulso: tipoAtendimento === 'Avulso' ? parseFloat(valorAtendimentoAvulso) : 0,
         observacoes,
         horario_inicio: startTime,
-        nomeAprendente: cliente.displayName || cliente.aprendente || 'N/A'
+        nomeAprendente: cliente.displayName || cliente.aprendente || cliente.responsavel || 'N/A'
       }
     };
 
@@ -479,6 +469,7 @@ const calendarOptions = ref({
     showModal.value = true;
   },
   eventDidMount(info) {
+    info.el.style.color = '#fff';
     info.el.style.backgroundColor = info.event.backgroundColor;
     info.el.style.borderRadius = '4px';
     info.el.style.padding = '4px';

@@ -6,7 +6,7 @@ export class AgendamentoService {
   private showError = useShowErrorMessage().showError
 
   async createAgendamento(agendamento: Agendamento): Promise<string | undefined> {
-    console.log('[Service] Evento a ser salvo:', agendamento)
+    console.log('[Service] Evento a ser salvo:', agendamento);
 
     try {
       const { data, error } = await supabase
@@ -14,7 +14,7 @@ export class AgendamentoService {
         .insert([
           {
             titulo: agendamento.titulo,
-            data_agendamento: agendamento.dataAgendamento.toLocaleString(),
+            data_agendamento: agendamento.dataAgendamento, // Enviar como YYYY-MM-DD
             horario_inicio: agendamento.horarioInicio,
             duracao: agendamento.duracao,
             responsavel_id: agendamento.responsavel_id,
@@ -27,12 +27,13 @@ export class AgendamentoService {
             color: agendamento.color,
           },
         ])
-        .select()
+        .select();
 
-      if (error) throw error
-      return data[0].id
+      if (error) throw error;
+      return data[0].id_agendamento; // Ajustado para retornar id_agendamento
     } catch (err: any) {
-      this.showError(err.message || 'Erro ao criar agendamento')
+      this.showError(err.message || 'Erro ao criar agendamento');
+      return undefined;
     }
   }
 
@@ -42,7 +43,7 @@ export class AgendamentoService {
         .from('tb_agendamento')
         .update({
           titulo: agendamento.titulo,
-          data_agendamento: agendamento.dataAgendamento.toLocaleString(),
+          data_agendamento: agendamento.dataAgendamento, // Enviar como YYYY-MM-DD
           horario_inicio: agendamento.horarioInicio,
           duracao: agendamento.duracao,
           responsavel_id: agendamento.responsavel_id,
@@ -54,11 +55,11 @@ export class AgendamentoService {
           id_contrato: agendamento.id_contrato,
           color: agendamento.color,
         })
-        .eq('id_agendamento', agendamento.id)
+        .eq('id_agendamento', agendamento.id);
 
-      if (error) throw error
+      if (error) throw error;
     } catch (err: any) {
-      this.showError(err.message || 'Erro ao atualizar agendamento')
+      this.showError(err.message || 'Erro ao atualizar agendamento');
     }
   }
 
