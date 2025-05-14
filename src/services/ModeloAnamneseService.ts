@@ -73,7 +73,8 @@ export class ModeloAnamneseService {
         .maybeSingle()  // Use maybeSingle em vez de single
   
       if (error) throw error
-      return data
+      const modeloAnamnese = new ModeloAnamnese(data.nome, data.id_modelo, data.id_config)
+      return modeloAnamnese
     } catch (err: any) {
       this.showError(err.message || 'Erro ao buscar modelo de anamnese')
       return null

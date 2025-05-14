@@ -103,7 +103,8 @@ async function carregarModelo() {
     const modelo = await modeloService.obterModeloPorConfig(storeConfig.configuracao?.id)
     if (modelo) {
       nomeModelo.value = modelo.nome
-      const lista = await modeloService.carregarPerguntas(modelo.id_modelo)
+      console.log(modelo)
+      const lista = await modeloService.carregarPerguntas(modelo.id)
       perguntas.value = lista.map(p => ({ texto: p.texto }))
     } else {
       // Se não existir modelo ainda, inicializa vazio

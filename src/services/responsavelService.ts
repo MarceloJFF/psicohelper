@@ -30,15 +30,92 @@ export class ResponsavelService {
         .from('tb_responsavel')
         .select('*')
         .eq('id_profissional', idProfissional)
-
       if (error) throw error
-
       return data as Responsavel[]
     } catch (err: any) {
       this.showError(err.message || 'Erro ao carregar responsaveis')
       return []
     }
   }
+
+  async loadResponsaveisGerenciarClientes(): Promise<Responsavel[]> {
+    try {
+      const idProfissional = this.storeProfissional.profissionalDetails?.id
+      if (!idProfissional) {
+        this.showError('Profissional não está autenticado')
+        return []
+      }
+
+      const { data, error } = await supabase
+        .from('tb_responsavel')
+        .select('*')
+        .eq('id_profissional', idProfissional)
+      if (error) throw error
+      const responsaveis: Responsavel[] = []
+      
+      for (const responsavel of data) {
+
+        responsaveis.push(this.mapResponsavel(responsavel))
+      }
+      return responsaveis
+    } catch (err: any) {
+      this.showError(err.message || 'Erro ao carregar responsaveis')
+      return []
+    }
+  }
+
+  mapResponsavel(data: any): Responsavel {
+    const responsavel = new Responsavel();
+    responsavel.id = data.id;
+    responsavel.nome = data.nome;
+    responsavel.cpf = data.cpf;
+    responsavel.telefone = data.telefone;
+    responsavel.nascimento = data.nascimento;
+    responsavel.sexo = data.sexo;
+    responsavel.idProfissional = data.id_profissional;
+    responsavel.email = data.email;
+    // Adicione outros campos conforme necessário
+    return responsavel;
+  }
+  async addResponsavelGerenciarClientes(responsavel: Responsavel): Promise<void> {
+    try {
+      const idProfissional = this.storeProfissional.profissionalDetails?.id
+
+      const { error } = await supabase.from('tb_responsavel').insert({
+        nome: responsavel.nome,
+        cpf: responsavel.cpf,
+        telefone: responsavel.telefone,
+        nascimento: responsavel.nascimento,
+        sexo: responsavel.sexo,
+        email: responsavel.email,
+        id_profissional: idProfissional,
+      }).select()
+
+      if (error) throw error
+    } catch (err: any) {  
+      this.showError(err.message || 'Erro ao adicionar responsavel')
+    }
+  } 
+  
+
+  async updateResponsavelGerenciarClientes(responsavel: Responsavel): Promise<void> {
+    try {
+      const { error } = await supabase.from('tb_responsavel').update({
+        nome: responsavel.nome,
+        cpf: responsavel.cpf,
+        telefone: responsavel.telefone,
+        nascimento: responsavel.nascimento,
+        sexo: responsavel.sexo,
+        email: responsavel.email,
+        
+      }).eq('id', responsavel.id)
+
+      if (error) throw error
+    } catch (err: any) {
+      this.showError(err.message || 'Erro ao atualizar responsavel')  
+    }
+  }
+
 
   async addResponsavel(responsavel: any): Promise<void> {
     try {
@@ -66,7 +143,7 @@ export class ResponsavelService {
         ]).select()
 
       if (error) throw error
-      let idAprendente= '';
+      let idAprendente: string | undefined = undefined;
       if (responsavel.aprendentes?.length > 0 && responsavel.atendimento_proprio!=true) {
         for (const aprendente of responsavel.aprendentes) {
           aprendente.idResponsavel = data[0].id; // Ajuste se necessário
@@ -81,9 +158,11 @@ export class ResponsavelService {
         const idResponsavel = data[0].id;
         console.log("gerando contrato")
         console.log("Responsavel"+ idResponsavel,"Aprendente"+ idAprendente)
-        const idContrato = await this.contratoService.addContrato(responsavel.contrato,idResponsavel,idAprendente)
-        if (idContrato) {
-          this.diasAtendimentoService.addDiasAtendimento(responsavel.contrato.diasAtendimento, idContrato)
+        if (idAprendente) {
+          const idContrato = await this.contratoService.addContrato(responsavel.contrato, idResponsavel, idAprendente)
+          if (idContrato) {
+            this.diasAtendimentoService.addDiasAtendimento(responsavel.contrato.diasAtendimento, idContrato)
+          }
         }
       }
 
@@ -93,7 +172,7 @@ export class ResponsavelService {
   }
 
   async loadResponsaveisAprendentesEAprendentes(): Promise<any[]> {
-
+    return [];
   }
 
 
@@ -119,7 +198,7 @@ export class ResponsavelService {
       }
 
       // Formatamos os dados conforme necessário
-      
+
       const listaFinal = data.map(item => ({
         idAprendente: item.atendimento_proprio ? item.id_responsavel : item.id_aprendente,
         idResponsavel: item.id_responsavel,
@@ -153,10 +232,8 @@ export class ResponsavelService {
           cidade: responsavel.cidade,
           estado: responsavel.estado,
           nascimento: responsavel.nascimento,
-          atendimento_proprio: responsavel.atendimentoProprio,
           sexo: responsavel.sexo,
-          tipo_atendimento: responsavel.tipoAtendimento,
-          status: responsavel.status,
+          email: responsavel.email,
         })
         .eq('id', responsavel.id)
 

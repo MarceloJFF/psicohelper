@@ -1,8 +1,8 @@
-import { supabase } from '@/lib/supabase'
+import supabase from '@/config/supabase'
 import Configuracao from '@/models/Configuracao'
 import ConfigFeriado from '@/models/ConfigFeriado'
 import ConfigWhatsapp from '@/models/ConfigWhatsapp'
-import { useShowErrorMessage } from '@/composables/useShowErrorMessage'
+import { useShowErrorMessage } from '@/userCases/useShowErrorMessage'
 
 const { showError } = useShowErrorMessage()
 
