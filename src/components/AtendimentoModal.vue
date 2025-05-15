@@ -49,11 +49,36 @@
             <component
               :is="item.component"
               :model-value="item.value"
-              @update:modelValue="item.value = $event"
+              @update:modelValue="addFile"
               v-bind="item.props"
               :error-messages="item.label === 'Anexos' ? errorMessage : undefined"
               :loading="item.label === 'Anexos' ? uploadLoading : undefined"
             />
+            <!-- Arquivos selecionados (antes do upload) -->
+            <v-row v-if="item.label === 'Anexos' && selectedFiles.length" class="mt-4">
+              <v-col v-for="(file, index) in selectedFiles" :key="index" cols="12" sm="6" md="4">
+                <v-card class="pa-2" elevation="1">
+                  <v-img
+                    v-if="file.type.includes('image')"
+                    :src="createObjectURL(file)"
+                    max-height="100"
+                    max-width="100"
+                    class="rounded"
+                  />
+                  <v-icon v-else size="40">mdi-file-document</v-icon>
+                  <div class="text-caption mt-2">{{ file.name }}</div>
+                  <v-btn
+                    icon
+                    small
+                    @click="removeFile(index)"
+                    class="mt-2"
+                  >
+                    <v-icon color="red">mdi-delete</v-icon>
+                  </v-btn>
+                </v-card>
+              </v-col>
+            </v-row>
+            <!-- Arquivos enviados (após upload) -->
             <v-row v-if="item.label === 'Anexos' && uploadedFiles.length" class="mt-4">
               <v-col v-for="(file, index) in uploadedFiles" :key="index" cols="12" sm="6" md="4">
                 <v-card class="pa-2" elevation="1">
@@ -117,6 +142,7 @@ const filteredClientes = ref<any[]>([]);
 const selectedCliente = ref<any>(null);
 const errorMessage = ref('');
 const uploadedFiles = ref<{ name: string; url: string }[]>([]);
+const selectedFiles = ref<File[]>([]);
 const aprendenteService = new AprendenteService();
 const sessaoService = new SessaoService();
 const uploadService = new UploadService();
@@ -173,10 +199,9 @@ const menus = ref([
   {
     label: 'Anexos',
     component: 'v-file-input',
-    value: ref([] as File[]),
+    value: ref(null as File | null),
     props: {
-      label: 'Anexar documentos/fotos',
-      multiple: true,
+      label: 'Anexar documento/foto',
       chips: true,
       accept: 'image/*,.pdf',
     },
@@ -211,17 +236,41 @@ watch(searchQuery, async (newValue) => {
   }
 }, { debounce: 300 });
 
-watch(
-  () => menus.value[5].value,
-  async (newFiles: File[]) => {
-    if (!newFiles || newFiles.length === 0) return;
+function addFile(newFile: File | null) {
+  if (newFile) {
+    selectedFiles.value = [...selectedFiles.value, newFile];
+    menus.value[5].value = null; // Clear the file input
+    console.log('Arquivo adicionado:', newFile.name, 'Tipo:', newFile.type, 'Total:', selectedFiles.value.length);
+  }
+}
 
-    uploadLoading.value = true;
-    errorMessage.value = '';
+function removeFile(index: number) {
+  selectedFiles.value.splice(index, 1);
+  console.log('Arquivo removido, Total:', selectedFiles.value.length);
+}
 
-    try {
-      for (const file of newFiles) {
-        if (!file.type.match(/image\/.*|.pdf/)) {
+function createObjectURL(file: File): string {
+  const url = window.URL.createObjectURL(file);
+  console.log('URL gerada para pré-visualização:', url);
+  return url;
+}
+
+async function salvar() {
+  if (!selectedCliente.value) {
+    errorMessage.value = 'Selecione um cliente antes de salvar';
+    return;
+  }
+
+  uploadLoading.value = true;
+  errorMessage.value = '';
+
+  try {
+    // Handle file uploads
+    if (selectedFiles.value.length > 0) {
+      let uploadedCount = 0;
+      for (const file of selectedFiles.value) {
+        console.log('Validando arquivo:', file.name, 'Tipo:', file.type);
+        if (!file.type.match(/^image\/.+$|^application\/pdf$/)) {
           errorMessage.value = 'Apenas imagens ou PDFs são permitidos';
           return;
         }
@@ -236,27 +285,13 @@ watch(
           file
         );
         uploadedFiles.value.push({ name: file.name, url });
+        uploadedCount++;
+        console.log(`Upload ${uploadedCount}/${selectedFiles.value.length} concluído`);
       }
-      menus.value[5].value = []; // Limpa o input após upload
-    } catch (err) {
-      console.error('Erro ao fazer upload:', err);
-      errorMessage.value = 'Erro ao fazer upload: ' + (err as Error).message;
-    } finally {
-      uploadLoading.value = false;
+      selectedFiles.value = []; // Clear selected files after upload
     }
-  }
-);
 
-async function salvar() {
-  if (!selectedCliente.value) {
-    errorMessage.value = 'Selecione um cliente antes de salvar';
-    return;
-  }
-
-  uploadLoading.value = true;
-  errorMessage.value = '';
-
-  try {
+    // Prepare session data
     const sessao = {
       pre_sessao: menus.value[0].value,
       queixas: menus.value[1].value,
@@ -271,7 +306,7 @@ async function salvar() {
     await sessaoService.createSessao(sessao);
     console.log('Sessão salva com sucesso:', sessao);
     emit('update:modelValue', false);
-    uploadedFiles.value = []; // Limpa os arquivos após salvar
+    uploadedFiles.value = []; // Clear uploaded files after save
   } catch (err) {
     console.error('Erro ao salvar sessão:', err);
     errorMessage.value = 'Erro ao salvar sessão: ' + (err as Error).message;
