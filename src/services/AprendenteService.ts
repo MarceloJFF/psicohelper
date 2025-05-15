@@ -58,6 +58,34 @@ export class AprendenteService {
         aprendente.idResponsavel = item.id_responsavel
         aprendente.nomeResponsavel = item.nome_responsavel
         aprendente.telefone = item.telefone
+        aprendente.statusMatricula = item.status_matricula
+        aprendentes.push(aprendente)
+      })
+      console.log(aprendentes)
+      return aprendentes
+    } catch (err: any) {
+      this.showError(err.message || 'Erro ao carregar aprendentes')
+      return []
+    }
+  }
+  async loadAprendentesPorProfissionalENome(nome: string): Promise<ViewAprendenteLogadoProfissional[]> {
+    try {
+      const idProfissional = this.useStoreProfissional.profissionalDetails?.id
+      const { data, error } = await supabase
+        .from('vw_aprendentes_logado_profissional')
+        .select('*')
+        .eq('id_profissional', idProfissional)      
+        .ilike('nome_aprendente', `%${nome}%`)
+      if (error) throw error
+      const aprendentes: ViewAprendenteLogadoProfissional[] = []
+      data.forEach((item: any) => {
+        const aprendente = new ViewAprendenteLogadoProfissional()
+        aprendente.id = item.id
+        aprendente.nomeAprendente = item.nome_aprendente
+        aprendente.idResponsavel = item.id_responsavel
+        aprendente.nomeResponsavel = item.nome_responsavel
+        aprendente.telefone = item.telefone
+        aprendente.statusMatricula = item.status_matricula
         aprendentes.push(aprendente)
       })
       return aprendentes
@@ -203,6 +231,17 @@ export class AprendenteService {
     }
   }
   
+  async alternarStatusMatricula(id: string, status: boolean, motivo: string) {
+    try {
+      const { error } = await supabase
+        .from('tb_aprendente')
+        .update({ status_matricula: status, motivo_alternancia: motivo }) 
+        .eq('id', id)
+      if (error) throw error
+    } catch (err: any) {
+      this.showError(err.message || 'Erro ao alternar status da matrícula')
+    }
+  }
   
   
 }

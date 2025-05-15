@@ -150,6 +150,7 @@ async function salvarRecurso() {
     const criado = await recursoService.criarRecurso(recursoAtual.value)
     if (criado) recursos.value.push(criado)
   }
+  carregarRecursos()
   fecharDialog()
 }
 
