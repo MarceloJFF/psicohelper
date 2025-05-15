@@ -1,7 +1,7 @@
 import { ref, reactive } from 'vue'
 import { useRouter } from 'vue-router'
 import { defineStore } from 'pinia'
-import {supabase} from '@/config/supabase'
+import supabase from '@/config/supabase'
 import { useStoreProfissional } from '@/stores/storeProfissional'
 import { useShowErrorMessage } from '@/userCases/useShowErrorMessage'
 import { useStoreConfig } from '@/stores/storeConfig'
