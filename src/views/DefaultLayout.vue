@@ -26,7 +26,7 @@ const storeProfissional = useStoreProfissional()
   <v-app id="inspire" v-if="storeProfissional.profissionalDetails">
     <v-navigation-drawer v-model="drawer" app color="#9a20c1" permanent>
       <v-img
-        :width="321"
+        :max-width="320"
         aspect-ratio="16/9"
         cover
         :src="logo"
