@@ -5,4 +5,8 @@ export default interface Recurso {
   preco: number;
   status:boolean;
   idProfissional: string;
+  quantidade: number;
+  observacao: string;
+  habilitarDespesa: boolean;
+  dataCompra: Date;
 }
