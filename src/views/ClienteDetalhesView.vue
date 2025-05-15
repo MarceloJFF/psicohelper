@@ -63,6 +63,19 @@
                       />
                     </v-col>
                   </v-row>
+                  <v-btn color="primary" class="ma-4" @click="salvarCliente">
+            <v-icon left>mdi-content-save</v-icon>
+            Salvar
+          </v-btn>
+
+          <v-btn color="grey" class="ma-4" @click="voltar">
+            <v-icon left>mdi-arrow-left</v-icon>
+            Voltar
+          </v-btn>
+
+          <v-snackbar v-model="snackbar" :color="snackbarColor" timeout="3000">
+            {{ snackbarMessage }}
+          </v-snackbar>
                 </div>
 
                 <!-- Anamnese -->
@@ -122,6 +135,19 @@
                       </v-btn>
                     </v-col>
                   </v-row>
+                  <v-btn color="primary" class="ma-4" @click="salvarAnamnese">
+            <v-icon left>mdi-content-save</v-icon>
+            Salvar
+          </v-btn>
+
+          <v-btn color="grey" class="ma-4" @click="voltar">
+            <v-icon left>mdi-arrow-left</v-icon>
+            Voltar
+          </v-btn>
+
+          <v-snackbar v-model="snackbar" :color="snackbarColor" timeout="3000">
+            {{ snackbarMessage }}
+          </v-snackbar>
                 </div>
 
                 <!-- Contratos -->
@@ -255,19 +281,7 @@
             </v-window-item>
           </v-window>
 
-          <v-btn color="primary" class="ma-4" @click="salvarCliente">
-            <v-icon left>mdi-content-save</v-icon>
-            Salvar
-          </v-btn>
-
-          <v-btn color="grey" class="ma-4" @click="voltar">
-            <v-icon left>mdi-arrow-left</v-icon>
-            Voltar
-          </v-btn>
-
-          <v-snackbar v-model="snackbar" :color="snackbarColor" timeout="3000">
-            {{ snackbarMessage }}
-          </v-snackbar>
+         
         </v-card>
       </v-col>
 
@@ -320,13 +334,13 @@
       <v-card>
         <v-card-title>Anexar Novo Documento</v-card-title>
         <v-card-text>
-          <v-text-field 
-            label="Nome do Documento" 
+          <v-text-field
+            label="Nome do Documento"
             v-model="novoDocumentoNome"
             :error-messages="errorMessage"
           />
-          <v-file-input 
-            label="Selecionar Arquivo" 
+          <v-file-input
+            label="Selecionar Arquivo"
             v-model="novoDocumento"
             :error-messages="errorMessage"
           />
@@ -334,8 +348,8 @@
         <v-card-actions>
           <v-spacer />
           <v-btn text @click="modalDocumento = false">Cancelar</v-btn>
-          <v-btn 
-            color="primary" 
+          <v-btn
+            color="primary"
             @click="anexarDocumento"
             :loading="uploadLoading"
             :disabled="!novoDocumento || !novoDocumentoNome"
@@ -361,35 +375,17 @@ import { DiasAtendimentosContratoService } from '@/services/DiasAtendimentosCont
 import Contrato from '@/models/Contrato'
 import { useStoreConfig } from '@/stores/storeConfig'
 import { DocumentoService } from '@/services/DocumentoService'
-import type Documento from '@/models/Documento'
+import supabase from '@/config/supabase'
+import  Documento from '@/models/Documento'
 import { ModeloAnamneseService } from '@/services/ModeloAnamneseService'
-import ModeloPergunta from '@/models/ModeloPergunta'
-import { ModeloPerguntaAnamneseService } from '@/services/ModeloPerguntaAnamneseService'
 import AnamneseResposta from '@/models/AnamneseResposta'
 import RespostaPergunta from '@/models/RespostaPergunta'
 import { AnamneseService } from '@/services/AnamneseService'
 
-interface Anamnese {
-  queixaPrincipal: string
-  historicoFamiliar: string
-  desenvolvimento: string
-  historicoEscolar: string
-  historicoMedico: string
-  observacoes: string
-}
+
 
 const anamnese = ref<Anamnese | null>(null)
 
-const criarAnamnese = () => {
-  anamnese.value = {
-    queixaPrincipal: '',
-    historicoFamiliar: '',
-    desenvolvimento: '',
-    historicoEscolar: '',
-    historicoMedico: '',
-    observacoes: ''
-  }
-}
 
 const route = useRoute()
 const router = useRouter()
@@ -466,6 +462,7 @@ const salvandoAnamnese = ref(false)
 
 const anamneseService = new AnamneseService()
 const anamneseExistente = ref<AnamneseResposta | null>(null)
+const respostaAnamneseExistente = ref<string | null>(null)
 
 const loadDocuments = async () => {
   try {
@@ -485,6 +482,7 @@ onMounted(async () => {
   await buscarContratos()
   await loadDocuments()
   await carregarPerguntasAnamnese()
+  await carregarRespostaAnamnese()
 })
 
 const carregarPerguntasAnamnese = async () => {
@@ -523,47 +521,46 @@ const carregarPerguntasAnamnese = async () => {
   }
 }
 
+const carregarRespostaAnamnese = async () => {
+  try {
+    if (!idAprendente && !idResponsavel) return
+    // Busca resposta de anamnese existente (texto)
+    const resposta = await anamneseService.obterRespostaAnamnese(idAprendente || idResponsavel)
+    if (resposta) {
+      respostaAnamneseExistente.value = resposta.texto // ajuste conforme retorno
+      perguntasModelo.value = resposta.texto
+    } else {
+      respostaAnamneseExistente.value = null
+      // perguntasModelo já será preenchido pelo modelo padrão
+    }
+  } catch (error) {
+    console.error('Erro ao carregar resposta de anamnese:', error)
+  }
+}
+
 const salvarAnamnese = async () => {
   try {
-    salvandoAnamnese.value = true
-    const config = useStoreConfig().configuracao
-    if (!config) throw new Error('Configuração não encontrada')
-
-    const modeloAnamneseService = new ModeloAnamneseService()
-    const modelo = await modeloAnamneseService.obterModeloPorConfig(config.id)
-    if (!modelo) throw new Error('Modelo de anamnese não encontrado')
-
-    // Criar a anamnese resposta
-    const anamneseResposta = new AnamneseResposta(
-      anamneseExistente.value?.id || '', // Se for edição, usa o ID existente
-      modelo.id,
-      idResponsavel,
-      config.id_profissional,
-      idAprendente || ''
-    )
-
-    // Criar as respostas para cada pergunta
-    const respostas = perguntasAnamnese.value.map(pergunta => 
-      new RespostaPergunta(
-        '', // id será gerado pelo backend
-        anamneseResposta.id,
-        pergunta.id,
-        respostasAnamnese.value[pergunta.id]
-      )
-    )
-
-    await anamneseService.salvarAnamnese(anamneseResposta, respostas)
-
+    if (!perguntasModelo.value) {
+      snackbarMessage.value = 'O formulário de anamnese não pode estar vazio';
+      snackbarColor.value = 'error';
+      snackbar.value = true;
+      return;
+    }
+    if (respostaAnamneseExistente.value) {
+      // Atualizar resposta existente
+      await anamneseService.atualizarRespostaAnamnese(idAprendente || idResponsavel, perguntasModelo.value)
+    } else {
+      // Criar nova resposta
+      await anamneseService.criarRespostaAnamnese(idAprendente || idResponsavel, perguntasModelo.value)
+    }
     snackbarMessage.value = 'Anamnese salva com sucesso'
     snackbarColor.value = 'success'
     snackbar.value = true
+    await carregarRespostaAnamnese() // Atualiza estado após salvar
   } catch (error) {
-    console.error('Erro ao salvar anamnese:', error)
     snackbarMessage.value = 'Erro ao salvar anamnese'
     snackbarColor.value = 'error'
     snackbar.value = true
-  } finally {
-    salvandoAnamnese.value = false
   }
 }
 
@@ -664,6 +661,7 @@ async function salvarCliente() {
     snackbar.value = true
     console.error(error)
   }
+
 }
 
 const voltar = () => {

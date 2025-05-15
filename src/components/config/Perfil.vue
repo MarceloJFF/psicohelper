@@ -3,17 +3,19 @@ import { ref, onMounted } from 'vue'
 import { useStoreProfissional } from '@/stores/storeProfissional'
 import { useStoreAuth } from '@/stores/storeAuth'
 import { useShowErrorMessage } from '@/userCases/useShowErrorMessage'
+import { StorageAvatarService } from '@/services/storage/StorageAvatarService'
+import Profissional from '@/models/Profissional'
 
 const storeProfissional = useStoreProfissional()
 const storeAuth = useStoreAuth()
 const { showError } = useShowErrorMessage()
+const storageAvatarService = new StorageAvatarService();
 
-const formRef = ref(null)
+const formRef = ref<{ validate: () => boolean } | null>(null)
 const perfil = ref({
   nome: '',
   email: '',
   telefone: '',
-  whatsapp: '',
   profissao: '',
   cnpj: '',
   nConselho: '',
@@ -38,8 +40,10 @@ const snackbarMessage = ref('')
 const snackbarColor = ref('success')
 
 onMounted(async () => {
-  storeProfissional.loadProfissional()
+  await storeProfissional.loadProfissional();
   if (storeProfissional.profissionalDetails) {
+    let url = await storageAvatarService.getAvatarUrl(storeProfissional.profissionalDetails.id);
+    fotoUrl.value = url ? url + '?t=' + Date.now() : '/assets/logo.jpeg';
     perfil.value = {
       ...storeProfissional.profissionalDetails,
       email: storeAuth.userDetails.email || '',
@@ -55,15 +59,54 @@ onMounted(async () => {
   }
 })
 
-function atualizarFoto(file) {
-  if (file) {
-    const reader = new FileReader()
-    reader.onload = () => {
-      fotoUrl.value = reader.result
-    }
-    reader.readAsDataURL(file)
+async function atualizarFoto(file: File | File[] | null) {
+  // Garante que está pegando o arquivo certo
+  let realFile: File | null = null;
+  if (Array.isArray(file)) {
+    realFile = file.length > 0 ? file[0] : null;
+  } else if (file instanceof File) {
+    realFile = file;
+  } else if (file && typeof file === 'object' && 'target' in file && file.target.files) {
+    // fallback para eventos do input
+    realFile = file.target.files[0];
+  }
+
+
+  if (!realFile || !realFile.name) {
+    snackbarMessage.value = 'Selecione uma imagem válida.';
+    snackbarColor.value = 'error';
+    snackbar.value = true;
+    return;
+  }
+
+  const profissionalId = storeProfissional.profissionalDetails?.id;
+  if (!profissionalId) {
+    snackbarMessage.value = 'Profissional não encontrado.';
+    snackbarColor.value = 'error';
+    snackbar.value = true;
+    return;
+  }
+
+  try {
+    // 1. Upload do arquivo
+    const filepath = await storageAvatarService.uploadAvatar(profissionalId, realFile);
+    storeProfissional.updateAvatar(filepath)
+    // 2. Obtenha a URL pública
+    const publicUrl = await storageAvatarService.getAvatarUrl(profissionalId);
+    
+    // 4. Atualiza a visualização do avatar a partir do campo AvatarStorage
+    fotoUrl.value = publicUrl ? publicUrl + '?t=' + Date.now() : '/assets/logo.jpeg';
+    snackbarMessage.value = 'Foto atualizada com sucesso!';
+    snackbarColor.value = 'success';
+  } catch (err) {
+    console.error('Erro ao atualizar a foto:', err);
+    snackbarMessage.value = 'Erro ao atualizar foto.';
+    snackbarColor.value = 'error';
+  } finally {
+    snackbar.value = true;
   }
 }
+
 
 async function salvarPerfil() {
   if (formRef.value?.validate()) {
@@ -82,7 +125,7 @@ async function salvarPerfil() {
         complemento: perfil.value.endereco.complemento
       }
 
-      await storeProfissional.updateProfissional(profissionalData)
+      await storeProfissional.updateProfissional(profissionalData as Profissional)
       snackbarMessage.value = 'Perfil atualizado com sucesso!'
       snackbarColor.value = 'success'
     } catch (error) {
@@ -91,7 +134,7 @@ async function salvarPerfil() {
       snackbarColor.value = 'error'
     } finally {
       snackbar.value = true
-      storeProfissional.loadProfissional()
+      await storeProfissional.loadProfissional()
     }
   }
 }
@@ -127,12 +170,13 @@ async function salvarSenha() {
     <!-- Header com botão de voltar -->
     <v-row class="mb-4 d-flex align-center justify-space-between">
       <v-col cols="auto">
-        <v-btn icon to="/" color="text-deep-purple-lighten-2">
+        <v-btn icon to="/" color="primary">
           <v-icon>mdi-arrow-left</v-icon>
         </v-btn>
       </v-col>
       <v-col class="text-center">
-        <h2 class="text-h3 mb-8 font-weight-bold text-deep-purple-lighten-2">
+        <h2 class="text-h3 mb-4 font-weight-bold text-deep-purple-lighten-2"> 
+          <v-icon size="large" color="primary">mdi-cog</v-icon>
           Configurações do Perfil
         </h2>
       </v-col>
@@ -143,18 +187,19 @@ async function salvarSenha() {
       <v-row class="mb-6" align="center">
         <v-col cols="auto">
           <v-avatar size="100">
-            <v-img :src="fotoUrl || 'https://via.placeholder.com/100'" />
+            <v-img :src="fotoUrl" />
           </v-avatar>
         </v-col>
         <v-col cols="4">
           <v-file-input
-            label="Alterar foto de perfil"
-            prepend-icon="mdi-camera"
-            accept="image/*"
-            v-model="foto"
-            @change="atualizarFoto"
-            hide-details
-          />
+  label="Alterar foto de perfil"
+  prepend-icon="mdi-camera"
+  accept="image/*"
+  v-model="foto"
+  @change="atualizarFoto"
+  hide-details
+/>
+
         </v-col>
       </v-row>
 
@@ -188,9 +233,7 @@ async function salvarSenha() {
         <v-col cols="12" sm="6">
           <v-text-field label="Telefone" v-model="perfil.telefone" type="tel" />
         </v-col>
-        <v-col cols="12" sm="6">
-          <v-text-field label="WhatsApp" v-model="perfil.whatsapp" type="tel" />
-        </v-col>
+     
         <v-col cols="12" sm="6">
           <v-text-field label="Profissão" v-model="perfil.profissao" />
         </v-col>
@@ -198,7 +241,7 @@ async function salvarSenha() {
           <v-text-field label="CNPJ/MEI" v-model="perfil.cnpj" />
         </v-col>
         <v-col cols="12" sm="6">
-          <v-text-field label="Nº do Conselho" v-model="perfil.numeroConselho" />
+          <v-text-field label="Nº do Conselho" v-model="perfil.nConselho" />
         </v-col>
       </v-row>
 
@@ -210,7 +253,7 @@ async function salvarSenha() {
           <v-row class="d-flex align-center">
             <v-col class="pa-2">
               <h4 class="mb-2 text-h4 text-deep-purple-lighten-1">
-                Endereço
+                Endereço de Atendimento
               </h4>
             </v-col>
             <v-col cols="auto" class="pa-2">

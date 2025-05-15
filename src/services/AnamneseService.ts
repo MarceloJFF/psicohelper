@@ -88,4 +88,68 @@ export class AnamneseService {
       return null
     }
   }
+
+  async carregarRespostaAnamnese(id_modelo_anamnese: string, id_aprendente: string) {
+    try {
+      const { data, error } = await supabase
+        .from('tb_anamnese_resposta')
+        .select('resposta')
+        .eq('id_modelo_anamnese', id_modelo_anamnese)
+        .eq('id_aprendente', id_aprendente)
+        .maybeSingle()
+      if (error) return null
+      return data
+    } catch (err: any) {
+      this.showError(err.message || 'Erro ao carregar resposta da anamnese')
+      return null
+    }
+  }
+
+  // Busca a resposta de anamnese mais recente para um aprendente ou responsável
+  async obterRespostaAnamnese(idAprendenteOuResponsavel: string): Promise<{ texto: string } | null> {
+    try {
+      const { data, error } = await supabase
+        .from('tb_anamnese_resposta')
+        .select('id, resposta')
+        .or(`id_aprendente.eq.${idAprendenteOuResponsavel},id_responsavel.eq.${idAprendenteOuResponsavel}`)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .single();
+      if (error || !data) return null;
+      return { texto: data.resposta };
+    } catch (err) {
+      return null;
+    }
+  }
+
+  // Cria uma nova resposta de anamnese
+  async criarRespostaAnamnese(idAprendenteOuResponsavel: string, texto: string): Promise<void> {
+    try {
+      // Você pode precisar passar id_modelo_anamnese e outros campos obrigatórios
+      await supabase.from('tb_anamnese_resposta').insert({
+        id_aprendente: idAprendenteOuResponsavel,
+        resposta: texto
+      });
+    } catch (err) {
+      throw err;
+    }
+  }
+
+  // Atualiza a resposta de anamnese existente
+  async atualizarRespostaAnamnese(idAprendenteOuResponsavel: string, texto: string): Promise<void> {
+    try {
+      // Busca o id da resposta mais recente
+      const { data, error } = await supabase
+        .from('tb_anamnese_resposta')
+        .select('id')
+        .or(`id_aprendente.eq.${idAprendenteOuResponsavel},id_responsavel.eq.${idAprendenteOuResponsavel}`)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .single();
+      if (error || !data) throw new Error('Resposta não encontrada para atualizar');
+      await supabase.from('tb_anamnese_resposta').update({ resposta: texto }).eq('id', data.id);
+    } catch (err) {
+      throw err;
+    }
+  }
 } 

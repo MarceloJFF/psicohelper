@@ -530,7 +530,6 @@ function formatarData(data: string | undefined | null): string {
 .v-list-item:hover {
   background-color: rebeccapurple;
   color: white;
-  transform: translateX(4px);
 }
 
 .bg-primary {

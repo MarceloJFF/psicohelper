@@ -27,24 +27,25 @@
           />
         </template>
 
-        <template #item.preco="{ item }">
+        <template #[`item.preco`]="{ item }">
           {{ formatarPreco(item.preco) }}
         </template>
 
-        <template #item.ativo="{ item }">
-          <v-chip :color="item.ativo ? 'green' : 'grey'" class="text-white">
-            {{ item.ativo ? 'Ativo' : 'Inativo' }}
+        <template #[`item.status`]="{ item }">
+          <v-chip :color="item.status ? 'green' : 'grey'" class="text-white">
+            {{ item.status ? 'Ativo' : 'Inativo' }}
           </v-chip>
         </template>
 
-        <template #item.actions="{ item }">
+        <template #[`item.actions`]="{ item }">
           <v-btn icon="mdi-pencil" @click="openDialog(item)" variant="text" />
           <v-btn
-            :icon="item.ativo ? 'mdi-cancel' : 'mdi-check-circle-outline'"
+            :icon="item.status ? 'mdi-cancel' : 'mdi-check-circle-outline'"
             @click="alternarStatus(item)"
-            :color="item.ativo ? 'orange' : 'green'"
+            :color="item.status ? 'orange' : 'green'"
             variant="text"
           />
+          <v-btn icon="mdi-delete" color="red" variant="text" @click="excluirRecurso(item)" />
         </template>
 
         <template #no-data>
@@ -59,16 +60,13 @@
         <v-card-title>{{ recursoAtual.id ? 'Editar Recurso' : 'Novo Recurso' }}</v-card-title>
         <v-card-text>
           <v-text-field v-model="recursoAtual.nome" label="Nome do Recurso" required />
-          <v-textarea v-model="recursoAtual.descricao" label="Descrição" rows="2" />
+          <v-textarea v-model="recursoAtual.observacao" label="Observação" rows="2" />
           <v-text-field v-model="recursoAtual.tipo" label="Tipo (Jogo, Livro, etc)" />
-          <v-text-field v-model="recursoAtual.local" label="Local de Aquisição" />
-          <v-text-field
-            v-model.number="recursoAtual.preco"
-            label="Preço de Compra"
-            prefix="R$"
-            type="number"
-          />
-          <v-switch v-model="recursoAtual.ativo" label="Ativo?" color="green" />
+          <v-text-field v-model.number="recursoAtual.preco" label="Preço de Compra" prefix="R$" type="number" />
+          <v-text-field v-model.number="recursoAtual.quantidade" label="Quantidade" type="number" />
+          <v-text-field v-model="recursoAtual.dataCompra" label="Data da Compra" type="date" />
+          <v-switch v-model="recursoAtual.habilitarDespesa" label="Habilitar como Despesa?" color="purple" />
+          <v-switch v-model="recursoAtual.status" label="Ativo?" color="green" />
         </v-card-text>
         <v-card-actions>
           <v-spacer />
@@ -80,55 +78,60 @@
   </v-container>
 </template>
 
-<script setup>
-import { ref } from 'vue'
+<script setup lang="ts">
+import { ref, onMounted } from 'vue'
+import { RecursoService } from '@/services/RecursoService'
+import type Recurso from '@/models/Recurso'
+import { useStoreProfissional } from '@/stores/storeProfissional'
 
 const headers = [
   { title: 'Nome', key: 'nome' },
   { title: 'Tipo', key: 'tipo' },
-  { title: 'Descrição', key: 'descricao' },
+  { title: 'Descrição', key: 'observacao' },
   { title: 'Preço', key: 'preco' },
-  { title: 'Local', key: 'local' },
-  { title: 'Status', key: 'ativo' },
+  { title: 'Quantidade', key: 'quantidade' },
+  { title: 'Status', key: 'status' },
   { title: 'Ações', key: 'actions', sortable: false }
 ]
 
-const recursos = ref([
-  {
-    id: 1,
-    nome: 'Jogo da Memória',
-    tipo: 'Jogo',
-    descricao: 'Trabalha atenção e memória visual.',
-    preco: 45.5,
-    local: 'Papelaria Alegria',
-    ativo: true
-  },
-  {
-    id: 2,
-    nome: 'Livro: O Pequeno Príncipe',
-    tipo: 'Livro',
-    descricao: 'Desenvolve interpretação textual.',
-    preco: 32.0,
-    local: 'Livraria Cultura',
-    ativo: true
-  }
-])
-
+const recursoService = new RecursoService()
+const storeProfissional = useStoreProfissional()
+const recursos = ref<Recurso[]>([])
 const dialog = ref(false)
-const recursoAtual = ref({})
+const recursoAtual = ref<Partial<Recurso>>({})
 const search = ref('')
 
-function openDialog(recurso = null) {
+async function carregarRecursos() {
+  recursos.value = await recursoService.listarRecursos()
+}
+
+onMounted(() => {
+  if (storeProfissional.profissionalDetails?.id) {
+    carregarRecursos()
+  } else {
+    // Aguarda o profissional ser carregado
+    const stop = storeProfissional.$subscribe((mutation, state) => {
+      if (state.profissionalDetails?.id) {
+        carregarRecursos()
+        stop()
+      }
+    })
+  }
+})
+
+function openDialog(recurso: Partial<Recurso> | null = null) {
   recursoAtual.value = recurso
     ? { ...recurso }
     : {
-      nome: '',
-      tipo: '',
-      descricao: '',
-      preco: null,
-      local: '',
-      ativo: true
-    }
+        nome: '',
+        tipo: '',
+        observacao: '',
+        preco: 0,
+        quantidade: 1,
+        status: true,
+        dataCompra: '',
+        habilitarDespesa: false
+      }
   dialog.value = true
 }
 
@@ -136,23 +139,34 @@ function fecharDialog() {
   dialog.value = false
 }
 
-function salvarRecurso() {
+async function salvarRecurso() {
   if (recursoAtual.value.id) {
-    const index = recursos.value.findIndex(r => r.id === recursoAtual.value.id)
-    if (index !== -1) recursos.value[index] = { ...recursoAtual.value }
+    const atualizado = await recursoService.atualizarRecurso(recursoAtual.value as Recurso)
+    if (atualizado) {
+      const idx = recursos.value.findIndex(r => r.id === atualizado.id)
+      if (idx !== -1) recursos.value[idx] = atualizado
+    }
   } else {
-    recursoAtual.value.id = Date.now()
-    recursos.value.push({ ...recursoAtual.value })
+    const criado = await recursoService.criarRecurso(recursoAtual.value)
+    if (criado) recursos.value.push(criado)
   }
+  carregarRecursos()
   fecharDialog()
 }
 
-function alternarStatus(recurso) {
-  const index = recursos.value.findIndex(r => r.id === recurso.id)
-  if (index !== -1) recursos.value[index].ativo = !recursos.value[index].ativo
+async function alternarStatus(recurso: Recurso) {
+  await recursoService.alternarStatus(recurso.id, !recurso.status)
+  recurso.status = !recurso.status
 }
 
-function formatarPreco(valor) {
+async function excluirRecurso(recurso: Recurso) {
+  if (confirm(`Deseja excluir o recurso "${recurso.nome}"?`)) {
+    await recursoService.excluirRecurso(recurso.id)
+    recursos.value = recursos.value.filter(r => r.id !== recurso.id)
+  }
+}
+
+function formatarPreco(valor: number) {
   return valor != null
     ? valor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
     : 'R$ 0,00'

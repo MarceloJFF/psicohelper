@@ -31,11 +31,13 @@ export const useStoreProfissional = defineStore('profissional', () => {
       if (error) throw error
 
       if (data && data.length > 0) {
-        profissionalDetails.value = data[0] as Profissional
+        profissionalDetails.value = mapBdToProfissional(data[0])
         profissionalLoaded.value = true
         subscribeEntries()
+        console.log(profissionalDetails.value)
       } else {
         profissionalDetails.value = null
+      
       }
     } catch (err: unknown) {
       if (err instanceof Error) {
@@ -45,7 +47,24 @@ export const useStoreProfissional = defineStore('profissional', () => {
       }
     }
   }
-
+   const mapBdToProfissional = (data: any): Profissional => {
+    const profissional = new Profissional();
+    profissional.id = data.id;
+    profissional.nome = data.nome;
+    profissional.profissao = data.profissao;
+    profissional.nConselho = data.n_conselho;
+    profissional.telefone = data.telefone;
+    profissional.cnpj = data.cnpj;
+    profissional.cep = data.cep;
+    profissional.logradouro = data.logradouro;
+    profissional.cidade = data.cidade;
+    profissional.estado = data.estado;
+    profissional.bairro = data.bairro;
+    profissional.complemento = data.complemento;
+    profissional.avatarStorage = data.avatar_storage_path;
+  
+    return profissional;
+   }
   const registerProfissional = async (profissional: Partial<Profissional>, idUser: string) => {
     try {
       const { data, error } = await supabase
@@ -60,7 +79,7 @@ export const useStoreProfissional = defineStore('profissional', () => {
 
       if (error) throw error
       if (data) {
-        profissionalDetails.value = data[0] as Profissional
+        profissionalDetails.value = mapBdToProfissional(data[0])
       }
     } catch (err: unknown) {
       if (err instanceof Error) {
@@ -72,6 +91,8 @@ export const useStoreProfissional = defineStore('profissional', () => {
   }
 
   const updateProfissional = async (profissional: Profissional) => {
+   console.log("updateProfissional")
+    console.log(profissional)
     try {
       const { data, error } = await supabase
         .from('tb_profissional')
@@ -86,20 +107,23 @@ export const useStoreProfissional = defineStore('profissional', () => {
           cidade: profissional.cidade,
           estado: profissional.estado,
           bairro: profissional.bairro,
-          complemento: profissional.complemento
+          complemento: profissional.complemento,
+          avatar_storage_path:`${profissional.id}/avatar_${profissional.id}.webp`
         })
         .eq('id', profissional.id)
         .select()
 
       if (error) throw error
       if (data) {
-        profissionalDetails.value = data[0] as Profissional
+        profissionalDetails.value = mapBdToProfissional(data[0])
       }
     } catch (err: unknown) {
       if (err instanceof Error) {
         showError(err.message)
       } else {
-        showError('Erro ao atualizar profissional')
+
+        console.log(err)
+        showError('Erro ao atualizar profissional' +err)
       }
     }
   }
@@ -141,7 +165,27 @@ export const useStoreProfissional = defineStore('profissional', () => {
       })
       .subscribe()
   }
-  
+  const updateAvatar = async (avatar: string | null) => {
+    try {
+      const { data, error } = await supabase
+        .from('tb_profissional')
+        .update({ avatar_storage_path: avatar })
+        .eq('id', profissionalDetails.value?.id)
+        .select()
+      console.log(data)
+      if (error) throw error
+      if (data) {
+        profissionalDetails.value = data[0] as Profissional
+      }
+    } catch (err: unknown) {
+      if (err instanceof Error) {
+        showError(err.message)
+      } else {
+        showError('Erro ao atualizar avatar')
+      }
+    }
+  }
+
   const unsubscribeEntries = () => {
     if (entriesChannel) {
       supabase.removeChannel(entriesChannel)
@@ -164,6 +208,7 @@ export const useStoreProfissional = defineStore('profissional', () => {
     updateProfissional,
     updatePassword,
     unsubscribeEntries,
-    clearEntries
+    clearEntries,
+    updateAvatar  
   }
 })

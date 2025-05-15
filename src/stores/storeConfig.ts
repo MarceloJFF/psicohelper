@@ -17,18 +17,55 @@ interface Configuracao {
   id_profissional: string
 }
 
-interface MensagensWhatsapp {
+export interface MensagensWhatsapp {
   id?: string
-  mensagemCobranca: string
-  mensagemConfirmacao: string
+  msgCobranca: string
+  msgConfirmacaoPagamento: string
+  msgLembreteAtendimento: string
+  idConfig: string
 }
 
 export const useStoreConfig = defineStore('config', () => {
   // State
   const configuracao = ref<Configuracao | null>(null)
   const feriados = ref<Feriado[]>([])
-  const mensagensWhatsapp = ref(null)
+  const mensagensWhatsapp = ref<MensagensWhatsapp | null>(null)
   const loading = ref(false)
+
+  const getMensagensPadrao = (idConfig: string): MensagensWhatsapp => ({
+    msgCobranca: 'Olá {{nome}}, lembramos que o pagamento de {{valor}} vence em {{data}}. Qualquer dúvida, estamos à disposição.',
+    msgConfirmacaoPagamento: 'Olá {{nome}}, confirmamos o recebimento de {{valor}} em {{data}}. Obrigado pelo pagamento!',
+    msgLembreteAtendimento: 'Olá {{nome}}, lembramos que você tem um atendimento agendado para {{data}} às {{hora}}. Até lá!',
+    idConfig
+  })
+
+  const createMensagensPadrao = async (idConfig: string) => {
+    try {
+      const mensagensPadrao = getMensagensPadrao(idConfig)
+      const { data, error } = await supabase
+        .from('tb_config_whatsapp')
+        .insert({
+          id_config: idConfig,
+          msg_cobranca: mensagensPadrao.msgCobranca,
+          msg_confirmacao_pagamento: mensagensPadrao.msgConfirmacaoPagamento,
+          msg_lembrete_atendimento: mensagensPadrao.msgLembreteAtendimento
+        })
+        .select()
+        .single()
+        .throwOnError()
+
+      if (error) throw error
+      mapMessage(data)
+      return mensagensWhatsapp
+    } catch (err) {
+      if (err instanceof Error) {
+        showError(err.message)
+      } else {
+        showError('Erro ao criar mensagens padrão do WhatsApp')
+      }
+      return null
+    }
+  }
 
   // Actions
   const createConfiguracao = async (idProfissional: string) => {
@@ -71,6 +108,7 @@ export const useStoreConfig = defineStore('config', () => {
 
       configuracao.value = data
       await loadFeriados()
+      await loadMensagensWhatsapp()
       return data
     } catch (err) {
       if (err instanceof Error) {
@@ -113,16 +151,36 @@ export const useStoreConfig = defineStore('config', () => {
         .select('*')
         .eq('id_config', configuracao.value.id)
         .single()
+        .throwOnError()
 
-      if (error) throw error
-      mensagensWhatsapp.value = data
+      if (error) {
+        if (error.code === 'PGRST116') {
+          // Se não encontrou mensagens, cria as padrões
+          return await createMensagensPadrao(configuracao.value.id)
+        }
+        throw error
+      }
+
+      mensagensWhatsapp.value = data || null
+      mapMessage(data)
+      return mensagensWhatsapp    
     } catch (err) {
       if (err instanceof Error) {
         showError(err.message)
       } else {
         showError('Erro ao carregar mensagens do WhatsApp')
       }
+      return null
     }
+  }
+  const mapMessage = (data: any) =>  {
+    if (!mensagensWhatsapp.value) return
+    mensagensWhatsapp.value.id = data.id
+    mensagensWhatsapp.value.msgCobranca = data.msg_cobranca
+    mensagensWhatsapp.value.msgConfirmacaoPagamento = data.msg_confirmacao_pagamento
+    mensagensWhatsapp.value.msgLembreteAtendimento = data.msg_lembrete_atendimento
+    mensagensWhatsapp.value.idConfig = data.id_config
+    return mensagensWhatsapp.value
   }
 
   const addFeriado = async (feriado: Omit<Feriado, 'id'>) => {
@@ -199,34 +257,30 @@ export const useStoreConfig = defineStore('config', () => {
       return false
     }
   }
-
   const updateMensagensWhatsapp = async (mensagens: MensagensWhatsapp) => {
-    if (!configuracao.value) return null
-
+    if (!configuracao.value?.id) return null
+  
     try {
-      const { data, error } = await supabase
+      const { data } = await supabase
         .from('tb_config_whatsapp')
-        .upsert({
-          id: mensagens.id,
-          id_config: configuracao.value.id,
-          mensagem_cobranca: mensagens.mensagemCobranca,
-          mensagem_confirmacao: mensagens.mensagemConfirmacao
+        .update({
+          msg_cobranca: mensagens.msgCobranca,
+          msg_confirmacao_pagamento: mensagens.msgConfirmacaoPagamento,
+          msg_lembrete_atendimento: mensagens.msgLembreteAtendimento
         })
+        .eq('id_config', configuracao.value.id)
         .select()
         .single()
-
-      if (error) throw error
+        .throwOnError()
+  
       mensagensWhatsapp.value = data
       return data
     } catch (err) {
-      if (err instanceof Error) {
-        showError(err.message)
-      } else {
-        showError('Erro ao atualizar mensagens do WhatsApp')
-      }
+      showError(err instanceof Error ? err.message : 'Erro ao atualizar mensagens do WhatsApp')
       return null
     }
   }
+  
 
   const clearConfig = () => {
     configuracao.value = null

@@ -10,8 +10,7 @@ export default class Profissional {
   estado: string = '';
   bairro: string = '';
   complemento: string = '';
-  idUSer: string = '';
   telefone: string = '';
-
+  avatarStorage: string = '';
   constructor() {}
 }
