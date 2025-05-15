@@ -10,30 +10,7 @@
       </v-card-title>
 
       <v-card-text>
-        <!-- Seleção de Aprendente -->
-        <v-autocomplete
-          v-model="selectedCliente"
-          :items="filteredClientes"
-          v-model:search="searchQuery"
-          label="Cliente"
-          item-title="displayName"
-          item-value="id"
-          :loading="isLoading"
-          return-object
-          clearable
-          :filter="() => true"
-          :menu-props="{ maxHeight: 400 }"
-          class="mb-4"
-          :error-messages="errorMessage"
-        >
-          <template v-slot:item="{ props, item }">
-            <v-list-item v-bind="props">
-              <v-list-item-title>
-                {{ item.raw.aprendente ? item.raw.aprendente : item.raw.responsavel }}
-              </v-list-item-title>
-            </v-list-item>
-          </template>
-        </v-autocomplete>
+        
 
         <!-- Menu Superior -->
         <v-tabs v-model="tab" center-active grow>
@@ -46,28 +23,34 @@
         <v-window v-model="tab" class="mt-4">
           <v-window-item v-for="(item, index) in menus" :key="index" :value="index">
             <h4>{{ item.label }}</h4>
-            <component
-              :is="item.component"
+            <v-textarea
+              v-if="item.component === 'v-textarea'"
+              v-model="item.value"
+              v-bind="item.props"
+            />
+            <v-file-input
+              v-if="item.component === 'v-file-input'"
               :model-value="item.value"
               @update:modelValue="addFile"
               v-bind="item.props"
-              :error-messages="item.label === 'Anexos' ? errorMessage : undefined"
-              :loading="item.label === 'Anexos' ? uploadLoading : undefined"
+              :error-messages="errorMessage"
+              :loading="uploadLoading"
             />
             <!-- Arquivos selecionados (antes do upload) -->
             <v-row v-if="item.label === 'Anexos' && selectedFiles.length" class="mt-4">
               <v-col v-for="(file, index) in selectedFiles" :key="index" cols="12" sm="6" md="4">
                 <v-card class="pa-2" elevation="1">
                   <v-img
-                    v-if="file.type.includes('image')"
+                    v-if="file && file.type.includes('image')"
                     :src="createObjectURL(file)"
                     max-height="100"
                     max-width="100"
                     class="rounded"
                   />
-                  <v-icon v-else size="40">mdi-file-document</v-icon>
-                  <div class="text-caption mt-2">{{ file.name }}</div>
+                  <v-icon v-else-if="file" size="40">mdi-file-document</v-icon>
+                  <div v-if="file" class="text-caption mt-2">{{ file.name }}</div>
                   <v-btn
+                    v-if="file"
                     icon
                     small
                     @click="removeFile(index)"
@@ -236,11 +219,18 @@ watch(searchQuery, async (newValue) => {
   }
 }, { debounce: 300 });
 
+watch(tab, (newTab) => {
+  console.log('Aba alterada:', menus.value[newTab].label, 'Valor:', menus.value[newTab].value);
+});
+
 function addFile(newFile: File | null) {
-  if (newFile) {
+  console.log('addFile chamado com:', newFile, 'Tipo:', newFile ? newFile.constructor.name : 'null');
+  if (newFile instanceof File) {
     selectedFiles.value = [...selectedFiles.value, newFile];
-    menus.value[5].value = null; // Clear the file input
+    menus.value[5].value = null;
     console.log('Arquivo adicionado:', newFile.name, 'Tipo:', newFile.type, 'Total:', selectedFiles.value.length);
+  } else {
+    console.warn('Ignorando newFile inválido:', newFile);
   }
 }
 
@@ -250,16 +240,20 @@ function removeFile(index: number) {
 }
 
 function createObjectURL(file: File): string {
+  if (!window.URL || !window.URL.createObjectURL) {
+    console.error('window.URL.createObjectURL não está disponível');
+    return '';
+  }
   const url = window.URL.createObjectURL(file);
   console.log('URL gerada para pré-visualização:', url);
   return url;
 }
 
 async function salvar() {
-  if (!selectedCliente.value) {
-    errorMessage.value = 'Selecione um cliente antes de salvar';
-    return;
-  }
+  // if (!selectedCliente.value) {
+  //   errorMessage.value = 'Selecione um cliente antes de salvar';
+  //   return;
+  // }
 
   uploadLoading.value = true;
   errorMessage.value = '';
