@@ -131,10 +131,11 @@ const storeCalendario = useStoreCalendario()
 const { showError } = useShowErrorMessage()
 const isLoading = ref(false)
 const searchQuery = ref('')
-const clientes = ref<any[]>([])
 const aprendenteService = new AprendenteService()
 const agendamentoService = new AgendamentoService()
 const aprendenteCache = new Map()
+const filteredClientes = ref<any[]>([])
+
 
 let calendarApi: any = null
 
@@ -157,7 +158,6 @@ const eventData = ref(defaultEventData())
 function resetEventData() {
   eventData.value = defaultEventData()
 }
-
 
 const loadEventos = async () => {
   isLoading.value = true;
@@ -505,7 +505,7 @@ const calendarOptions = ref({
     const event = info.event;
     const el = info.el;
     const jsEvent = info.jsEvent;
-    el.style.border = '2px solid #5E35B1';
+    // el.style.border = '2px solid #5E35B1';
     el.style.boxShadow = '0 2px 4px rgba(0, 0, 0, 0.2)';
 
     const tooltip = document.createElement('div');
@@ -546,7 +546,6 @@ const calendarOptions = ref({
   }
 });
 
-const filteredClientes = ref<any[]>([])
 
 watch(searchQuery, async (newValue) => {
   if (!newValue) {
