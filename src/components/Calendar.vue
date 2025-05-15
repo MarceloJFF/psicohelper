@@ -51,7 +51,6 @@
                     <v-list-item v-bind="props">
                       <v-list-item-title>
                         {{ item.aprendente ? item.aprendente : item.responsavel }}
-                        {{ item.id_aprendente === item.id_responsavel ? '(Adulto)' : '' }}
                       </v-list-item-title>
                     </v-list-item>
                   </template>
@@ -90,7 +89,8 @@
     </v-dialog>
 
     <v-dialog v-model="showAtendimentoModal" max-width="1200px" min-width="900px">
-      <AtendimentoModal v-model="showAtendimentoModal" :title="eventData.title" />
+      <AtendimentoModal v-model="showAtendimentoModal" :title="eventData.title"
+        :idAgendamento="eventData.id ? eventData.id.replace('agendamento-', '') : null" />
     </v-dialog>
 
     <v-snackbar v-model="snackbar" :color="snackbarColor" timeout="4000">
