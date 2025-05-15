@@ -170,12 +170,13 @@ async function salvarSenha() {
     <!-- Header com botão de voltar -->
     <v-row class="mb-4 d-flex align-center justify-space-between">
       <v-col cols="auto">
-        <v-btn icon to="/" color="text-deep-purple-lighten-2">
+        <v-btn icon to="/" color="primary">
           <v-icon>mdi-arrow-left</v-icon>
         </v-btn>
       </v-col>
       <v-col class="text-center">
-        <h2 class="text-h3 mb-8 font-weight-bold text-deep-purple-lighten-2">
+        <h2 class="text-h3 mb-4 font-weight-bold text-deep-purple-lighten-2"> 
+          <v-icon size="large" color="primary">mdi-cog</v-icon>
           Configurações do Perfil
         </h2>
       </v-col>
@@ -252,7 +253,7 @@ async function salvarSenha() {
           <v-row class="d-flex align-center">
             <v-col class="pa-2">
               <h4 class="mb-2 text-h4 text-deep-purple-lighten-1">
-                Endereço
+                Endereço de Atendimento
               </h4>
             </v-col>
             <v-col cols="auto" class="pa-2">

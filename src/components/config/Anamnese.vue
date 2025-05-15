@@ -1,7 +1,9 @@
 <template>
   <v-card class="pa-6 rounded-xl shadow-lg max-w-2xl mx-auto mt-8">
     <v-card-title class="text-h5 font-weight-bold text-center mb-4">
-      Criar Modelo de Anamnese
+      <v-icon size="x-large" color="primary">mdi-brain</v-icon>
+      <h3 class=" text-h4 text-deep-purple-lighten-1">Criar Modelo de Anamnese</h3>
+      
     </v-card-title>
 
     <v-card-text>
