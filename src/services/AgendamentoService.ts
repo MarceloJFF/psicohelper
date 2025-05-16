@@ -1,6 +1,7 @@
 import supabase from '@/config/supabase'
 import Agendamento from '@/models/Agendamento'
 import { useShowErrorMessage } from '@/userCases/useShowErrorMessage'
+import { useStoreProfissional } from '@/stores/storeProfissional'
 
 export class AgendamentoService {
   private showError = useShowErrorMessage().showError
@@ -90,11 +91,13 @@ export class AgendamentoService {
   }
 
   async getAllAgendamentos(): Promise<Agendamento[] | null> {
+    const storeProfissional = useStoreProfissional()
     try {
       const { data: dataContrato, error: errorContrato } = await supabase
         .from('tb_contrato')
         .select('*')
-        .eq('cancelado', false) //.eq('vencido', false)
+        .eq('cancelado', false)
+        .eq('id_profissional', storeProfissional.profissionalDetails?.id)
       const { data: agendamentos, error: errorAgendamento } = await supabase
         .from('tb_agendamento')
         .select('*')
