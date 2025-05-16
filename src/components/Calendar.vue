@@ -44,18 +44,27 @@
               </v-col>
 
               <v-col cols="12">
-                <v-autocomplete v-model="eventData.cliente" :items="filteredClientes" v-model:search="searchQuery"
-                  label="Cliente" item-title="displayName" item-value="id" :loading="isLoading" return-object clearable
-                  :filter="() => true" :menu-props="{ maxHeight: 400 }">
+                <v-autocomplete
+                  v-model="eventData.cliente"
+                  :items="filteredClientes"
+                  v-model:search="searchQuery"
+                  @update:search="searchQuery = $event"
+                  label="Cliente"
+                  item-title="nomeAprendente"
+                  item-value="id"
+                  return-object
+                  clearable
+                  :loading="isLoading"
+                  :filter="() => true"
+                  :menu-props="{ maxHeight: 400 }"
+                >
                   <template v-slot:item="{ props, item }">
                     <v-list-item v-bind="props">
-                      <v-list-item-title>
-                        {{ item.aprendente ? item.aprendente : item.responsavel }}
-                      </v-list-item-title>
+                      <v-list-item-title>{{ item.nomeAprendente }}</v-list-item-title>
                     </v-list-item>
                   </template>
-
                 </v-autocomplete>
+
               </v-col>
 
               <v-col cols="12">
@@ -116,6 +125,8 @@ import { AprendenteService } from '@/services/AprendenteService'
 import { AgendamentoService } from '@/services/AgendamentoService'
 import type Agendamento from '@/models/Agendamento'
 import { ContratoService } from '@/services/contratoService'
+import type Aprendente from '@/models/Aprendente.ts'
+import ViewAprendenteLogadoProfissional from '@/models/ViewAprendenteLogadoProfissional.ts'
 
 const calendar = ref()
 const showModal = ref(false)
@@ -134,7 +145,7 @@ const searchQuery = ref('')
 const aprendenteService = new AprendenteService()
 const agendamentoService = new AgendamentoService()
 const aprendenteCache = new Map()
-const filteredClientes = ref<any[]>([])
+const filteredClientes = ref<ViewAprendenteLogadoProfissional[]>([])
 
 
 let calendarApi: any = null
@@ -349,6 +360,7 @@ async function saveEvent() {
     let agendamentoId = agendamento.id;
     if (agendamento.id) {
       await agendamentoService.updateAgendamento(agendamento);
+      await loadEventos()
     } else {
       const response = await agendamentoService.createAgendamento(agendamento);
       agendamentoId = response;
@@ -413,6 +425,7 @@ async function deleteEvent() {
     calendarApi?.refetchEvents()
     showModal.value = false
     showMessage('Evento excluído com sucesso!', 'success')
+    await loadEventos()
   } catch (err: any) {
     showMessage(err.message || 'Erro ao excluir evento')
   }
@@ -545,25 +558,28 @@ const calendarOptions = ref({
     }
   }
 });
-
-
-watch(searchQuery, async (newValue) => {
-  if (!newValue) {
+watch(searchQuery, async (val) => {
+  if (!val || val.length < 3) {
     filteredClientes.value = []
     return
   }
 
   isLoading.value = true
   try {
-    const resultados = await aprendenteService.buscarClientesPorNome(newValue)
-    filteredClientes.value = resultados
-  } catch (err) {
-    console.error('Erro na busca:', err)
+    const resultados = await aprendenteService.loadAprendentesPorProfissionalENome(val)
+    filteredClientes.value = resultados.map((item:any)=>({
+        id: item.id,
+        nomeAprendente: item.nomeAprendente,
+        idResponsavel: item.idResponsavel,
+    }))
+    console.log(filteredClientes.value)
+  } catch (e) {
     showError('Erro ao buscar clientes')
   } finally {
     isLoading.value = false
   }
-}, { debounce: 300 })
+})
+
 </script>
 
 <style scoped>

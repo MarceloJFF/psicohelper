@@ -50,13 +50,13 @@ export class AgendamentoService {
           data_agendamento: agendamento.dataAgendamento, // Enviar como YYYY-MM-DD
           horario_inicio: agendamento.horarioInicio,
           duracao: agendamento.duracao,
-          responsavel_id: agendamento.responsavel_id,
+          responsavel_id: agendamento.idResponsavel,
           id_aprendente: agendamento.idDependente,
           id_profissional: agendamento.idProfissional,
           tipo_atendimento: agendamento.tipoAtendimento,
           valor_atendimento: agendamento.valorAtendimento,
           observacoes: agendamento.observacoes,
-          id_contrato: agendamento.id_contrato,
+          id_contrato: agendamento.idContrato,
           color: agendamento.color,
         })
         .eq('id_profissional', storeProfissional.profissionalDetails?.id)
@@ -109,8 +109,6 @@ export class AgendamentoService {
         .from('tb_agendamento')
         .select('*')
         .eq('id_profissional', storeProfissional.profissionalDetails?.id);
-      console.log('[services] getAllAgendamentos', agendamentos);
-
       if (errorAgendamento)
         throw new Error('Erro ao carregar os agendamentos' + { errorAgendamento });
       return agendamentos as Agendamento[];
