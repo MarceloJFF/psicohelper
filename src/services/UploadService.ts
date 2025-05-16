@@ -4,7 +4,7 @@ export class UploadService {
   async uploadArquivo(bucket: string, caminho: string, arquivo: File): Promise<string> {
     try {
       const fileExt = arquivo.name.split('.').pop();
-      const fileName = `${caminho}.${fileExt}`;
+      const fileName = `${arquivo.name.split('.')[0]}.${fileExt}`;
       const filePath = `${caminho}/${fileName}`;
 
       const { data, error } = await supabase.storage

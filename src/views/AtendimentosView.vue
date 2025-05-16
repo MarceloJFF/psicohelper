@@ -80,13 +80,97 @@
                 <div class="mt-4">
                   <div v-for="menu in menus" :key="menu.field" class="mb-4">
                     <h4 class="text-subtitle-1 font-weight-bold mb-1">{{ menu.label }}</h4>
-                    <p class="text-body-2">
+                    <v-textarea
+                      v-if="atendimento.isEditing"
+                      v-model="atendimento[menu.field]"
+                      v-bind="menu.props"
+                      class="mt-2"
+                    />
+                    <p v-else class="text-body-2">
                       {{ atendimento[menu.field] || 'Sem informações' }}
                     </p>
                   </div>
+                  <h4 class="text-subtitle-1 font-weight-bold mb-2">Anexos</h4>
+                  <v-row v-if="atendimento.anexosTemporarios && atendimento.anexosTemporarios.length" class="mt-2">
+                    <v-col
+                      v-for="(anexo, index) in atendimento.anexosTemporarios"
+                      :key="index"
+                      cols="12"
+                      sm="6"
+                      md="4"
+                    >
+                      <v-card class="pa-2" elevation="1">
+                        <v-img
+                          v-if="anexo.url && anexo.url.includes('image')"
+                          :src="anexo.url"
+                          max-height="100"
+                          max-width="100"
+                          class="rounded"
+                        />
+                        <v-icon v-else-if="anexo.url" size="40">mdi-file-document</v-icon>
+                        <v-icon v-else size="40">mdi-file</v-icon>
+                        <div class="text-caption mt-2">
+                          {{ anexo.name || anexo.url.split('/').pop() || 'Arquivo' }}
+                        </div>
+                        <v-btn
+                          v-if="atendimento.isEditing"
+                          icon
+                          small
+                          @click="removerAnexoTemporario(atendimento, index)"
+                          class="mt-2"
+                        >
+                          <v-icon color="red">mdi-delete</v-icon>
+                        </v-btn>
+                        <v-btn
+                          v-if="anexo.url"
+                          icon
+                          small
+                          @click="downloadAnexo(anexo.url)"
+                          class="mt-2"
+                        >
+                          <v-icon>mdi-download</v-icon>
+                        </v-btn>
+                      </v-card>
+                    </v-col>
+                  </v-row>
+                  <p v-else class="text-body-2">Nenhum anexo disponível.</p>
+                  <v-file-input
+                    v-if="atendimento.isEditing"
+                    label="Adicionar anexos"
+                    accept="image/*,application/pdf"
+                    multiple
+                    v-model="atendimento.novosAnexos"
+                    class="mt-4"
+                    :error-messages="atendimento.uploadError"
+                    @change="validarNovosAnexos(atendimento)"
+                  />
                 </div>
-                <v-btn color="success" variant="outlined">
+                <v-btn
+                  v-if="!atendimento.isEditing"
+                  color="primary"
+                  variant="outlined"
+                  class="mt-4"
+                  @click="iniciarEdicao(atendimento)"
+                >
                   Editar
+                </v-btn>
+                <v-btn
+                  v-if="atendimento.isEditing"
+                  color="success"
+                  variant="outlined"
+                  class="mt-4"
+                  @click="salvarEdicao(atendimento)"
+                >
+                  Salvar
+                </v-btn>
+                <v-btn
+                  v-if="atendimento.isEditing"
+                  color="error"
+                  variant="outlined"
+                  class="mt-4 ml-2"
+                  @click="cancelarEdicao(atendimento)"
+                >
+                  Cancelar
                 </v-btn>
               </div>
             </v-expand-transition>
@@ -129,10 +213,12 @@
 import { ref, computed, onMounted, watch } from 'vue';
 import { SessaoService } from '@/services/SessaoService';
 import { AprendenteService } from '@/services/AprendenteService';
+import { UploadService } from '@/services/UploadService'; // Assumindo que existe um serviço para upload
 import supabase from '@/config/supabase';
 
 const sessaoService = new SessaoService();
 const aprendenteService = new AprendenteService();
+const uploadService = new UploadService(); // Serviço para upload de arquivos
 const atendimentos = ref<any[]>([]);
 const pacientes = ref<any[]>([]);
 const filtroPaciente = ref<string | null>(null);
@@ -198,6 +284,7 @@ async function loadSessoes() {
           paciente = responsavel.data?.nome_responsavel || 'N/A';
         }
 
+        const anexos = sessao.fotos ? sessao.fotos.split(',').filter((url: string) => url) : [];
         return {
           id: sessao.id,
           data: agendamento?.data_agendamento || '',
@@ -207,16 +294,22 @@ async function loadSessoes() {
           clienteId,
           id_aprendente: agendamento?.id_aprendente,
           responsavel_id: agendamento?.responsavel_id,
+          id_agendamento: agendamento?.id_agendamento,
           avatar: '',
           status: 'Pendente',
           anotacao: null,
           showDetails: false,
+          isEditing: false,
           preSessao: sessao.pre_sessao || '',
           queixas: sessao.queixas || '',
           evolucaoAtual: sessao.evolucao || '',
           habilidadesTrabalhadas: sessao.habilidades_trabalhadas || '',
           futurasAcoes: sessao.futuras_acoes || '',
-          anexos: sessao.fotos ? sessao.fotos.split(',') : [],
+          anexos,
+          anexosTemporarios: anexos.map(url => ({ url, name: url.split('/').pop() })), // Inicializa com anexos existentes
+          anexosParaExcluir: [] as string[], // Anexos a serem excluídos
+          novosAnexos: [] as File[], // Novos arquivos selecionados
+          uploadError: '',
           resumo: sessao.resumo || ''
         };
       })
@@ -245,6 +338,131 @@ async function loadPacientes() {
     console.log('Pacientes carregados:', pacientes.value);
   } catch (err) {
     console.error('Erro ao carregar pacientes:', err);
+  }
+}
+
+function iniciarEdicao(atendimento: any) {
+  atendimento.originalData = { ...atendimento }; // Armazenar cópia dos dados
+  atendimento.isEditing = true;
+}
+
+function cancelarEdicao(atendimento: any) {
+  Object.assign(atendimento, atendimento.originalData); // Restaurar dados originais
+  atendimento.isEditing = false;
+  delete atendimento.originalData;
+}
+
+function validarNovosAnexos(atendimento: any) {
+  atendimento.uploadError = '';
+  if (atendimento.novosAnexos && atendimento.novosAnexos.length > 0) {
+    for (const file of atendimento.novosAnexos) {
+      if (!file.type.match(/^image\/.+$|^application\/pdf$/)) {
+        atendimento.uploadError = 'Apenas imagens ou PDFs são permitidos';
+        atendimento.novosAnexos = [];
+        return;
+      }
+      if (file.size > 25 * 1024 * 1024) {
+        atendimento.uploadError = 'O arquivo deve ter menos de 25MB';
+        atendimento.novosAnexos = [];
+        return;
+      }
+    }
+    // Adicionar novos anexos à lista temporária para visualização
+    atendimento.anexosTemporarios.push(
+      ...atendimento.novosAnexos.map((file: File) => ({ url: '', name: file.name }))
+    );
+  }
+}
+
+function removerAnexoTemporario(atendimento: any, index: number) {
+  const anexo = atendimento.anexosTemporarios[index];
+  if (anexo.url) {
+    // Anexo existente, marcar para exclusão
+    atendimento.anexosParaExcluir.push(anexo.url);
+  }
+  // Remover da lista temporária
+  atendimento.anexosTemporarios.splice(index, 1);
+  // Remover do novosAnexos se for um novo arquivo
+  atendimento.novosAnexos = atendimento.novosAnexos.filter(
+    (file: File) => file.name !== anexo.name
+  );
+}
+
+async function downloadAnexo(anexo: string) {
+  try {
+    const caminho = anexo.split('/storage/v1/object/public/sessoes/')[1];
+    const data = await supabase.storage
+      .from('sessoes')
+      .download(caminho);
+    const url = window.URL.createObjectURL(data.data);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = anexo.split('/').pop() || 'Arquivo';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    window.URL.revokeObjectURL(url);
+  } catch (err) {
+    console.error('Erro ao baixar anexo:', err);
+    alert('Erro ao baixar anexo: ' + (err as Error).message);
+  }
+}
+
+async function salvarEdicao(atendimento: any) {
+  try {
+    // Processar novos anexos
+    const novosUrls: string[] = [];
+    if (atendimento.novosAnexos && atendimento.novosAnexos.length > 0) {
+      for (const file of atendimento.novosAnexos) {
+        const url = await uploadService.uploadArquivo(
+          'sessoes',
+          `sessao/${atendimento.id_agendamento || 'temp'}`,
+          file
+        );
+        novosUrls.push(url);
+      }
+    }
+
+    // Atualizar lista de anexos
+    atendimento.anexos = [
+      ...atendimento.anexosTemporarios
+        .filter((anexo: any) => anexo.url && !atendimento.anexosParaExcluir.includes(anexo.url))
+        .map((anexo: any) => anexo.url),
+      ...novosUrls
+    ];
+
+    // Montar dados da sessão
+    const sessaoData = {
+      id: atendimento.id,
+      pre_sessao: atendimento.preSessao,
+      queixas: atendimento.queixas,
+      evolucao: atendimento.evolucaoAtual,
+      habilidades_trabalhadas: atendimento.habilidadesTrabalhadas,
+      futuras_acoes: atendimento.futurasAcoes,
+      resumo: atendimento.resumo,
+      fotos: atendimento.anexos.length > 0 ? atendimento.anexos.join(',') : null,
+      id_agendamento: atendimento.id_agendamento
+    };
+
+    // Atualizar no banco
+    await sessaoService.updateSessao(atendimento.id, sessaoData);
+
+    // Limpar estados temporários
+    atendimento.anexosTemporarios = atendimento.anexos.map((url: string) => ({
+      url,
+      name: url.split('/').pop()
+    }));
+    atendimento.anexosParaExcluir = [];
+    atendimento.novosAnexos = [];
+    atendimento.uploadError = '';
+    atendimento.isEditing = false;
+    delete atendimento.originalData;
+
+    console.log('Sessão atualizada com sucesso:', sessaoData);
+    alert('Alterações salvas com sucesso!');
+  } catch (err) {
+    console.error('Erro ao salvar edição:', err);
+    alert('Erro ao salvar alterações: ' + (err as Error).message);
   }
 }
 
