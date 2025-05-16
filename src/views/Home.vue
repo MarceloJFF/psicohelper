@@ -14,23 +14,25 @@
               Novo Lembrete
             </v-btn>
           </div>
-
           <v-date-picker
-            v-model="selectedDate"
-            color="deep-purple-lighten-1"
-            show-adjacent-months
-            hide-header
-            size="small"
-            locale="pt-BR"
-            class="mb-4"
-          ></v-date-picker>
+  v-model="selectedDate"
+  color="deep-purple-lighten-1"
+  locale="pt-BR"
+  show-adjacent-months
+  hide-header
+  size="small"
+  elevation="0"
+  class="mb-4 bg-grey-lighten-4 rounded-lg border"
+  style="border: 1px solid #ccc;"
+/>
+
 
           <v-list class="pa-4" lines="two">
             <v-list-item
               v-for="(item, index) in lembretes"
               :key="index"
               class="rounded-lg mb-2 transition-swing"
-              :class="{ 
+              :class="{
                 'bg-deep-purple-lighten-5': item.done,
                 'border-left-4 border-deep-purple': !item.done && isUrgente(item.dataExpiracao)
               }"
@@ -85,13 +87,13 @@
       </v-col>
 
       <v-col cols="12" md="4">
-        <v-card class="pa-4 rounded-xl elevation-2 h-100">
+        <v-card class="pa-4 rounded-xl elevation-2 h-100 align-center justify-center">
           <div class="text-center">
             <div class="mascote-container">
               <v-img
-                src="/mascote.svg"
-                max-width="200"
-                class="mx-auto mascote"
+                src="src/assets/mascote.png"
+                max-width="400"
+                class=" mascote"
                 :class="{ 'mascote-happy': lembretesCompletos > 0 }"
               ></v-img>
             </div>
