@@ -17,11 +17,11 @@ export class ModeloAnamneseService {
         .single()
         console.log(modeloExistente)
       if (errorModelo && errorModelo.code !== 'PGRST116') throw errorModelo
-  
+
       let id_modelo: string
-  
+
       if (modeloExistente) {
-        //se o modelo existir, atualiza as perguntas 
+        //se o modelo existir, atualiza as perguntas
         id_modelo = modeloExistente.id_modelo
 
         // Busca perguntas existentes que já têm respostas
@@ -80,17 +80,17 @@ export class ModeloAnamneseService {
           .single()
         if (insertModeloError) throw insertModeloError
         id_modelo = modeloCriado.id
-  
+
         const perguntasData = perguntas.map((p, index) => ({
           id_modelo_anamnese: id_modelo,
           texto: p.texto,
           ordem: index
         }))
-  
+
         const { error: insertPerguntasError } = await supabase
           .from('tb_modelo_pergunta')
           .insert(perguntasData)
-  
+
         if (insertPerguntasError) throw insertPerguntasError
       }
     } catch (err: any) {
@@ -105,7 +105,7 @@ export class ModeloAnamneseService {
         .select('*')
         .eq('id_config', id_config)
         .maybeSingle()  // Use maybeSingle em vez de single
-  
+
       if (error) throw error
       const modeloAnamnese = new ModeloAnamnese(data.nome, data.id_modelo, data.id_config)
       return modeloAnamnese
@@ -193,5 +193,39 @@ export class ModeloAnamneseService {
       return []
     }
   }
-  
+
+  // Novo método para salvar perguntas como texto
+  async salvarModeloTexto(id_config: string, nome: string, perguntas: string): Promise<void> {
+    try {
+      // Verifica se já existe modelo com esse id_config
+      const { data: modeloExistente, error: fetchError } = await supabase
+        .from('tb_modelo_anamnese')
+        .select('id_modelo')
+        .eq('id_config', id_config)
+        .maybeSingle()
+
+      if (fetchError && fetchError.code !== 'PGRST116') {
+        throw fetchError
+      }
+
+      if (modeloExistente) {
+        // Atualiza o modelo existente
+        const { error: updateError } = await supabase
+          .from('tb_modelo_anamnese')
+          .update({ nome, perguntas })
+          .eq('id_config', id_config)
+        if (updateError) throw updateError
+      } else {
+        // Cria novo modelo
+        const { error: insertError } = await supabase
+          .from('tb_modelo_anamnese')
+          .insert({ id_config, nome, perguntas })
+        if (insertError) throw insertError
+      }
+    } catch (err: any) {
+      this.showError(err.message || 'Erro ao salvar modelo de anamnese (texto)')
+      throw err
+    }
+  }
+
 }
