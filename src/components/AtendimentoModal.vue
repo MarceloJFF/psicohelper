@@ -236,13 +236,51 @@ async function salvar() {
     id_agendamento: props.idAgendamento,
   };
 
+  // Lógica comum para upload de novos arquivos
+  async function handleFileUploads() {
+    if (selectedFiles.value.length > 0) {
+      let uploadedCount = 0;
+      for (const file of selectedFiles.value) {
+        console.log('Validando arquivo:', file.name, 'Tipo:', file.type);
+        if (!file.type.match(/^image\/.+$|^application\/pdf$/)) {
+          errorMessage.value = 'Apenas imagens ou PDFs são permitidos';
+          uploadLoading.value = false;
+          return false;
+        }
+        if (file.size > 25 * 1024 * 1024) {
+          errorMessage.value = 'O arquivo deve ter menos de 25MB';
+          uploadLoading.value = false;
+          return false;
+        }
+
+        const url = await uploadService.uploadArquivo(
+          'sessoes',
+          `sessao/${props.idAgendamento || 'temp'}`,
+          file
+        );
+        uploadedFiles.value.push({ name: file.name, url });
+        uploadedCount++;
+        console.log(`Upload ${uploadedCount}/${selectedFiles.value.length} concluído`);
+      }
+      selectedFiles.value = []; // Limpar arquivos selecionados após upload
+      // Atualizar o campo fotos com todos os arquivos
+      sessaoData.fotos = uploadedFiles.value.length > 0 ? uploadedFiles.value.map(f => f.url).join(',') : null;
+    }
+    return true;
+  }
+
   if (possuiSessao.value) {
     // Atualizar sessão existente
     try {
+      // Processar novos uploads, se houver
+      const uploadSuccess = await handleFileUploads();
+      if (!uploadSuccess) return;
+
       await sessaoService.updateSessao(props.sessao.id as string, sessaoData);
       console.log('Sessão atualizada com sucesso:', sessaoData);
       emit('update:modelValue', false);
       emit('sessao-salva', { idAgendamento: props.idAgendamento }); // Emitir evento
+      uploadedFiles.value = []; // Limpar uploadedFiles após salvar
     } catch (err) {
       console.error('Erro ao atualizar sessão:', err);
       errorMessage.value = 'Erro ao atualizar sessão: ' + (err as Error).message;
@@ -254,41 +292,16 @@ async function salvar() {
     console.log('Sessão a ser criada:', sessaoData);
 
     try {
-      // Handle file uploads
-      if (selectedFiles.value.length > 0) {
-        let uploadedCount = 0;
-        for (const file of selectedFiles.value) {
-          console.log('Validando arquivo:', file.name, 'Tipo:', file.type);
-          if (!file.type.match(/^image\/.+$|^application\/pdf$/)) {
-            errorMessage.value = 'Apenas imagens ou PDFs são permitidos';
-            uploadLoading.value = false;
-            return;
-          }
-          if (file.size > 25 * 1024 * 1024) {
-            errorMessage.value = 'O arquivo deve ter menos de 25MB';
-            uploadLoading.value = false;
-            return;
-          }
+      // Processar uploads
+      const uploadSuccess = await handleFileUploads();
+      if (!uploadSuccess) return;
 
-          const url = await uploadService.uploadArquivo(
-            'sessoes',
-            `sessao/${props.idAgendamento || 'temp'}`,
-            file
-          );
-          uploadedFiles.value.push({ name: file.name, url });
-          uploadedCount++;
-          console.log(`Upload ${uploadedCount}/${selectedFiles.value.length} concluído`);
-        }
-        selectedFiles.value = []; // Clear selected files after upload
-        // Atualizar o campo fotos com os novos uploads
-        sessaoData.fotos = uploadedFiles.value.length > 0 ? uploadedFiles.value.map(f => f.url).join(',') : null;
-      }
       delete sessaoData.id;
       await sessaoService.createSessao(sessaoData);
       console.log('Sessão criada com sucesso:', sessaoData);
       emit('update:modelValue', false);
       emit('sessao-salva', { idAgendamento: props.idAgendamento }); // Emitir evento
-      uploadedFiles.value = []; // Clear uploaded files after save
+      uploadedFiles.value = []; // Limpar uploadedFiles após salvar
     } catch (err) {
       console.error('Erro ao criar sessão:', err);
       errorMessage.value = 'Erro ao criar sessão: ' + (err as Error).message;
