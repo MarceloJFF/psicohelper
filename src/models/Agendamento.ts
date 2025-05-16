@@ -3,7 +3,7 @@ import type Dependente from '@/models/Aprendente'
 import type Profissional from '@/models/Profissional.ts'
 
 export default class Agendamento {
-  agendamento_id: string = ''
+  agendamentoId: string = ''
   titulo: string = ''
   dataAgendamento: Date = new Date()
   horarioInicio: string = ''
