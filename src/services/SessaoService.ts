@@ -66,4 +66,36 @@ export class SessaoService {
       return [];
     }
   }
+
+  async updateSessao(id: string, sessao: Partial<Sessao>): Promise<void> {
+    try {
+      const { error } = await supabase
+        .from('tb_sessao')
+        .update(sessao)
+        .eq('id', id);
+      
+      if (error) throw error;
+    } catch (err: any) {
+      this.showError(err.message || 'Erro ao atualizar sessão');
+      throw err;
+    }
+  }
+
+  async getSessaoByAgendamentoId(idAgendamento: number): Promise<Sessao | null> {
+    try {
+      const { data, error } = await supabase
+        .from('tb_sessao')
+        .select('*')
+        .eq('id_agendamento', idAgendamento)
+        .single();
+      
+      if (error) throw error;
+      return data;
+    } catch (err: any) {
+      // if (err.code !== 'PGRST116') { // Ignore "No rows found" error
+      //   this.showError(err.message || 'Erro ao buscar sessão');
+      // }
+      return null;
+    }
+  }
 }
