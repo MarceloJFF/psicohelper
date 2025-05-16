@@ -1,11 +1,15 @@
 import supabase from '@/config/supabase'
-
+import { useStoreProfissional } from '@/stores/storeProfissional'
+import{ useShowErrorMessage } from '@/userCases/useShowErrorMessage'
 export class PastaService {
-  async listarPastas(idPai:any = null) {
+  private showError = useShowErrorMessage().showError
+  private readonly storeProfissional = useStoreProfissional()
+  async listarPastas(idPai = null) {
     try {
       let query = supabase
         .from('tb_pasta')
         .select('*')
+        .eq("id_profissional", this.storeProfissional.profissionalDetails.id)
         .order('nome')
 
       if (idPai) {
@@ -24,13 +28,14 @@ export class PastaService {
     }
   }
 
-  async criarPasta(nome:any, idPastaPai = null) {
+  async criarPasta(nome, idPastaPai = null) {
     try {
       const { data, error } = await supabase
         .from('tb_pasta')
         .insert([
           {
             nome,
+            id_profissional: this.storeProfissional.profissionalDetails.id,
             id_pasta_pai: idPastaPai
           }
         ])
@@ -44,7 +49,7 @@ export class PastaService {
     }
   }
 
-  async atualizarPasta(idPasta:any, novoNome:any) {
+  async atualizarPasta(idPasta, novoNome) {
     try {
       const { data, error } = await supabase
         .from('tb_pasta')
@@ -60,7 +65,7 @@ export class PastaService {
     }
   }
 
-  async excluirPasta(idPasta:any) {
+  async excluirPasta(idPasta) {
     try {
       // Primeiro, verificar se existem subpastas
       const { data: subpastas, error: errorSubpastas } = await supabase
@@ -71,24 +76,26 @@ export class PastaService {
       if (errorSubpastas) throw errorSubpastas
 
       if (subpastas && subpastas.length > 0) {
+        this.showError('Não é possível excluir uma pasta que contém subpastas. Exclua as subpastas primeiro.')
         throw new Error('Não é possível excluir uma pasta que contém subpastas')
       }
 
       // Verificar se existem documentos
       const { data: documentos, error: errorDocumentos } = await supabase
-        .from('documentos')
+        .from('tb_documento')
         .select('id_documento')
         .eq('id_pasta', idPasta)
 
       if (errorDocumentos) throw errorDocumentos
 
       if (documentos && documentos.length > 0) {
+        this.showError('Não é possível excluir uma pasta que contém documentos. Exclua os documentos primeiro.')
         throw new Error('Não é possível excluir uma pasta que contém documentos')
       }
 
       // Se não houver subpastas nem documentos, excluir a pasta
       const { error } = await supabase
-        .from('pastas')
+        .from('tb_pasta')
         .delete()
         .eq('id_pasta', idPasta)
 
@@ -98,4 +105,4 @@ export class PastaService {
       throw error
     }
   }
-} 
+}

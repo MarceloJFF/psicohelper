@@ -127,13 +127,13 @@
       <v-card>
         <v-card-title>Anexar Novo Arquivo</v-card-title>
         <v-card-text>
-          <v-text-field 
-            label="Nome do Arquivo" 
+          <v-text-field
+            label="Nome do Arquivo"
             v-model="novoArquivoNome"
             :error-messages="errorMessage"
           />
-          <v-file-input 
-            label="Selecionar Arquivo" 
+          <v-file-input
+            label="Selecionar Arquivo"
             v-model="novoArquivo"
             :error-messages="errorMessage"
           />
@@ -153,8 +153,8 @@
         <v-card-actions>
           <v-spacer />
           <v-btn text @click="modalArquivo = false">Cancelar</v-btn>
-          <v-btn 
-            color="primary" 
+          <v-btn
+            color="primary"
             @click="anexarArquivo"
             :loading="uploadLoading"
             :disabled="!novoArquivo || !novoArquivoNome || !aprendenteSelecionado"
@@ -191,13 +191,13 @@
     </v-dialog>
   </v-container>
 </template>
-<script setup>
-import { ref, onMounted, watch } from 'vue'
+<script setup lang="ts">
+import { ref, watch } from 'vue'
 import { PastaService } from '@/services/PastaService'
 import { DocumentoService } from '@/services/DocumentoService'
 import { useStoreProfissional } from '@/stores/storeProfissional'
 import { AprendenteService } from '@/services/AprendenteService'
-import supabase from '@/config/supabase'  
+import supabase from '@/config/supabase'
 const pastaService = new PastaService()
 const documentoService = new DocumentoService()
 const storeProfissional = useStoreProfissional()
@@ -217,7 +217,6 @@ const loading = ref(false)
 const uploadLoading = ref(false)
 const errorMessage = ref('')
 
-console.log(supabase)
 async function carregarPastas() {
   const idPai = caminhoAtual.value.length
     ? caminhoAtual.value[caminhoAtual.value.length - 1].id_pasta || caminhoAtual.value[caminhoAtual.value.length - 1].id
@@ -290,14 +289,14 @@ async function anexarArquivo() {
     errorMessage.value = 'Por favor, preencha todos os campos'
     return
   }
-  
+
   uploadLoading.value = true
   errorMessage.value = ''
-  
+
   const idPai = caminhoAtual.value.length
     ? caminhoAtual.value[caminhoAtual.value.length - 1].id_pasta || caminhoAtual.value[caminhoAtual.value.length - 1].id
     : null
-    
+
   try {
     await documentoService.criarDocumento(
       novoArquivoNome.value,
