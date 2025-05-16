@@ -615,11 +615,7 @@ const voltar = () => {
   router.back()
 }
 
-const abrirModalDocumento = () => {
-  modalDocumento.value = true
-  novoDocumento.value = null
-  novoDocumentoNome.value = ''
-}
+
 
 const baixarDocumento = async (documento: Documento) => {
   try {
@@ -645,22 +641,6 @@ const baixarDocumento = async (documento: Documento) => {
   }
 }
 
-const excluirDocumento = async (documento: Documento) => {
-  if (confirm(`Deseja excluir o documento "${documento.nome}"?`)) {
-    try {
-      await documentoService.excluirDocumento(documento.id_documento)
-      await loadDocuments()
-      snackbarMessage.value = 'Documento excluído com sucesso'
-      snackbarColor.value = 'success'
-      snackbar.value = true
-    } catch (error) {
-      console.error('Erro ao excluir documento:', error)
-      snackbarMessage.value = 'Erro ao excluir documento'
-      snackbarColor.value = 'error'
-      snackbar.value = true
-    }
-  }
-}
 
 const anexarDocumento = async () => {
   try {
