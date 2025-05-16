@@ -1,12 +1,13 @@
-import supabase from '@/config/supabase'
-import Agendamento from '@/models/Agendamento'
-import { useShowErrorMessage } from '@/userCases/useShowErrorMessage'
-import { useStoreProfissional } from '@/stores/storeProfissional'
+import supabase from '@/config/supabase';
+import Agendamento from '@/models/Agendamento';
+import { useShowErrorMessage } from '@/userCases/useShowErrorMessage';
+import { useStoreProfissional } from '@/stores/storeProfissional';
 
 export class AgendamentoService {
-  private showError = useShowErrorMessage().showError
+  private showError = useShowErrorMessage().showError;
 
   async createAgendamento(agendamento: Agendamento): Promise<string | undefined> {
+    const storeProfissional = useStoreProfissional();
     console.log('[Service] Evento a ser salvo:', agendamento);
 
     try {
@@ -39,6 +40,8 @@ export class AgendamentoService {
   }
 
   async updateAgendamento(agendamento: Agendamento): Promise<void> {
+    const storeProfissional = useStoreProfissional();
+
     try {
       const { error } = await supabase
         .from('tb_agendamento')
@@ -56,6 +59,7 @@ export class AgendamentoService {
           id_contrato: agendamento.id_contrato,
           color: agendamento.color,
         })
+        .eq('id_profissional', storeProfissional.profissionalDetails?.id)
         .eq('id_agendamento', agendamento.id);
 
       if (error) throw error;
@@ -65,52 +69,54 @@ export class AgendamentoService {
   }
 
   async deleteAgendamento(id: string): Promise<void> {
-    try {
-      const { error } = await supabase.from('tb_agendamento').delete().eq('id_agendamento', id)
+    const storeProfissional = useStoreProfissional();
 
-      if (error) throw error
+    try {
+      const { error } = await supabase
+        .from('tb_agendamento')
+        .delete()
+        .eq('id_agendamento', id)
+        .eq('id_profissional', storeProfissional.profissionalDetails?.id);
+      if (error) throw error;
     } catch (err: any) {
-      this.showError(err.message || 'Erro ao remover agendamento')
+      this.showError(err.message || 'Erro ao remover agendamento');
     }
   }
 
   async getAgendamentoById(id: string): Promise<Agendamento | null> {
+    const storeProfissional = useStoreProfissional();
+
     try {
       const { data, error } = await supabase
         .from('tb_agendamento')
         .select('*')
         .eq('id', id)
-        .single()
+        .eq('id_profissional', storeProfissional.profissionalDetails?.id)
+        .single();
 
-      if (error) throw error
-      return data as Agendamento
+      if (error) throw error;
+      return data as Agendamento;
     } catch (err: any) {
-      this.showError(err.message || 'Erro ao carregar o agendamento')
-      return null
+      this.showError(err.message || 'Erro ao carregar o agendamento');
+      return null;
     }
   }
 
   async getAllAgendamentos(): Promise<Agendamento[] | null> {
-    const storeProfissional = useStoreProfissional()
+    const storeProfissional = useStoreProfissional();
     try {
-      const { data: dataContrato, error: errorContrato } = await supabase
-        .from('tb_contrato')
-        .select('*')
-        .eq('cancelado', false)
-        .eq('id_profissional', storeProfissional.profissionalDetails?.id)
       const { data: agendamentos, error: errorAgendamento } = await supabase
         .from('tb_agendamento')
         .select('*')
-      console.log('[services] getAllAgendamentos', agendamentos)
+        .eq('id_profissional', storeProfissional.profissionalDetails?.id);
+      console.log('[services] getAllAgendamentos', agendamentos);
 
-      if (errorContrato || errorAgendamento)
-        throw new Error(
-          'Erro ao carregar os agendamentos' + { cause: errorContrato || errorAgendamento },
-        )
-      return agendamentos as Agendamento[]
+      if (errorAgendamento)
+        throw new Error('Erro ao carregar os agendamentos' + { errorAgendamento });
+      return agendamentos as Agendamento[];
     } catch (err: any) {
-      this.showError(err.message || 'Erro ao carregar os agendamentos')
-      return null
+      this.showError(err.message || 'Erro ao carregar os agendamentos');
+      return null;
     }
   }
 }
