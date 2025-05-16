@@ -99,7 +99,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue';
+import { computed, onMounted, ref, watch } from 'vue';
 import { AprendenteService } from '@/services/AprendenteService';
 import { SessaoService } from '@/services/SessaoService';
 import { UploadService } from '@/services/UploadService';
@@ -108,6 +108,7 @@ const props = defineProps({
   modelValue: Boolean,
   title: String,
   idAgendamento: { type: [String, Number], default: null },
+  sessao: { type: Object, default: null },
 });
 
 const emit = defineEmits(['update:modelValue']);
@@ -115,6 +116,15 @@ const emit = defineEmits(['update:modelValue']);
 const internalModel = computed({
   get: () => props.modelValue,
   set: (val) => emit('update:modelValue', val),
+});
+
+
+onMounted(() => {
+  if(Object.keys(props.sessao).length > 0) {
+    
+  }
+  
+  
 });
 
 const tab = ref(0);
@@ -134,7 +144,7 @@ const menus = ref([
   {
     label: 'Pré-sessão',
     component: 'v-textarea',
-    value: ref(''),
+    value: ref(props.sessao?.pre_sessao || ''),
     props: {
       label: 'Anotações antes da sessão',
       rows: 3,
@@ -144,7 +154,7 @@ const menus = ref([
   {
     label: 'Queixas',
     component: 'v-textarea',
-    value: ref(''),
+    value: ref(props.sessao?.queixas || ''),
     props: {
       label: 'Principais queixas relatadas',
     },
@@ -152,7 +162,7 @@ const menus = ref([
   {
     label: 'Evolução Atual',
     component: 'v-textarea',
-    value: ref(''),
+    value: ref(props.sessao?.evolucao || ''),
     props: {
       label: 'Progresso do paciente',
       rows: 3,
@@ -162,7 +172,7 @@ const menus = ref([
   {
     label: 'Habilidades Trabalhadas',
     component: 'v-textarea',
-    value: ref(''),
+    value: ref(props.sessao?.habilidades_trabalhadas || ''),
     props: {
       label: 'Habilidades trabalhadas na sessão',
       rows: 3,
@@ -172,7 +182,7 @@ const menus = ref([
   {
     label: 'Futuras Ações',
     component: 'v-textarea',
-    value: ref(''),
+    value: ref(props.sessao?.futuras_acoes || ''),
     props: {
       label: 'Planejamento futuro',
       rows: 3,
@@ -192,7 +202,7 @@ const menus = ref([
   {
     label: 'Resumo',
     component: 'v-textarea',
-    value: ref(''),
+    value: ref(props.sessao?.resumo || ''),
     props: {
       label: 'Resumo da sessão',
       rows: 5,
@@ -200,6 +210,31 @@ const menus = ref([
     },
   },
 ]);
+
+watch(
+  () => props.sessao,
+  (newSessao) => {
+    // Atualiza os valores dos campos de texto
+    menus.value[0].value = newSessao?.pre_sessao || '';
+    menus.value[1].value = newSessao?.queixas || '';
+    menus.value[2].value = newSessao?.evolucao || '';
+    menus.value[3].value = newSessao?.habilidades_trabalhadas || '';
+    menus.value[4].value = newSessao?.futuras_acoes || '';
+    menus.value[6].value = newSessao?.resumo || '';
+
+    // Trata os anexos (fotos)
+    if (newSessao?.fotos) {
+      const fotosArray = newSessao.fotos.split(',').filter((url: string) => url);
+      uploadedFiles.value = fotosArray.map((url: string) => ({
+        name: url.split('/').pop() || 'Arquivo',
+        url,
+      }));
+    } else {
+      uploadedFiles.value = [];
+    }
+  },
+  { immediate: true } // Executa imediatamente ao montar o componente
+);
 
 watch(searchQuery, async (newValue) => {
   if (!newValue) {

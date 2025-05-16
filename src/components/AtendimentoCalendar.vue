@@ -44,23 +44,12 @@
               </v-col>
 
               <v-col cols="12">
-                <v-autocomplete
-                  v-model="eventData.cliente"
-                  :items="filteredClientes"
-                  v-model:search="searchQuery"
-                  @update:search="searchQuery = $event"
-                  label="Cliente"
-                  item-title="nomeAprendente"
-                  item-value="id"
-                  return-object
-                  clearable
-                  :loading="isLoading"
-                  :filter="() => true"
-                  :menu-props="{ maxHeight: 400 }"
-                >
+                <v-autocomplete v-model="eventData.cliente" :items="filteredClientes" v-model:search="searchQuery"
+                  @update:search="searchQuery = $event" label="Cliente" item-title="nomeAprendente" item-value="id"
+                  return-object clearable :loading="isLoading" :filter="() => true" :menu-props="{ maxHeight: 400 }">
                   <template v-slot:item="{ props, item }">
                     <v-list-item v-bind="props">
-                      <v-list-item-title>{{nomeAprendente }}</v-list-item-title>
+                      <v-list-item-title>{{ nomeAprendente }}</v-list-item-title>
                     </v-list-item>
                   </template>
                 </v-autocomplete>
@@ -87,8 +76,8 @@
           <v-btn color="success" @click="saveEvent">
             Salvar
           </v-btn>
-          <v-btn color="primary" @click="startAtendimento" v-if="showStartButton">
-            Iniciar Atendimento
+          <v-btn color="primary" @click="showAtendimentoModal = true">
+            {{ agendamentoPossuiSessao ? 'Nova Sessão' : 'Editar Sessão' }}
           </v-btn>
           <v-btn text @click="showModal = false">
             Cancelar
@@ -99,7 +88,8 @@
 
     <v-dialog v-model="showAtendimentoModal" max-width="1200px" min-width="900px">
       <AtendimentoModal v-model="showAtendimentoModal" :title="eventData.title"
-        :idAgendamento="eventData.id ? eventData.id.toString().replace('agendamento-', '') : undefined" />
+        :idAgendamento="eventData.id ? eventData.id.toString().replace('agendamento-', '') : undefined"
+        :sessao="sessaoModal" />
     </v-dialog>
 
     <v-snackbar v-model="snackbar" :color="snackbarColor" timeout="4000">
@@ -126,11 +116,12 @@ import { AgendamentoService } from '@/services/AgendamentoService'
 import { ContratoService } from '@/services/contratoService'
 import ViewAprendenteLogadoProfissional from '@/models/ViewAprendenteLogadoProfissional'
 import type { CalendarOptions } from '@fullcalendar/core'
+import { SessaoService } from '@/services/SessaoService'
 
 const calendar = ref()
 const showModal = ref(false)
 const showAtendimentoModal = ref(false)
-const showStartButton = ref(false)
+const agendamentoPossuiSessao = ref(false)
 const snackbar = ref(false)
 const snackbarText = ref('')
 const snackbarColor = ref('error')
@@ -143,8 +134,12 @@ const isLoading = ref(false)
 const searchQuery = ref('')
 const aprendenteService = new AprendenteService()
 const agendamentoService = new AgendamentoService()
+const sessaoService = new SessaoService()
+const sessoes = ref([])
+const sessaoModal: any = ref()
 const aprendenteCache = new Map()
 const filteredClientes = ref<ViewAprendenteLogadoProfissional[]>([])
+const sessaoAtendimentoModal: any = ref()
 
 // Interfaces for FullCalendar API and Events
 interface CalendarApi {
@@ -222,6 +217,8 @@ const loadEventos = async () => {
     await storeCalendario.loadAgendamentos();
     const agendamentosEvents = await Promise.all(
       storeCalendario.agendamentos.map(async (agendamento) => {
+
+
         const start = new Date(agendamento.data_agendamento + 'T' + agendamento.horario_inicio);
         const end = new Date(start.getTime() + agendamento.duracao * 60000);
 
@@ -240,6 +237,7 @@ const loadEventos = async () => {
           return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`;
         };
 
+        console.log('[COISOOO]:', agendamento.id_agendamento);
         return {
           id: agendamento.id_agendamento,
           title: agendamento.titulo,
@@ -258,13 +256,14 @@ const loadEventos = async () => {
               id_responsavel: aprendente.id_responsavel || null,
               displayName: aprendente.nome_aprendente || 'N/A',
               aprendente: aprendente.nome_aprendente || 'N/A',
-              responsavel: aprendente.nome_responsavel || 'N/A'
+              responsavel: aprendente.nome_responsavel || 'N/A',
             } : null,
             tipoAtendimento: agendamento.tipo_atendimento,
             valorAtendimentoAvulso: agendamento.valor_atendimento,
             observacoes: agendamento.observacoes,
             horario_inicio: agendamento.horario_inicio,
-            nomeAprendente: aprendente?.nome_aprendente || 'N/A'
+            nomeAprendente: aprendente?.nome_aprendente || 'N/A',
+            sessao: await sessaoService.getSessaoByAgendamentoId(agendamento.id_agendamento),
           }
         };
       })
@@ -321,7 +320,7 @@ function isDateFeriado(date: Date): boolean {
 
 function openEventModal() {
   resetEventData()
-  showStartButton.value = false
+  agendamentoPossuiSessao.value = false
   showModal.value = true
 }
 
@@ -383,10 +382,10 @@ async function saveEvent() {
 
     let agendamentoId = eventData.value.id ? eventData.value.id.replace('agendamento-', '') : '';
     const isUpdate = !!agendamentoId;
-    
+
     if (isUpdate) {
       console.log('Updating agendamento:', agendamento);
-      
+
       // Create Agendamento object with correct properties
       const agendamentoToUpdate = {
         id: agendamento.id,
@@ -405,11 +404,11 @@ async function saveEvent() {
         agendamentoId: agendamento.id,
         clienteId: agendamento.id_aprendente,
       };
-      
+
       await agendamentoService.updateAgendamento(agendamentoToUpdate);
     } else {
       console.log('Creating new agendamento:', agendamento);
-      
+
       // Create Agendamento object with correct properties
       const agendamentoToCreate = {
         titulo: agendamento.titulo,
@@ -426,7 +425,7 @@ async function saveEvent() {
         color: agendamento.color,
         clienteId: agendamento.id_aprendente,
       };
-      
+
       const response = await agendamentoService.createAgendamento(agendamentoToCreate);
       if (response) {
         agendamentoId = response;
@@ -465,7 +464,7 @@ async function saveEvent() {
     if (isUpdate) {
       events.value = events.value.filter(e => e.id !== newEvent.id);
     }
-    
+
     events.value.push(newEvent);
 
     if (calendarApi) {
@@ -564,26 +563,26 @@ const calendarOptions = ref<CalendarOptions>({
       info.el.style.pointerEvents = 'none';
     }
   },
-  eventClick(info: { 
-    event: { 
-      id: string, 
-      title: string, 
-      startStr: string, 
-      endStr: string, 
-      backgroundColor: string, 
+  eventClick(info: {
+    event: {
+      id: string,
+      title: string,
+      startStr: string,
+      endStr: string,
+      backgroundColor: string,
       display: string,
-      extendedProps: Record<string, unknown> 
-    } 
+      extendedProps: Record<string, unknown>
+    }
   }) {
     if (info.event.display === 'background') return;
     const [startDate, startTimeRaw] = info.event.startStr.split('T');
     const start = new Date(info.event.startStr);
     const end = new Date(info.event.endStr);
     const durationInMinutes = Math.round((end.getTime() - start.getTime()) / 60000);
-    
+
     const clienteData = info.event.extendedProps.cliente as Record<string, string | null | undefined>;
     let cliente: ViewAprendenteLogadoProfissional | null = null;
-    
+
     if (clienteData) {
       cliente = new ViewAprendenteLogadoProfissional();
       cliente.id = clienteData.id || clienteData.id_aprendente || '';
@@ -591,7 +590,7 @@ const calendarOptions = ref<CalendarOptions>({
       cliente.idResponsavel = clienteData.idResponsavel || clienteData.id_responsavel || '';
       cliente.nomeResponsavel = clienteData.nomeResponsavel || clienteData.responsavel || '';
     }
-    
+
     eventData.value = {
       id: info.event.id,
       title: info.event.title,
@@ -603,21 +602,27 @@ const calendarOptions = ref<CalendarOptions>({
       valorAtendimentoAvulso: info.event.extendedProps.valorAtendimentoAvulso as string || '',
       cliente: cliente,
       observacoes: info.event.extendedProps.observacoes as string || '',
-      idContrato: ''
+      idContrato: '',
     };
-    
-    showStartButton.value = true;
+
+    sessaoModal.value = info.event.extendedProps.sessao as Record<string, unknown> || {};
+
     showModal.value = true;
+    if (Object.keys(sessaoModal.value).length > 0) {
+      agendamentoPossuiSessao.value = false
+    } else {
+      agendamentoPossuiSessao.value = true
+    }
   },
-  eventMouseEnter(info: { 
-    event: { 
-      title: string, 
-      start: Date | null, 
+  eventMouseEnter(info: {
+    event: {
+      title: string,
+      start: Date | null,
       display: string,
-      extendedProps: Record<string, unknown> 
+      extendedProps: Record<string, unknown>
     },
     el: HTMLElement & { _tooltip?: HTMLElement },
-    jsEvent: MouseEvent 
+    jsEvent: MouseEvent
   }) {
     if (info.event.display === 'background') return;
     const event = info.event;
@@ -650,9 +655,9 @@ const calendarOptions = ref<CalendarOptions>({
     document.body.appendChild(tooltip);
     el._tooltip = tooltip;
   },
-  eventMouseLeave(info: { 
-    event: { display: string }, 
-    el: HTMLElement & { _tooltip?: HTMLElement } 
+  eventMouseLeave(info: {
+    event: { display: string },
+    el: HTMLElement & { _tooltip?: HTMLElement }
   }) {
     if (info.event.display === 'background') return;
     const el = info.el;
@@ -764,4 +769,4 @@ watch(searchQuery, async (val) => {
     padding: 5px 10px;
   }
 }
-</style> 
+</style>
