@@ -14,7 +14,7 @@ export class ContratoService {
         .from('tb_contrato')
         .select('*')
         .eq('id_responsavel', idResponsavel)
-
+      
       if (error) throw error
       return data as Contrato[]
     } catch (err: any) {

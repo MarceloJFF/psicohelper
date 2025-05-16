@@ -38,8 +38,9 @@ import Anamnese from '@/components/config/Anamnese.vue'
 import Feriados from '@/components/config/Feriados.vue'
 import Mensagens from '@/components/config/Mensagens.vue'
 import Perfil from '@/components/config/Perfil.vue'
-
 const abaAtiva = ref('perfil')  // Aba inicial ativa
+
+
 </script>
 
 <style scoped>

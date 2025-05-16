@@ -12,7 +12,7 @@ export class ResponsavelService {
   private readonly storeProfissional = useStoreProfissional()
   private contratoService = new ContratoService()
   private aprendenteService = new AprendenteService()
-  private diasAtendimentoService= new DiasAtendimentosContratoService();
+  private diasAtendimentoService = new DiasAtendimentosContratoService()
 
   constructor() {
     this.showError = useShowErrorMessage().showError
@@ -140,13 +140,14 @@ export class ResponsavelService {
             email: responsavel.email,
             status: responsavel.status,
           },
-        ]).select()
+        ])
+        .select()
 
       if (error) throw error
       let idAprendente: string | undefined = undefined;
       if (responsavel.aprendentes?.length > 0 && responsavel.atendimento_proprio!=true) {
         for (const aprendente of responsavel.aprendentes) {
-          aprendente.idResponsavel = data[0].id; // Ajuste se necessário
+          aprendente.idResponsavel = data[0].id // Ajuste se necessário
           idAprendente = await this.aprendenteService.addAprendente(aprendente)
           if (!idAprendente) {
             throw new Error('Erro ao adicionar aprendente')
@@ -165,7 +166,6 @@ export class ResponsavelService {
           }
         }
       }
-
     } catch (err: any) {
       this.showError(err.message || 'Erro ao adicionar cliente')
     }
@@ -199,7 +199,7 @@ export class ResponsavelService {
 
       // Formatamos os dados conforme necessário
 
-      const listaFinal = data.map((item:any) => ({
+      const listaFinal = data.map(item => ({
         idAprendente: item.atendimento_proprio ? item.id_responsavel : item.id_aprendente,
         idResponsavel: item.id_responsavel,
         nomeAprendente: item.atendimento_proprio ? item.nome_responsavel : item.nome_aprendente,
@@ -215,8 +215,6 @@ export class ResponsavelService {
       return [];
     }
   }
-
-
 
   async updateResponsavel(responsavel: Responsavel): Promise<void> {
     try {
@@ -244,17 +242,13 @@ export class ResponsavelService {
   }
   async inativarResponsavel(id: string): Promise<void> {
     try {
-      const { error } = await supabase
-        .from('tb_responsavel')
-        .update({ status: false })
-        .eq('id', id)
+      const { error } = await supabase.from('tb_responsavel').update({ status: false }).eq('id', id)
 
       if (error) throw error
     } catch (err: any) {
       this.showError(err.message || 'Erro ao inativar Responsavel')
     }
   }
-
 
   async getResponsavelById(id: string): Promise<Responsavel | null> {
     try {
@@ -282,7 +276,8 @@ export class ResponsavelService {
         .eq('status', true)
         .single()
 
-      if (error && error.code !== 'PGRST116') { // PGRST116 is the error code for no rows returned
+      if (error && error.code !== 'PGRST116') {
+        // PGRST116 is the error code for no rows returned
         throw error
       }
 

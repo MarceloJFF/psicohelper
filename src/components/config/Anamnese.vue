@@ -14,15 +14,33 @@
           class="mb-6"
           outlined
         />
-        <v-textarea
-          v-model="perguntasText"
-          label="Perguntas (uma por linha)"
-          auto-grow
-          outlined
-          rows="5"
-          class="mb-6"
-        />
+        <v-row dense v-for="(pergunta, index) in perguntas" :key="index" class="mb-4">
+  <v-col cols="11">
+    <v-textarea
+      v-model="pergunta.texto"
+      :label="`Pergunta ${index + 1}`"
+      auto-grow
+      outlined
+      dense
+      rows="1"
+    />
+  </v-col>
+  <v-col cols="1" class="d-flex align-center">
+    <v-btn
+      icon
+      color="error"
+      @click="removerPergunta(index)"
+      :disabled="loading"
+      v-if="index >= perguntasDefault.length"
+    >
+      <v-icon>mdi-delete</v-icon>
+    </v-btn>
+  </v-col>
+</v-row>
         <div class="d-flex justify-space-between mt-6">
+          <v-btn color="primary" @click="adicionarPergunta" class="px-6">
+            Adicionar Pergunta
+          </v-btn>
           <v-btn color="success" type="submit" class="px-6">
             Salvar Anamnese
           </v-btn>
@@ -36,14 +54,13 @@
           Modelo Salvo com Sucesso
         </v-card-title>
         <v-card-text>
-          <v-textarea
-            v-model="perguntasText"
-            label="Perguntas Salvas"
-            readonly
-            auto-grow
-            outlined
-            rows="5"
-          />
+          <v-list dense>
+            <v-list-item v-for="(pergunta, index) in perguntas" :key="index">
+              <v-list-item-title class="font-weight-bold">
+                {{ pergunta.texto }}
+              </v-list-item-title>
+            </v-list-item>
+          </v-list>
         </v-card-text>
         <v-card-actions>
           <v-spacer />
@@ -61,20 +78,37 @@ import { useStoreConfig } from '@/stores/storeConfig'
 const storeConfig = useStoreConfig()
 const nomeModelo = ref('Anamnese Padrão')
 const dialog = ref(false)
-const perguntasText = ref('')
+const perguntas = ref<{ texto: string }[]>([])
 
 const modeloService = new ModeloAnamneseService()
+const perguntasDefault = ref<{ texto: string }[]>([
+
+])// Em carregarModelo(), substitua:
+perguntas.value = []
+// Por:
+perguntas.value = [...perguntasDefault.value]
+function adicionarPergunta() {
+  perguntas.value.push({ texto: 'Nova pergunta' })
+}
+function removerPergunta(index: number) {
+  // Verifica se é uma pergunta adicional (não padrão)
+  if (index >= perguntasDefault.value.length) {
+    perguntas.value.splice(index, 1)
+  }
+}
 
 async function carregarModelo() {
   try {
-    const idConfig = storeConfig.configuracao?.id || ''
-    if (!idConfig) return
-    const modelo = await modeloService.obterModeloPorConfig(idConfig)
+    console.log(storeConfig.configuracao?.id)
+    const modelo = await modeloService.obterModeloPorConfig(storeConfig.configuracao?.id)
     if (modelo) {
       nomeModelo.value = modelo.nome
-      perguntasText.value = (modelo as any).perguntas || ''
+      console.log(modelo)
+      const lista = await modeloService.carregarPerguntas(modelo.id)
+      perguntas.value = lista.map(p => ({ texto: p.texto }))
     } else {
-      perguntasText.value = ''
+      // Se não existir modelo ainda, inicializa vazio
+      perguntas.value = []
     }
   } catch (err: any) {
     console.error('Erro ao carregar modelo:', err)
@@ -85,13 +119,16 @@ const error = ref<string | null>(null)
 
 async function submit() {
   try {
+
     loading.value = true
     error.value = null
-    await modeloService.salvarModeloTexto(
-      storeConfig.configuracao?.id || '',
-      nomeModelo.value,
-      perguntasText.value
+    await modeloService.salvarOuAtualizarModelo(
+      storeConfig.configuracao?.id || '', 
+      nomeModelo.value, 
+      perguntas.value
     )
+    alert("salvou")
+
     dialog.value = true
   } catch (err: any) {
     error.value = err.message || 'Erro ao salvar anamnese'

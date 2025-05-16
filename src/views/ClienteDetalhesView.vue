@@ -87,18 +87,52 @@
 
                   <v-divider class="my-4" />
 
-                  <v-row>
+                  <v-row v-if="perguntasAnamnese.length > 0">
                     <v-col cols="12">
-                      <div class="mb-2" v-if="perguntasModelo">
-                        <strong>Perguntas do Modelo:</strong>
-                      </div>
-                      <v-textarea
-                        v-model="perguntasModelo"
-                        label="Altere aqui o formulário de anamnese de acordo com as respostas do cliente"
-                        outlined
-                        rows="10"
-                        auto-grow
-                      />
+                      <v-form ref="formAnamnese" v-model="formAnamneseValido">
+                        <v-card v-for="(pergunta, index) in perguntasAnamnese" 
+                                :key="pergunta.id" 
+                                class="mb-4 pa-4"
+                                elevation="1">
+                          <v-textarea
+                            v-model="respostasAnamnese[pergunta.id]"
+                            :label="pergunta.texto"
+                            outlined
+                            rows="3"
+                            auto-grow
+                            :rules="[v => !!v || 'Este campo é obrigatório']"
+                          />
+                        </v-card>
+                      </v-form>
+                    </v-col>
+                  </v-row>
+
+                  <v-row v-else class="d-flex justify-center align-center" style="min-height: 200px">
+                    <v-col cols="12" class="text-center">
+                      <v-icon size="64" color="grey-lighten-1">mdi-clipboard-text</v-icon>
+                      <div class="text-h6 text-grey mt-4">Nenhuma pergunta de anamnese encontrada</div>
+                      <v-btn
+                        color="primary"
+                        class="mt-4"
+                        @click="criarAnamnese"
+                      >
+                        <v-icon left>mdi-plus</v-icon>
+                        Criar Anamnese
+                      </v-btn>
+                    </v-col>
+                  </v-row>
+
+                  <v-row v-if="perguntasAnamnese.length > 0" class="mt-4">
+                    <v-col cols="12" class="d-flex justify-end">
+                      <v-btn
+                        color="primary"
+                        @click="salvarAnamnese"
+                        :loading="salvandoAnamnese"
+                        :disabled="!formAnamneseValido"
+                      >
+                        <v-icon left>mdi-content-save</v-icon>
+                        Salvar Anamnese
+                      </v-btn>
                     </v-col>
                   </v-row>
                   <v-btn color="primary" class="ma-4" @click="salvarAnamnese">
@@ -421,8 +455,10 @@ const novoDocumentoNome = ref('')
 const errorMessage = ref('')
 const uploadLoading = ref(false)
 
-const perguntasModelo = ref('')
-const respostaAnamnese = ref('')
+const perguntasAnamnese = ref<ModeloPergunta[]>([])
+const respostasAnamnese = ref<Record<string, string>>({})
+const formAnamneseValido = ref(false)
+const salvandoAnamnese = ref(false)
 
 const anamneseService = new AnamneseService()
 const anamneseExistente = ref<AnamneseResposta | null>(null)
@@ -451,15 +487,32 @@ onMounted(async () => {
 
 const carregarPerguntasAnamnese = async () => {
   try {
+    const perguntaService = new ModeloPerguntaAnamneseService()
     const config = useStoreConfig().configuracao
     if (!config) return
 
     const modeloAnamneseService = new ModeloAnamneseService()
     const modelo = await modeloAnamneseService.obterModeloPorConfig(config.id)
-    if (!modelo || !(modelo as any).perguntas) return
+    if (!modelo) return
 
-    perguntasModelo.value = (modelo as any).perguntas
-    respostaAnamnese.value = ''
+    perguntasAnamnese.value = await perguntaService.listarPerguntasPorModelo(modelo.id)
+    
+    // Se tiver um aprendente, tenta carregar a anamnese existente
+    if (idAprendente) {
+      const resultado = await anamneseService.carregarAnamnese(idAprendente)
+      if (resultado) {
+        anamneseExistente.value = resultado.anamnese
+        // Preenche as respostas existentes
+        resultado.respostas.forEach(resposta => {
+          respostasAnamnese.value[resposta.idModeloPergunta] = resposta.resposta
+        })
+      }
+    } else {
+      // Inicializa as respostas vazias para cada pergunta
+      perguntasAnamnese.value.forEach(pergunta => {
+        respostasAnamnese.value[pergunta.id] = ''
+      })
+    }
   } catch (error) {
     console.error('Erro ao carregar perguntas da anamnese:', error)
     snackbarMessage.value = 'Erro ao carregar perguntas da anamnese'
