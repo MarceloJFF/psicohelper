@@ -10,8 +10,6 @@
       </v-card-title>
 
       <v-card-text>
-        
-
         <!-- Menu Superior -->
         <v-tabs v-model="tab" center-active grow>
           <v-tab v-for="(item, index) in menus" :key="index" :value="index">
@@ -23,39 +21,19 @@
         <v-window v-model="tab" class="mt-4">
           <v-window-item v-for="(item, index) in menus" :key="index" :value="index">
             <h4>{{ item.label }}</h4>
-            <v-textarea
-              v-if="item.component === 'v-textarea'"
-              v-model="item.value"
-              v-bind="item.props"
-            />
-            <v-file-input
-              v-if="item.component === 'v-file-input'"
-              :model-value="item.value"
-              @update:modelValue="addFile"
-              v-bind="item.props"
-              :error-messages="errorMessage"
-              :loading="uploadLoading"
-            />
+            <v-textarea v-if="item.component === 'v-textarea'" v-model="item.value" v-bind="item.props" />
+            <v-file-input v-if="item.component === 'v-file-input'" :model-value="item.value"
+              @update:modelValue="addFile" v-bind="item.props" :error-messages="errorMessage"
+              :loading="uploadLoading" />
             <!-- Arquivos selecionados (antes do upload) -->
             <v-row v-if="item.label === 'Anexos' && selectedFiles.length" class="mt-4">
               <v-col v-for="(file, index) in selectedFiles" :key="index" cols="12" sm="6" md="4">
                 <v-card class="pa-2" elevation="1">
-                  <v-img
-                    v-if="file && file.type.includes('image')"
-                    :src="createObjectURL(file)"
-                    max-height="100"
-                    max-width="100"
-                    class="rounded"
-                  />
+                  <v-img v-if="file && file.type.includes('image')" :src="createObjectURL(file)" max-height="100"
+                    max-width="100" class="rounded" />
                   <v-icon v-else-if="file" size="40">mdi-file-document</v-icon>
                   <div v-if="file" class="text-caption mt-2">{{ file.name }}</div>
-                  <v-btn
-                    v-if="file"
-                    icon
-                    small
-                    @click="removeFile(index)"
-                    class="mt-2"
-                  >
+                  <v-btn v-if="file" icon small @click="removeFile(index)" class="mt-2">
                     <v-icon color="red">mdi-delete</v-icon>
                   </v-btn>
                 </v-card>
@@ -65,21 +43,11 @@
             <v-row v-if="item.label === 'Anexos' && uploadedFiles.length" class="mt-4">
               <v-col v-for="(file, index) in uploadedFiles" :key="index" cols="12" sm="6" md="4">
                 <v-card class="pa-2" elevation="1">
-                  <v-img
-                    v-if="file.url && file.url.includes('image')"
-                    :src="file.url"
-                    max-height="100"
-                    max-width="100"
-                    class="rounded"
-                  />
+                  <v-img v-if="file.url && file.url.includes('image')" :src="file.url" max-height="100" max-width="100"
+                    class="rounded" />
                   <v-icon v-else size="40">mdi-file-document</v-icon>
                   <div class="text-caption mt-2">{{ file.name }}</div>
-                  <v-btn
-                    icon
-                    small
-                    @click="downloadFile(file)"
-                    class="mt-2"
-                  >
+                  <v-btn icon small @click="downloadFile(file)" class="mt-2">
                     <v-icon>mdi-download</v-icon>
                   </v-btn>
                 </v-card>
@@ -99,7 +67,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from 'vue';
+import { computed, onMounted, ref } from 'vue';
 import { AprendenteService } from '@/services/AprendenteService';
 import { SessaoService } from '@/services/SessaoService';
 import { UploadService } from '@/services/UploadService';
@@ -108,23 +76,38 @@ const props = defineProps({
   modelValue: Boolean,
   title: String,
   idAgendamento: { type: [String, Number], default: null },
-  sessao: { type: Object, default: null },
+  sessao: { type: Object, default: () => ({}) },
 });
 
-const emit = defineEmits(['update:modelValue']);
+const possuiSessao = ref(false);
+
+const emit = defineEmits(['update:modelValue', 'sessao-salva']);
 
 const internalModel = computed({
   get: () => props.modelValue,
   set: (val) => emit('update:modelValue', val),
 });
 
-
-onMounted(() => {
-  if(Object.keys(props.sessao).length > 0) {
-    
+onMounted(async () => {
+  if (Object.keys(props.sessao).length > 0) {
+    const sessao = await sessaoService.getSessaoById(props.sessao.id);
+    possuiSessao.value = true;
+    // Inicializar os valores dos campos com os dados da sessão
+    menus.value[0].value = sessao?.pre_sessao || '';
+    menus.value[1].value = sessao?.queixas || '';
+    menus.value[2].value = sessao?.evolucao || '';
+    menus.value[3].value = sessao?.habilidades_trabalhadas || '';
+    menus.value[4].value = sessao?.futuras_acoes || '';
+    menus.value[6].value = sessao?.resumo || '';
+    // Carregar anexos, se existirem
+    if (sessao?.fotos) {
+      const fotosArray = sessao.fotos.split(',').filter((url: string) => url);
+      uploadedFiles.value = fotosArray.map((url: string) => ({
+        name: url.split('/').pop() || 'Arquivo',
+        url,
+      }));
+    }
   }
-  
-  
 });
 
 const tab = ref(0);
@@ -144,7 +127,7 @@ const menus = ref([
   {
     label: 'Pré-sessão',
     component: 'v-textarea',
-    value: ref(props.sessao?.pre_sessao || ''),
+    value: ref(''),
     props: {
       label: 'Anotações antes da sessão',
       rows: 3,
@@ -154,7 +137,7 @@ const menus = ref([
   {
     label: 'Queixas',
     component: 'v-textarea',
-    value: ref(props.sessao?.queixas || ''),
+    value: ref(''),
     props: {
       label: 'Principais queixas relatadas',
     },
@@ -162,7 +145,7 @@ const menus = ref([
   {
     label: 'Evolução Atual',
     component: 'v-textarea',
-    value: ref(props.sessao?.evolucao || ''),
+    value: ref(''),
     props: {
       label: 'Progresso do paciente',
       rows: 3,
@@ -172,7 +155,7 @@ const menus = ref([
   {
     label: 'Habilidades Trabalhadas',
     component: 'v-textarea',
-    value: ref(props.sessao?.habilidades_trabalhadas || ''),
+    value: ref(''),
     props: {
       label: 'Habilidades trabalhadas na sessão',
       rows: 3,
@@ -182,7 +165,7 @@ const menus = ref([
   {
     label: 'Futuras Ações',
     component: 'v-textarea',
-    value: ref(props.sessao?.futuras_acoes || ''),
+    value: ref(''),
     props: {
       label: 'Planejamento futuro',
       rows: 3,
@@ -202,7 +185,7 @@ const menus = ref([
   {
     label: 'Resumo',
     component: 'v-textarea',
-    value: ref(props.sessao?.resumo || ''),
+    value: ref(''),
     props: {
       label: 'Resumo da sessão',
       rows: 5,
@@ -211,55 +194,7 @@ const menus = ref([
   },
 ]);
 
-watch(
-  () => props.sessao,
-  (newSessao) => {
-    // Atualiza os valores dos campos de texto
-    menus.value[0].value = newSessao?.pre_sessao || '';
-    menus.value[1].value = newSessao?.queixas || '';
-    menus.value[2].value = newSessao?.evolucao || '';
-    menus.value[3].value = newSessao?.habilidades_trabalhadas || '';
-    menus.value[4].value = newSessao?.futuras_acoes || '';
-    menus.value[6].value = newSessao?.resumo || '';
-
-    // Trata os anexos (fotos)
-    if (newSessao?.fotos) {
-      const fotosArray = newSessao.fotos.split(',').filter((url: string) => url);
-      uploadedFiles.value = fotosArray.map((url: string) => ({
-        name: url.split('/').pop() || 'Arquivo',
-        url,
-      }));
-    } else {
-      uploadedFiles.value = [];
-    }
-  },
-  { immediate: true } // Executa imediatamente ao montar o componente
-);
-
-watch(searchQuery, async (newValue) => {
-  if (!newValue) {
-    filteredClientes.value = [];
-    return;
-  }
-
-  isLoading.value = true;
-  try {
-    const resultados = await aprendenteService.buscarClientesPorNome(newValue);
-    filteredClientes.value = resultados;
-  } catch (err) {
-    console.error('Erro na busca:', err);
-    errorMessage.value = 'Erro ao buscar clientes';
-  } finally {
-    isLoading.value = false;
-  }
-}, { debounce: 300 });
-
-watch(tab, (newTab) => {
-  console.log('Aba alterada:', menus.value[newTab].label, 'Valor:', menus.value[newTab].value);
-});
-
 function addFile(newFile: File | null) {
-  console.log('addFile chamado com:', newFile, 'Tipo:', newFile ? newFile.constructor.name : 'null');
   if (newFile instanceof File) {
     selectedFiles.value = [...selectedFiles.value, newFile];
     menus.value[5].value = null;
@@ -285,62 +220,81 @@ function createObjectURL(file: File): string {
 }
 
 async function salvar() {
-  // if (!selectedCliente.value) {
-  //   errorMessage.value = 'Selecione um cliente antes de salvar';
-  //   return;
-  // }
-
   uploadLoading.value = true;
   errorMessage.value = '';
 
-  try {
-    // Handle file uploads
-    if (selectedFiles.value.length > 0) {
-      let uploadedCount = 0;
-      for (const file of selectedFiles.value) {
-        console.log('Validando arquivo:', file.name, 'Tipo:', file.type);
-        if (!file.type.match(/^image\/.+$|^application\/pdf$/)) {
-          errorMessage.value = 'Apenas imagens ou PDFs são permitidos';
-          return;
-        }
-        if (file.size > 25 * 1024 * 1024) {
-          errorMessage.value = 'O arquivo deve ter menos de 25MB';
-          return;
-        }
+  // Montar o objeto da sessão com os valores atuais dos inputs
+  const sessaoData = {
+    id: props.sessao?.id, // Incluído para updateSessao
+    pre_sessao: menus.value[0].value || '',
+    queixas: menus.value[1].value || '',
+    evolucao: menus.value[2].value || '',
+    habilidades_trabalhadas: menus.value[3].value || '',
+    futuras_acoes: menus.value[4].value || '',
+    resumo: menus.value[6].value || '',
+    fotos: uploadedFiles.value.length > 0 ? uploadedFiles.value.map(f => f.url).join(',') : null,
+    id_agendamento: props.idAgendamento,
+  };
 
-        const url = await uploadService.uploadArquivo(
-          'sessoes',
-          `sessao/${props.idAgendamento || 'temp'}`,
-          file
-        );
-        uploadedFiles.value.push({ name: file.name, url });
-        uploadedCount++;
-        console.log(`Upload ${uploadedCount}/${selectedFiles.value.length} concluído`);
-      }
-      selectedFiles.value = []; // Clear selected files after upload
+  if (possuiSessao.value) {
+    // Atualizar sessão existente
+    try {
+      await sessaoService.updateSessao(props.sessao.id as string, sessaoData);
+      console.log('Sessão atualizada com sucesso:', sessaoData);
+      emit('update:modelValue', false);
+      emit('sessao-salva', { idAgendamento: props.idAgendamento }); // Emitir evento
+    } catch (err) {
+      console.error('Erro ao atualizar sessão:', err);
+      errorMessage.value = 'Erro ao atualizar sessão: ' + (err as Error).message;
+    } finally {
+      uploadLoading.value = false;
     }
+  } else {
+    // Criar nova sessão
+    console.log('Sessão a ser criada:', sessaoData);
 
-    // Prepare session data
-    const sessao = {
-      pre_sessao: menus.value[0].value,
-      queixas: menus.value[1].value,
-      evolucao: menus.value[2].value,
-      habilidades_trabalhadas: menus.value[3].value,
-      futuras_acoes: menus.value[4].value,
-      resumo: menus.value[6].value,
-      fotos: uploadedFiles.value.length > 0 ? uploadedFiles.value.map(f => f.url).join(',') : null,
-      id_agendamento: props.idAgendamento,
-    };
+    try {
+      // Handle file uploads
+      if (selectedFiles.value.length > 0) {
+        let uploadedCount = 0;
+        for (const file of selectedFiles.value) {
+          console.log('Validando arquivo:', file.name, 'Tipo:', file.type);
+          if (!file.type.match(/^image\/.+$|^application\/pdf$/)) {
+            errorMessage.value = 'Apenas imagens ou PDFs são permitidos';
+            uploadLoading.value = false;
+            return;
+          }
+          if (file.size > 25 * 1024 * 1024) {
+            errorMessage.value = 'O arquivo deve ter menos de 25MB';
+            uploadLoading.value = false;
+            return;
+          }
 
-    await sessaoService.createSessao(sessao);
-    console.log('Sessão salva com sucesso:', sessao);
-    emit('update:modelValue', false);
-    uploadedFiles.value = []; // Clear uploaded files after save
-  } catch (err) {
-    console.error('Erro ao salvar sessão:', err);
-    errorMessage.value = 'Erro ao salvar sessão: ' + (err as Error).message;
-  } finally {
-    uploadLoading.value = false;
+          const url = await uploadService.uploadArquivo(
+            'sessoes',
+            `sessao/${props.idAgendamento || 'temp'}`,
+            file
+          );
+          uploadedFiles.value.push({ name: file.name, url });
+          uploadedCount++;
+          console.log(`Upload ${uploadedCount}/${selectedFiles.value.length} concluído`);
+        }
+        selectedFiles.value = []; // Clear selected files after upload
+        // Atualizar o campo fotos com os novos uploads
+        sessaoData.fotos = uploadedFiles.value.length > 0 ? uploadedFiles.value.map(f => f.url).join(',') : null;
+      }
+      delete sessaoData.id;
+      await sessaoService.createSessao(sessaoData);
+      console.log('Sessão criada com sucesso:', sessaoData);
+      emit('update:modelValue', false);
+      emit('sessao-salva', { idAgendamento: props.idAgendamento }); // Emitir evento
+      uploadedFiles.value = []; // Clear uploaded files after save
+    } catch (err) {
+      console.error('Erro ao criar sessão:', err);
+      errorMessage.value = 'Erro ao criar sessão: ' + (err as Error).message;
+    } finally {
+      uploadLoading.value = false;
+    }
   }
 }
 

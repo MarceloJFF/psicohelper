@@ -76,8 +76,8 @@
           <v-btn color="success" @click="saveEvent">
             Salvar
           </v-btn>
-          <v-btn color="primary" @click="showAtendimentoModal = true">
-            {{ agendamentoPossuiSessao ? 'Nova Sessão' : 'Editar Sessão' }}
+          <v-btn color="primary" @click="openAtendimentoModal">
+            {{ agendamentoPossuiSessao ? 'Editar Sessão' : 'Nova Sessão' }}
           </v-btn>
           <v-btn text @click="showModal = false">
             Cancelar
@@ -89,7 +89,7 @@
     <v-dialog v-model="showAtendimentoModal" max-width="1200px" min-width="900px">
       <AtendimentoModal v-model="showAtendimentoModal" :title="eventData.title"
         :idAgendamento="eventData.id ? eventData.id.toString().replace('agendamento-', '') : undefined"
-        :sessao="sessaoModal" />
+        :sessao="sessaoModal" @sessao-salva="handleSessaoSalva" />
     </v-dialog>
 
     <v-snackbar v-model="snackbar" :color="snackbarColor" timeout="4000">
@@ -181,6 +181,56 @@ const eventData = ref<EventData>(defaultEventData())
 
 function resetEventData() {
   eventData.value = defaultEventData()
+}
+
+async function handleSessaoSalva(data: { idAgendamento: string | number }) {
+  if (data.idAgendamento === eventData.value.id.replace('agendamento-', '')) {
+    agendamentoPossuiSessao.value = true;
+    console.log('Sessão salva, agendamentoPossuiSessao atualizado para true');
+
+    // Buscar os dados da sessão atualizada
+    try {
+      const sessao = await sessaoService.getSessaoByAgendamentoId(data.idAgendamento.toString());
+      sessaoModal.value = sessao || {};
+      console.log('Dados da sessão atualizados em sessaoModal:', sessaoModal.value);
+
+      // Atualizar o evento específico no calendário
+      const eventIndex = events.value.findIndex(e => e.id === `agendamento-${data.idAgendamento}`);
+      if (eventIndex !== -1) {
+        events.value[eventIndex] = {
+          ...events.value[eventIndex],
+          extendedProps: {
+            ...events.value[eventIndex].extendedProps,
+            sessao: sessaoModal.value
+          }
+        };
+        if (calendarApi) {
+          calendarApi.refetchEvents();
+        }
+      }
+    } catch (err) {
+      console.error('Erro ao buscar sessão atualizada:', err);
+      showError('Erro ao carregar dados da sessão');
+    }
+  }
+}
+
+async function openAtendimentoModal() {
+  if (eventData.value.id) {
+    const agendamentoId = eventData.value.id.replace('agendamento-', '');
+    try {
+      // Garantir que sessaoModal esteja atualizado antes de abrir o modal
+      const sessao = await sessaoService.getSessaoByAgendamentoId(agendamentoId);
+      sessaoModal.value = sessao || {};
+      agendamentoPossuiSessao.value = Object.keys(sessaoModal.value).length > 0;
+      console.log('sessaoModal antes de abrir AtendimentoModal:', sessaoModal.value);
+    } catch (err) {
+      console.error('Erro ao carregar sessão para AtendimentoModal:', err);
+      showError('Erro ao carregar dados da sessão');
+      return;
+    }
+  }
+  showAtendimentoModal.value = true;
 }
 
 const loadEventos = async () => {
@@ -502,11 +552,6 @@ async function deleteEvent() {
   }
 }
 
-function startAtendimento() {
-  showModal.value = false
-  showAtendimentoModal.value = true
-}
-
 const calendarOptions = ref<CalendarOptions>({
   plugins: [dayGridPlugin, timeGridPlugin, interactionPlugin, listPlugin],
   height: 'auto',
@@ -608,11 +653,8 @@ const calendarOptions = ref<CalendarOptions>({
     sessaoModal.value = info.event.extendedProps.sessao as Record<string, unknown> || {};
 
     showModal.value = true;
-    if (Object.keys(sessaoModal.value).length > 0) {
-      agendamentoPossuiSessao.value = false
-    } else {
-      agendamentoPossuiSessao.value = true
-    }
+    // Corrigir a lógica: true se houver sessão, false caso contrário
+    agendamentoPossuiSessao.value = Object.keys(sessaoModal.value).length > 0;
   },
   eventMouseEnter(info: {
     event: {
