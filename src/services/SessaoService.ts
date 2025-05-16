@@ -66,8 +66,23 @@ export class SessaoService {
       return [];
     }
   }
-
+  async getSessaoById(id: string): Promise<Sessao | null> {
+    try {
+      const { data, error } = await supabase
+        .from('tb_sessao')
+        .select('*')
+        .eq('id', id)
+        .single();
+      if (error) throw error;
+      return data;
+    } catch (err: any) {
+      this.showError(err.message || 'Erro ao buscar sessão');
+      return null;
+    }
+  }
   async updateSessao(id: string, sessao: Partial<Sessao>): Promise<void> {
+    console.log("updateSessao:", id, sessao);
+    
     try {
       const { error } = await supabase
         .from('tb_sessao')
