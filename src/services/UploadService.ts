@@ -1,11 +1,10 @@
 import supabase from '@/config/supabase';
-import { v4 as uuidv4 } from 'uuid';
 
 export class UploadService {
   async uploadArquivo(bucket: string, caminho: string, arquivo: File): Promise<string> {
     try {
       const fileExt = arquivo.name.split('.').pop();
-      const fileName = `${uuidv4()}.${fileExt}`;
+      const fileName = `${caminho}.${fileExt}`;
       const filePath = `${caminho}/${fileName}`;
 
       const { data, error } = await supabase.storage
