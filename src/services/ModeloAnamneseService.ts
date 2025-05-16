@@ -107,7 +107,8 @@ export class ModeloAnamneseService {
         .maybeSingle()  // Use maybeSingle em vez de single
 
       if (error) throw error
-      const modeloAnamnese = new ModeloAnamnese(data.nome, data.id_modelo, data.id_config)
+      const modeloAnamnese = new ModeloAnamnese(data.nome, data.id_modelo, data.id_config, data.perguntas)
+      console.log(modeloAnamnese)
       return modeloAnamnese
     } catch (err: any) {
       this.showError(err.message || 'Erro ao buscar modelo de anamnese')
@@ -177,6 +178,7 @@ export class ModeloAnamneseService {
       this.showError(err.message || 'Erro ao salvar modelo de anamnese')
     }
   }
+
 
   async carregarPerguntas(id_modelo: string): Promise<ModeloPergunta[]> {
     try {
