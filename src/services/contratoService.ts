@@ -99,48 +99,82 @@ export class ContratoService {
   }
 
   async pagarMensalidadeContrato(mensalidade: {
-    id_contrato: string;
-    mes_referencia: string;
-    valor: number;
-    forma_pagamento: string;
-    comprovante?: File;
+    id_contrato: string
+    mes_referencia: string
+    valor: number
+    forma_pagamento: string
+    comprovante?: File
   }) {
-    let comprovante_url = null;
+    let comprovante_url = null
     if (mensalidade.comprovante) {
       comprovante_url = await this.uploadService.uploadArquivo(
         'pagamentos',
         `mensalidade/${mensalidade.id_contrato}/${mensalidade.mes_referencia}`,
-        mensalidade.comprovante
-      );
+        mensalidade.comprovante,
+      )
     }
 
-    const { data, error } = await supabase
-      .from('tb_mensalidades')
-      .insert({
-        id_contrato: mensalidade.id_contrato,
-        mes_referencia: mensalidade.mes_referencia,
-        valor: mensalidade.valor,
-        status_pagamento: 'Pago',
-        comprovante_url,
-        data_pagamento: new Date().toISOString()
-      })
-      .select()
-      .single();
+    const { data: existingMensalidade, error: checkError } = await supabase
+      .from('tb_mensalidade')
+      .select('id_mensalidade, status_pagamento')
+      .eq('id_contrato', mensalidade.id_contrato)
+      .eq('mes_referencia', mensalidade.mes_referencia)
+      .maybeSingle()
 
-    if (error) throw error;
+    if (checkError && checkError.code !== 'PGRST116') throw checkError
 
-    // Criar registro em tb_pagamentos
-    await supabase
-      .from('tb_pagamentos')
-      .insert({
-        id_mensalidade: data.id_mensalidade,
+    let mensalidadeData
+    if (existingMensalidade) {
+      if (existingMensalidade.status_pagamento === 'Pago') {
+        throw new Error('Mensalidade já está paga')
+      }
+      const { data, error } = await supabase
+        .from('tb_mensalidade')
+        .update({
+          valor: mensalidade.valor,
+          forma_pagamento: mensalidade.forma_pagamento,
+          comprovante_url,
+          status_pagamento: 'Pago',
+          data_pagamento: new Date().toISOString(),
+        })
+        .eq('id_mensalidade', existingMensalidade.id_mensalidade)
+        .select()
+        .single()
+      if (error) throw error
+      mensalidadeData = data
+    } else {
+      const { data, error } = await supabase
+        .from('tb_mensalidade')
+        .insert({
+          id_contrato: mensalidade.id_contrato,
+          mes_referencia: mensalidade.mes_referencia,
+          valor: mensalidade.valor,
+          forma_pagamento: mensalidade.forma_pagamento,
+          comprovante_url,
+          status_pagamento: 'Pago',
+          data_pagamento: new Date().toISOString(),
+        })
+        .select()
+        .single()
+      if (error) throw error
+      mensalidadeData = data
+    }
+
+    const { data: pagamentoData, error: pagamentoError } = await supabase
+      .from('tb_pagamento')
+      .upsert({
+        id_mensalidade: mensalidadeData.id_mensalidade,
         valor: mensalidade.valor,
         forma_pagamento: mensalidade.forma_pagamento,
         comprovante_url,
-        data_pagamento: new Date().toISOString()
-      });
+        data_pagamento: new Date().toISOString(),
+      })
+      .select()
+      .single()
 
-    return data;
+    if (pagamentoError) throw pagamentoError
+
+    return mensalidadeData
   }
   async getMensalidadesByContrato(id_contrato: string) {
     const { data, error } = await supabase
@@ -150,6 +184,4 @@ export class ContratoService {
     if (error) throw error
     return data
   }
-
-  
 }

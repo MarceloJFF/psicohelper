@@ -287,7 +287,7 @@ const uploadSuccess = ref<boolean>(false);
 const contratos = ref<any[]>([]);
 const contratoSelecionado = ref<string | null>(null);
 const mensalidadesPendentes = ref<any[]>([]);
-const mesReferencia = ref<string | null>(null);
+const mesReferencia = ref<number | null>(null);
 const atendimentosSelecionados = ref<any[]>([]);
 const loadingMensalidades = ref(false);
 
@@ -311,11 +311,11 @@ async function handleFileChange(files: File[] | null) {
 
 async function loadSessoes() {
   try {
-    const hoje = new Date().toISOString().split('T')[0]; // Data atual (YYYY-MM-DD)
+    const hoje = new Date().toISOString().split('T')[0];
     const sessoes = await sessaoService.getAllSessoes();
     atendimentos.value = await Promise.all(
       sessoes
-        .filter(sessao => sessao.tb_agendamento?.data_agendamento <= hoje) // Apenas sessões passadas
+        // .filter(sessao => sessao.tb_agendamento?.data_agendamento <= hoje)
         .map(async (sessao) => {
           const agendamento = sessao.tb_agendamento;
           const startTime = agendamento?.horario_inicio;
@@ -467,20 +467,25 @@ async function loadMensalidades() {
       const [mensalidades, contrato] = await Promise.all([
         contratoService.getMensalidadesByContrato(contratoSelecionado.value),
         supabase
-          .from('tb_contratos')
-          .select('data_inicio')
+          .from('tb_contrato')
+          .select('data_criacao, duracao')
           .eq('id_contrato', contratoSelecionado.value)
           .single()
       ]);
       console.log('Mensalidades returned:', mensalidades);
-      console.log('Contrato data_inicio:', contrato.data?.data_inicio);
+      console.log('Duração do contrato:', contrato.data?.duracao);
+      console.log('Contrato data_criacao:', contrato.data?.data_criacao);
 
-      const dataInicio = contrato.data?.data_inicio ? new Date(contrato.data.data_inicio) : new Date();
-      if (!contrato.data?.data_inicio) {
-        console.warn('Contrato sem data_inicio, usando data atual');
+      const dataInicio = contrato.data?.data_criacao ? new Date(contrato.data.data_criacao) : new Date();
+      const duracao = contrato.data?.duracao || 12;
+      if (!contrato.data?.data_criacao) {
+        console.warn('Contrato sem data_criacao, usando data atual');
+      }
+      if (!contrato.data?.duracao) {
+        console.warn('Contrato sem duracao, usando 12 meses');
       }
 
-      // Get existing unpaid mensalidades
+      // Process existing unpaid mensalidades
       const existingPendentes = mensalidades
         .filter(m => m.status_pagamento !== 'Pago')
         .map(m => {
@@ -490,40 +495,41 @@ async function loadMensalidades() {
             (mesDate.getFullYear() - dataInicio.getFullYear()) * 12 +
             mesDate.getMonth() - dataInicio.getMonth() + 1
           );
+          if (cycleNumber > duracao) return null; // Exclude cycles beyond duracao
           return {
             ...m,
             mes_referencia_cycle: cycleNumber,
-            mes_referencia_display: `Mensalidade ${cycleNumber} (${new Date(m.mes_referencia).toLocaleString('pt-BR', { month: 'long', year: 'numeric' })}`,
+            mes_referencia_display: `Mensalidade ${cycleNumber} (${mesDate.toLocaleString('pt-BR', { month: 'long', year: 'numeric' })}`,
             mes_referencia_raw: m.mes_referencia
           };
-        });
+        })
+        .filter(m => m !== null);
 
-      // Generate months for current and next 3 months
-      const today = new Date();
-      const mesesFuturos = [];
-      for (let i = 0; i < 4; i++) {
-        const date = new Date(today.getFullYear(), today.getMonth() + i, 1);
+      // Generate all billing cycles within duracao
+      const meses = [];
+      for (let i = 0; i < duracao; i++) {
+        const date = new Date(dataInicio.getFullYear(), dataInicio.getMonth() + i, 1);
         const mesReferenciaRaw = date.toISOString().slice(0, 10);
-        if (!mensalidades.some(m => m.mes_referencia === mesReferenciaRaw)) {
-          const cycleNumber = Math.max(
-            1,
-            (date.getFullYear() - dataInicio.getFullYear()) * 12 +
-            date.getMonth() - dataInicio.getMonth() + 1
-          );
-          mesesFuturos.push({
+        const cycleNumber = i + 1;
+        // Only include if not already paid
+        if (!mensalidades.some(m => m.mes_referencia === mesReferenciaRaw && m.status_pagamento === 'Pago')) {
+          meses.push({
             id_mensalidade: null,
             id_contrato: contratoSelecionado.value,
             mes_referencia_cycle: cycleNumber,
-            mes_referencia_display: `Mensalidade ${cycleNumber} (${date.toLocaleString('pt-BR', { month: 'long', year: 'numeric' })}`,
+            mes_referencia_display: `Mensalidade ${cycleNumber} (${date.toLocaleString('pt-BR', { month: 'long', year: 'numeric' })})`,
             mes_referencia_raw: mesReferenciaRaw,
             status_pagamento: 'Pendente'
           });
         }
       }
 
-      mensalidadesPendentes.value = [...existingPendentes, ...mesesFuturos].sort(
-        (a, b) => a.mes_referencia_cycle - b.mes_referencia_cycle
-      );
+      // Combine and deduplicate by cycle number
+      mensalidadesPendentes.value = [...existingPendentes, ...meses]
+        .sort((a, b) => a.mes_referencia_cycle - b.mes_referencia_cycle)
+        .filter((item, index, self) =>
+          index === self.findIndex(t => t.mes_referencia_cycle === item.mes_referencia_cycle)
+        );
       console.log('Mensalidades pendentes:', mensalidadesPendentes.value);
     }
   } catch (err) {
@@ -808,7 +814,7 @@ async function confirmarMensalidade() {
       forma_pagamento: formaPagamento.value,
       comprovante: comprovanteImagem.value?.[0]
     };
-    const mensalidade = await contratoService.pagarMensalidade(mensalidadeData);
+    const mensalidade = await contratoService.pagarMensalidadeContrato(mensalidadeData);
 
     const mes = new Date(selectedMensalidade.mes_referencia_raw).toISOString().slice(0, 7);
     atendimentos.value.forEach(atendimento => {
