@@ -177,16 +177,7 @@
                             <v-icon left>mdi-cancel</v-icon>
                             Cancelar
                           </v-btn>
-                          <v-btn
-                            v-if="contrato.cadastrado && !contrato.cancelado"
-                            color="warning"
-                            size="small"
-                            class="mr-2"
-                            @click="inativarContrato(contrato)"
-                          >
-                            <v-icon left>mdi-close-circle</v-icon>
-                            Inativar
-                          </v-btn>
+
                           <v-btn
                             v-if="!contrato.cancelado"
                             color="primary"
@@ -329,7 +320,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, computed, watch } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import CalendarioDiario from '@/components/calendario-diario.vue'
 import Todo from '@/components/todo.vue'
@@ -344,43 +335,28 @@ import { DocumentoService } from '@/services/DocumentoService'
 import supabase from '@/config/supabase'
 import  Documento from '@/models/Documento'
 import { ModeloAnamneseService } from '@/services/ModeloAnamneseService'
-import AnamneseResposta from '@/models/AnamneseResposta'
-import RespostaPergunta from '@/models/RespostaPergunta'
 import { AnamneseService } from '@/services/AnamneseService'
-
-
-
-const anamnese = ref<Anamnese | null>(null)
 
 
 const route = useRoute()
 const router = useRouter()
-
-
-const modeloAnamneseService = new ModeloAnamneseService()
 const idResponsavel = route.params.idResponsavel as string
 const idAprendente = route.params.idAprendente as string | undefined
-
 const responsavelService = new ResponsavelService()
 const contratoService = new ContratoService()
 const diasAtendimento = new DiasAtendimentosContratoService()
 const documentoService = new DocumentoService()
-
 const responsavelDetalhes = ref()
 const contratos = ref<Contrato[]>([])
 const documentos = ref<Documento[]>([])
-
 const modalContrato = ref(false)
 const contratoSelecionado = ref<Contrato | null>(null)
-
 const dialogCancelamento = ref(false)
 const motivoCancelamento = ref('')
 const formCancelamentoValido = ref(false)
 const modoCancelamento = ref<'cancelar' | 'inativar'>('cancelar')
-
 const abaSelecionada = ref('Cadastro')
 const abas = ['Cadastro', 'Anamnese', 'Contratos', 'Sessões', 'Documentos anexos']
-
 const snackbar = ref(false)
 const snackbarMessage = ref('')
 const snackbarColor = ref('success')
@@ -399,7 +375,6 @@ const camposPrincipais = {
   email: 'Email',
 }
 
-const menu = ref(false)
 
 const dataNascimentoFormatada = computed({
   get: () => {
@@ -425,7 +400,6 @@ const perguntasModelo = ref('')
 const respostaAnamnese = ref('')
 
 const anamneseService = new AnamneseService()
-const anamneseExistente = ref<AnamneseResposta | null>(null)
 const respostaAnamneseExistente = ref<string | null>(null)
 
 const loadDocuments = async () => {
@@ -512,17 +486,10 @@ const salvarAnamnese = async () => {
 }
 
 const buscarContratos = async () => {
-  //O valor caso idAprendente seja  null é idResponsavel
-  if(idAprendente == idResponsavel){
-    contratos.value = await contratoService.loadContratos(idResponsavel);
-  }else{
-    contratos.value = await contratoService.loadContratoPorAprendente(idAprendente);
-  }
-
+  contratos.value = await contratoService.loadContratoPorAprendente(idAprendente);
   for (const contrato of contratos.value) {
     contrato.diasAtendimento = await diasAtendimento.loadDiasAtendimento(contrato.id_contrato)
   }
-  console.log(contratos.value)
 }
 
 const abrirModalContrato = () => {
@@ -536,24 +503,15 @@ const editarContrato = (contrato: Contrato) => {
 }
 
 const cancelarContrato = async (contrato: Contrato) => {
-  modoCancelamento.value = 'cancelar'
-  contratoSelecionado.value = contrato
   dialogCancelamento.value = true
+  await contratoService.inativarContrato(contrato.id,motivoCancelamento.value);
 }
 
-const inativarContrato = async (contrato: Contrato) => {
-  modoCancelamento.value = 'inativar'
-  contratoSelecionado.value = contrato
-  dialogCancelamento.value = true
-}
+
 
 const confirmarAcao = async () => {
   try {
-    if (modoCancelamento.value === 'cancelar') {
-      await contratoService.cancelarContrato(contratoSelecionado.value!.idContrato)
-    } else {
-      await contratoService.inativarContrato(contratoSelecionado.value!.idContrato)
-    }
+
     dialogCancelamento.value = false
     snackbarMessage.value = `${modoCancelamento.value === 'cancelar' ? 'Cancelado' : 'Inativado'} com sucesso`
     snackbarColor.value = 'success'
@@ -569,15 +527,10 @@ const confirmarAcao = async () => {
 const salvarContrato = async (contrato: Contrato) => {
   modalContrato.value = false
   try {
-    console.log(contrato)
-    // Salva os dados no backend através do ContratoService
     await contratoService.addContrato(contrato,idResponsavel,idAprendente);
-    // Após salvar, atualiza a lista de contratos
     await buscarContratos();
     modalContrato.value = false; // Fecha o modal
-    snackbarMessage.value = 'Contrato salvo com sucesso';
-    snackbarColor.value = 'success';
-    snackbar.value = true;
+
   } catch (error) {
     snackbarMessage.value = 'Erro ao salvar contrato';
     snackbarColor.value = 'error';

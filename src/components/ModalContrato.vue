@@ -101,7 +101,7 @@
 <script setup lang="ts">
 import { ref, watch } from 'vue'
 import Contrato from '@/models/Contrato'
-import type DiasAtendimentoContrato from '@/models/DiasAtendimentoContrato'
+import  DiasAtendimentoContrato from '@/models/DiasAtendimentoContrato'
 
 const props = defineProps<{
   modelValue: boolean
@@ -118,7 +118,7 @@ const contrato = ref<Contrato>(new Contrato())
 watch(() => props.contratoInicial, (newVal) => {
   // Create a new contract instance with all fields
   contrato.value = new Contrato()
-  
+
   // Map all fields from the initial contract
   contrato.value.idContrato = newVal.id_contrato || newVal.idContrato
   contrato.value.valorMensal = newVal.valor_mensal || newVal.valorMensal
@@ -128,7 +128,7 @@ watch(() => props.contratoInicial, (newVal) => {
   contrato.value.cadastrado = newVal.cadastrado
   contrato.value.idResponsavel = newVal.id_responsavel || newVal.idResponsavel
   contrato.value.idProfissional = newVal.id_profissional || newVal.idProfissional
-  
+
   // Handle the vencimento date
   if (newVal.vencimento instanceof Date) {
     contrato.value.vencimento = newVal.vencimento.toISOString().split('T')[0]
@@ -140,7 +140,7 @@ watch(() => props.contratoInicial, (newVal) => {
     nextMonth.setMonth(nextMonth.getMonth() + 1)
     contrato.value.vencimento = nextMonth.toISOString().split('T')[0]
   }
-  
+
   // Handle diasAtendimento
   if (newVal.diasAtendimento && newVal.diasAtendimento.length > 0) {
     contrato.value.diasAtendimento = newVal.diasAtendimento.map(dia => ({
@@ -163,6 +163,7 @@ watch(() => props.contratoInicial, (newVal) => {
 }, { immediate: true })
 
 const adicionarDiaAtendimento = () => {
+  console.log("Add dias atendimento")
   contrato.value.diasAtendimento.push({
     id: '',
     dia: '',
@@ -186,7 +187,9 @@ const fechar = () => {
 }
 
 const salvarContrato = () => {
+  console.log("Emitindo")
+  console.log(contrato.value)
   emit('salvar', { ...contrato.value })
   emit('update:modelValue', false)
 }
-</script> 
+</script>

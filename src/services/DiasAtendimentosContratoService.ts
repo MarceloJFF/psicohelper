@@ -12,7 +12,6 @@ export class DiasAtendimentosContratoService {
         .from('tb_dias_atendimento_contrato')
         .select('*')
         .eq('contrato_id', contratoId)
-
       if (error) throw error
       return data as DiasAtendimentoContrato[]
     } catch (err: any) {
@@ -22,7 +21,7 @@ export class DiasAtendimentosContratoService {
   }
 
   async addDiasAtendimento(dias:any, contratoId:string): Promise<void> {
- 
+
     try {
       const payload = dias.map((d:any) => ({
         dia: d.dia,
