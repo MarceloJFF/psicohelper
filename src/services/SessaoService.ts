@@ -31,40 +31,74 @@ export class SessaoService {
     }
   }
 
-  async getAllSessoes(): Promise<any[]> {
-    try {
-      const { data, error } = await supabase
-        .from('tb_sessao')
-        .select(`
-          id,
-          pre_sessao,
-          queixas,
-          evolucao,
-          habilidades_trabalhadas,
-          futuras_acoes,
-          resumo,
-          fotos,
-          id_agendamento,
-          tb_agendamento (
-            data_agendamento,
-            horario_inicio,
-            duracao,
-            id_aprendente,
-            responsavel_id
-          )
-        `);
-      if (error) throw error;
+  // async getAllSessoes(): Promise<any[]> {
+  //   try {
+  //     const { data, error } = await supabase
+  //       .from('tb_sessao')
+  //       .select(`
+  //         id,
+  //         pre_sessao,
+  //         queixas,
+  //         evolucao,
+  //         habilidades_trabalhadas,
+  //         futuras_acoes,
+  //         resumo,
+  //         fotos,
+  //         id_agendamento,
+  //         tb_agendamento (
+  //           data_agendamento,
+  //           horario_inicio,
+  //           duracao,
+  //           id_aprendente,
+  //           responsavel_id
+  //         )
+  //       `);
+  //     if (error) throw error;
 
-      console.log('Sessões brutas:', data);
-      return (data || []).sort((a, b) => {
-        const dateA = new Date(a.tb_agendamento?.data_agendamento || '9999-12-31');
-        const dateB = new Date(b.tb_agendamento?.data_agendamento || '9999-12-31');
-        return dateB.getTime() - dateA.getTime();
-      });
-    } catch (err: any) {
-      this.showError(err.message || 'Erro ao carregar sessões');
-      return [];
+  //     console.log('Sessões brutas:', data);
+  //     return (data || []).sort((a, b) => {
+  //       const dateA = new Date(a.tb_agendamento?.data_agendamento || '9999-12-31');
+  //       const dateB = new Date(b.tb_agendamento?.data_agendamento || '9999-12-31');
+  //       return dateB.getTime() - dateA.getTime();
+  //     });
+  //   } catch (err: any) {
+  //     this.showError(err.message || 'Erro ao carregar sessões');
+  //     return [];
+  //   }
+  // }
+  async getAllSessoes() {
+    const { data, error } = await supabase
+      .from('tb_sessao')
+      .select(`
+        id,
+        pre_sessao,
+        queixas,
+        evolucao,
+        habilidades_trabalhadas,
+        futuras_acoes,
+        resumo,
+        fotos,
+        id_agendamento,
+        id_contrato,
+        tb_agendamento (
+          id_agendamento,
+          data_agendamento,
+          horario_inicio,
+          duracao,
+          id_aprendente,
+          responsavel_id
+        )
+      `);
+    if (error) {
+      console.error('Erro ao buscar sessões:', error);
+      throw error;
     }
+    console.log('Sessões carregadas:', data.map(s => ({
+      id: s.id,
+      id_contrato: s.id_contrato,
+      tipo: s.id_contrato ? 'Contrato' : 'Avulsa'
+    })));
+    return data;
   }
   async getSessaoById(id: string): Promise<Sessao | null> {
     try {

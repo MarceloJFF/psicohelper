@@ -72,6 +72,7 @@
 
               <v-spacer />
               <v-col cols="12" sm="6" class="d-flex align-center">
+                <!-- {{ atendimento }} -->
                 <v-btn icon @click="atendimento.showDetails = !atendimento.showDetails">
                   <v-icon>{{ atendimento.showDetails ? 'mdi-eye-off' : 'mdi-eye' }}</v-icon>
                 </v-btn>
@@ -79,7 +80,7 @@
                   {{ atendimento.showDetails ? 'Ocultar Detalhes' : 'Mostrar Detalhes' }}
                 </v-btn>
                 <v-btn
-                  v-if="atendimento.status === 'Pendente' && (atendimento.id_contrato === null || atendimento.id_contrato === undefined)"
+                  v-if="atendimento.status === 'Pendente' && (atendimento.id_contrato == null || atendimento.id_contrato == undefined)"
                   color="success" variant="outlined" class="ml-2" @click="abrirModalPagamentoIndividual(atendimento)">
                   Lançar Pagamento
                 </v-btn>
@@ -323,7 +324,7 @@ async function loadSessoes() {
       sessoes.map(async (sessao) => {
         const agendamento = sessao.tb_agendamento;
         const startTime = agendamento?.horario_inicio;
-        const duracao = agendamento?.duracao || 60;
+        const duracao = parseInt(agendamento?.duracao) || 60;
         const startDateTime = startTime ? new Date(`1970-01-01T${startTime}`) : null;
         const endDateTime = startDateTime ? new Date(startDateTime.getTime() + duracao * 60000) : null;
         const horarioFim = endDateTime
@@ -343,10 +344,10 @@ async function loadSessoes() {
         } else if (agendamento?.responsavel_id) {
           const responsavel = await supabase
             .from('tb_responsavel')
-            .select('nome_responsavel')
+            .select('nome')
             .eq('id_responsavel', agendamento.responsavel_id)
             .single();
-          paciente = responsavel.data?.nome_responsavel || 'N/A';
+          paciente = responsavel.data?.nome || 'N/A';
         }
 
         const anexos = sessao.fotos ? sessao.fotos.split(',').filter((url: string) => url) : [];
@@ -354,7 +355,7 @@ async function loadSessoes() {
         let pagamentoData: any = null;
 
         const idContrato = sessao.id_contrato || null;
-        console.log(`Processando sessão ${sessao.id}, id_contrato: ${idContrato}`);
+        console.log(`Processando sessão ${sessao.id}, id_contrato: ${idContrato}, tipo: ${idContrato ? 'Contrato' : 'Avulsa'}`);
 
         if (idContrato) {
           const mesReferencia = new Date(agendamento?.data_agendamento).toISOString().slice(0, 7) + '-01';
@@ -437,7 +438,8 @@ async function loadSessoes() {
       responsavel_id: a.responsavel_id,
       paciente: a.paciente,
       status: a.status,
-      id_contrato: a.id_contrato
+      id_contrato: a.id_contrato,
+      tipo_sessao: a.id_contrato ? 'Contrato' : 'Avulsa'
     })));
   } catch (err) {
     console.error('Erro ao carregar sessões:', err);
