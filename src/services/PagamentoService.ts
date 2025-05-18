@@ -5,47 +5,57 @@ import { UploadService } from './UploadService'
 export class PagamentoService {
   private uploadService = new UploadService()
 
-  async createPagamento(pagamento: {
+  async createPagamento(pagamentoData: {
     id_sessao: string[]
     valor: number
     forma_pagamento: string
     comprovante?: File
   }) {
     let comprovante_url = null
-    if (pagamento.comprovante) {
-      const folder = `comprovante/${pagamento.id_sessao.join('_')}`
+    if (pagamentoData.comprovante) {
       comprovante_url = await this.uploadService.uploadArquivo(
-        'pagamentos',
-        folder,
-        pagamento.comprovante,
+        'comprovantes-pagamento',
+        `comprovante/${pagamentoData.id_sessao[0]}`,
+        pagamentoData.comprovante,
       )
     }
 
-    const { data: pagamentoData, error: pagamentoError } = await supabase
+    // Create a payment in tb_pagamento
+    const { data: pagamento, error: pagamentoError } = await supabase
       .from('tb_pagamento')
       .insert({
-        valor: pagamento.valor,
-        forma_pagamento: pagamento.forma_pagamento,
+        valor: pagamentoData.valor,
+        forma_pagamento: pagamentoData.forma_pagamento,
         comprovante_url,
-        data_pagamento: new Date().toISOString(),
+        data_pagamento: new Date().toISOString(), // Ensure data_pagamento is set
       })
-      .select()
+      .select('id_pagamento, valor, forma_pagamento, comprovante_url, data_pagamento')
       .single()
 
-    if (pagamentoError) throw pagamentoError
-
-    if (pagamento.id_sessao.length > 0) {
-      const sessaoInserts = pagamento.id_sessao.map((id) => ({
-        id_pagamento: pagamentoData.id_pagamento,
-        id_sessao: id,
-      }))
-      const { error: sessaoError } = await supabase
-        .from('tb_pagamento_sessao')
-        .insert(sessaoInserts)
-      if (sessaoError) throw sessaoError
+    if (pagamentoError) {
+      console.error('Erro ao criar tb_pagamento:', pagamentoError)
+      throw pagamentoError
     }
 
-    return pagamentoData
+    // Link sessions in tb_pagamento_sessao
+    const { data: pagamentoSessao, error: sessaoError } = await supabase
+      .from('tb_pagamento_sessao')
+      .insert(
+        pagamentoData.id_sessao.map((id) => ({
+          id_sessao: id,
+          id_pagamento: pagamento.id_pagamento,
+        })),
+      )
+      .select('id, id_sessao, id_pagamento')
+      .single()
+
+    if (sessaoError) {
+      console.error('Erro ao criar tb_pagamento_sessao:', sessaoError)
+      throw sessaoError
+    }
+
+    console.log('Pagamento criado:', { pagamento, pagamentoSessao })
+    return pagamento // Return tb_pagamento data to match getPagamentoBySessao
   }
 
   async updatePagamento(
@@ -83,12 +93,29 @@ export class PagamentoService {
 
   async getPagamentoBySessao(id_sessao: string) {
     const { data, error } = await supabase
-      .from('tb_pagamento')
-      .select('*, tb_pagamento_sessao(id_sessao)')
-      .eq('tb_pagamento_sessao.id_sessao', id_sessao)
+      .from('tb_pagamento_sessao')
+      .select(
+        `
+        id,
+        id_sessao,
+        id_pagamento,
+        tb_pagamento (
+          id_pagamento,
+          valor,
+          forma_pagamento,
+          comprovante_url,
+          data_pagamento
+        )
+      `,
+      )
+      .eq('id_sessao', id_sessao)
       .maybeSingle()
 
-    if (error && error.code !== 'PGRST116') throw error
+    if (error && error.code !== 'PGRST116') {
+      console.error(`Erro ao buscar pagamento para sessão ${id_sessao}:`, error)
+      throw error
+    }
+    console.log(`Pagamento para sessão ${id_sessao}:`, data)
     return data
   }
 }

@@ -78,14 +78,20 @@
                 <v-btn color="primary" variant="text" @click="atendimento.showDetails = !atendimento.showDetails">
                   {{ atendimento.showDetails ? 'Ocultar Detalhes' : 'Mostrar Detalhes' }}
                 </v-btn>
-                <v-btn v-if="atendimento.status === 'Pendente' && !atendimento.id_contrato" color="success"
-                  variant="outlined" class="ml-2" @click="abrirModalPagamentoIndividual(atendimento)">
+                <v-btn
+                  v-if="atendimento.status === 'Pendente' && (atendimento.id_contrato === null || atendimento.id_contrato === undefined)"
+                  color="success" variant="outlined" class="ml-2" @click="abrirModalPagamentoIndividual(atendimento)">
                   Lançar Pagamento
                 </v-btn>
-                <v-btn v-if="atendimento.status === 'Pago' && !atendimento.id_contrato" color="error" variant="outlined"
-                  class="ml-2" @click="abrirModalPagamentoIndividual(atendimento)">
+                <v-btn
+                  v-if="atendimento.status === 'Pago' && (atendimento.id_contrato === null || atendimento.id_contrato === undefined)"
+                  color="error" variant="outlined" class="ml-2" @click="abrirModalPagamentoIndividual(atendimento)">
                   Editar Pagamento
                 </v-btn>
+                <!-- <v-btn v-if="atendimento.status === 'Pago' && !atendimento.id_contrato" color="error" variant="outlined"
+                  class="ml-2" @click="abrirModalPagamentoIndividual(atendimento)">
+                  Editar Pagamento
+                </v-btn> -->
               </v-col>
             </v-row>
 
@@ -314,106 +320,115 @@ async function loadSessoes() {
     const hoje = new Date().toISOString().split('T')[0];
     const sessoes = await sessaoService.getAllSessoes();
     atendimentos.value = await Promise.all(
-      sessoes
-        // .filter(sessao => sessao.tb_agendamento?.data_agendamento <= hoje)
-        .map(async (sessao) => {
-          const agendamento = sessao.tb_agendamento;
-          const startTime = agendamento?.horario_inicio;
-          const duracao = agendamento?.duracao || 60;
-          const startDateTime = startTime ? new Date(`1970-01-01T${startTime}`) : null;
-          const endDateTime = startDateTime ? new Date(startDateTime.getTime() + duracao * 60000) : null;
-          const horarioFim = endDateTime
-            ? `${endDateTime.getHours().toString().padStart(2, '0')}:${endDateTime.getMinutes().toString().padStart(2, '0')}`
-            : '';
+      sessoes.map(async (sessao) => {
+        const agendamento = sessao.tb_agendamento;
+        const startTime = agendamento?.horario_inicio;
+        const duracao = agendamento?.duracao || 60;
+        const startDateTime = startTime ? new Date(`1970-01-01T${startTime}`) : null;
+        const endDateTime = startDateTime ? new Date(startDateTime.getTime() + duracao * 60000) : null;
+        const horarioFim = endDateTime
+          ? `${endDateTime.getHours().toString().padStart(2, '0')}:${endDateTime.getMinutes().toString().padStart(2, '0')}`
+          : '';
 
-          let paciente = 'N/A';
-          let clienteId = agendamento?.id_aprendente || agendamento?.responsavel_id || '';
-          if (agendamento?.id_aprendente) {
-            if (aprendenteCache.has(agendamento.id_aprendente)) {
-              paciente = aprendenteCache.get(agendamento.id_aprendente).nome_aprendente;
-            } else {
-              const aprendente = await aprendenteService.getAprendenteById(agendamento.id_aprendente);
-              paciente = aprendente?.nome_aprendente || 'N/A';
-              aprendenteCache.set(agendamento.id_aprendente, aprendente);
-            }
-          } else if (agendamento?.responsavel_id) {
-            const responsavel = await supabase
-              .from('tb_responsavel')
-              .select('nome_responsavel')
-              .eq('id_responsavel', agendamento.responsavel_id)
-              .single();
-            paciente = responsavel.data?.nome_responsavel || 'N/A';
-          }
-
-          const anexos = sessao.fotos ? sessao.fotos.split(',').filter((url: string) => url) : [];
-          let status = 'Pendente';
-          let pagamentoData: any = null;
-
-          if (sessao.id_contrato) {
-            const mesReferencia = new Date(agendamento?.data_agendamento).toISOString().slice(0, 7) + '-01';
-            const { data: mensalidade } = await supabase
-              .from('tb_mensalidade')
-              .select('*')
-              .eq('id_contrato', sessao.id_contrato)
-              .eq('mes_referencia', mesReferencia)
-              .eq('status_pagamento', 'Pago')
-              .maybeSingle();
-            if (mensalidade) {
-              status = 'Pago';
-              pagamentoData = {
-                id_mensalidade: mensalidade.id_mensalidade,
-                valor: mensalidade.valor,
-                forma_pagamento: mensalidade.forma_pagamento,
-                comprovante_url: mensalidade.comprovante_url
-              };
-            }
+        let paciente = 'N/A';
+        let clienteId = agendamento?.id_aprendente || agendamento?.responsavel_id || '';
+        if (agendamento?.id_aprendente) {
+          if (aprendenteCache.has(agendamento.id_aprendente)) {
+            paciente = aprendenteCache.get(agendamento.id_aprendente).nome_aprendente;
           } else {
-            const pagamento = await pagamentoService.getPagamentoBySessao(sessao.id);
-            if (pagamento) {
-              status = 'Pago';
-              pagamentoData = {
-                id_pagamento: pagamento.id_pagamento,
-                valor: pagamento.valor,
-                forma_pagamento: pagamento.forma_pagamento,
-                comprovante_url: pagamento.comprovante_url
-              };
-            }
+            const aprendente = await aprendenteService.getAprendenteById(agendamento.id_aprendente);
+            paciente = aprendente?.nome_aprendente || 'N/A';
+            aprendenteCache.set(agendamento.id_aprendente, aprendente);
           }
+        } else if (agendamento?.responsavel_id) {
+          const responsavel = await supabase
+            .from('tb_responsavel')
+            .select('nome_responsavel')
+            .eq('id_responsavel', agendamento.responsavel_id)
+            .single();
+          paciente = responsavel.data?.nome_responsavel || 'N/A';
+        }
 
-          return {
-            id: sessao.id,
-            data: agendamento?.data_agendamento || '',
-            horario: startTime || '',
-            horario_fim: horarioFim,
-            paciente,
-            clienteId,
-            id_aprendente: agendamento?.id_aprendente,
-            responsavel_id: agendamento?.responsavel_id,
-            id_agendamento: agendamento?.id_agendamento,
-            id_contrato: sessao.id_contrato,
-            avatar: '',
-            status,
-            id_pagamento: pagamentoData?.id_pagamento,
-            id_mensalidade: pagamentoData?.id_mensalidade,
-            valor_pagamento: pagamentoData?.valor,
-            forma_pagamento: pagamentoData?.forma_pagamento,
-            comprovante_url: pagamentoData?.comprovante_url,
-            anotacao: null,
-            showDetails: false,
-            isEditing: false,
-            preSessao: sessao.pre_sessao || '',
-            queixas: sessao.queixas || '',
-            evolucaoAtual: sessao.evolucao || '',
-            habilidadesTrabalhadas: sessao.habilidades_trabalhadas || '',
-            futurasAcoes: sessao.futuras_acoes || '',
-            anexos,
-            anexosTemporarios: anexos.map(url => ({ url, name: url.split('/').pop() })),
-            anexosParaExcluir: [] as string[],
-            novosAnexos: [] as File[],
-            uploadError: '',
-            resumo: sessao.resumo || ''
-          };
-        })
+        const anexos = sessao.fotos ? sessao.fotos.split(',').filter((url: string) => url) : [];
+        let status = 'Pendente';
+        let pagamentoData: any = null;
+
+        const idContrato = sessao.id_contrato || null;
+        console.log(`Processando sessão ${sessao.id}, id_contrato: ${idContrato}`);
+
+        if (idContrato) {
+          const mesReferencia = new Date(agendamento?.data_agendamento).toISOString().slice(0, 7) + '-01';
+          const { data: mensalidade } = await supabase
+            .from('tb_mensalidade')
+            .select('id_mensalidade, valor, forma_pagamento, comprovante_url, status_pagamento')
+            .eq('id_contrato', idContrato)
+            .eq('mes_referencia', mesReferencia)
+            .eq('status_pagamento', 'Pago')
+            .maybeSingle();
+          if (mensalidade) {
+            status = 'Pago';
+            pagamentoData = {
+              id_mensalidade: mensalidade.id_mensalidade,
+              valor: mensalidade.valor,
+              forma_pagamento: mensalidade.forma_pagamento,
+              comprovante_url: mensalidade.comprovante_url
+            };
+            console.log(`Sessão ${sessao.id} marcada como Pago por mensalidade:`, mensalidade);
+          } else {
+            console.log(`Sessão ${sessao.id} sem mensalidade paga para ${mesReferencia}`);
+          }
+        } else {
+          const pagamento = await pagamentoService.getPagamentoBySessao(sessao.id);
+          if (pagamento) {
+            status = 'Pago';
+            pagamentoData = {
+              id_pagamento: pagamento.id_pagamento,
+              valor: pagamento.valor,
+              forma_pagamento: pagamento.forma_pagamento,
+              comprovante_url: pagamento.comprovante_url
+            };
+            console.log(`Sessão ${sessao.id} marcada como Pago por pagamento avulso:`, pagamento);
+          } else {
+            console.log(`Sessão ${sessao.id} sem pagamento avulso`);
+          }
+        }
+
+        const atendimento = {
+          id: sessao.id,
+          data: agendamento?.data_agendamento || '',
+          horario: startTime || '',
+          horario_fim: horarioFim,
+          paciente,
+          clienteId,
+          id_aprendente: agendamento?.id_aprendente,
+          responsavel_id: agendamento?.responsavel_id,
+          id_agendamento: agendamento?.id_agendamento,
+          id_contrato: idContrato,
+          avatar: '',
+          status,
+          id_pagamento: pagamentoData?.id_pagamento,
+          id_mensalidade: pagamentoData?.id_mensalidade,
+          valor_pagamento: pagamentoData?.valor,
+          forma_pagamento: pagamentoData?.forma_pagamento,
+          comprovante_url: pagamentoData?.comprovante_url,
+          anotacao: null,
+          showDetails: false,
+          isEditing: false,
+          preSessao: sessao.pre_sessao || '',
+          queixas: sessao.queixas || '',
+          evolucaoAtual: sessao.evolucao || '',
+          habilidadesTrabalhadas: sessao.habilidades_trabalhadas || '',
+          futurasAcoes: sessao.futuras_acoes || '',
+          anexos,
+          anexosTemporarios: anexos.map(url => ({ url, name: url.split('/').pop() })),
+          anexosParaExcluir: [] as string[],
+          novosAnexos: [] as File[],
+          uploadError: '',
+          resumo: sessao.resumo || ''
+        };
+
+        return atendimento;
+      })
     );
     console.log('Atendimentos carregados:', atendimentos.value.map(a => ({
       id: a.id,
