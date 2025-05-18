@@ -555,7 +555,7 @@ async function deleteEvent() {
 const calendarOptions = ref<CalendarOptions>({
   plugins: [dayGridPlugin, timeGridPlugin, interactionPlugin, listPlugin],
   height: 'auto',
-  initialView: 'timeGridDay',
+  initialView: 'dayGridMonth',
   headerToolbar: {
     left: 'prev,next today',
     center: 'title',
