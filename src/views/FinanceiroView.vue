@@ -162,7 +162,44 @@
         </v-card-title>
         <v-card-text>
           <v-form ref="form" @submit.prevent="salvarLancamento">
+            <v-select
+              v-if="tipoSelecionado === 'receita'"
+              v-model="novoLancamento.tipo_receita"
+              :items="['Sessão Avulsa', 'Mensalidade']"
+              label="Tipo de Receita"
+              outlined
+              dense
+              :rules="[v => !!v || 'Campo obrigatório']"
+            />
+            <v-autocomplete
+              v-if="!loading && tipoSelecionado === 'receita' && novoLancamento.tipo_receita === 'Sessão Avulsa'"
+              v-model="novoLancamento.id_sessao"
+              :items="sessoesDisponiveis"
+              item-title="descricao"
+              item-value="id_sessao"
+              label="Sessão"
+              outlined
+              dense
+              :rules="[v => !!v || 'Campo obrigatório']"
+            />
+            <v-progress-circular
+              v-else-if="loading"
+              indeterminate
+              color="primary"
+            ></v-progress-circular>
+            <v-autocomplete
+              v-if="tipoSelecionado === 'receita' && novoLancamento.tipo_receita === 'Mensalidade'"
+              v-model="novoLancamento.id_mensalidade"
+              :items="mensalidadesDisponiveis"
+              item-title="descricao"
+              item-value="id_mensalidade"
+              label="Mensalidade"
+              outlined
+              dense
+              :rules="[v => !!v || 'Campo obrigatório']"
+            />
             <v-text-field
+              v-if="tipoSelecionado === 'despesa'"
               v-model="novoLancamento.tipo"
               label="Descrição"
               :rules="[v => !!v || 'Campo obrigatório']"
@@ -195,7 +232,7 @@
             <v-row>
               <v-col cols="6">
                 <v-text-field
-                  v-model="novoLancamento.qtdMeses"
+                  v-model="novoLancamento.qtd_meses"
                   label="Quantidade de meses"
                   type="number"
                   outlined
@@ -215,13 +252,6 @@
               </v-col>
             </v-row>
             <v-text-field
-              v-if="tipoSelecionado === 'receita'"
-              v-model="novoLancamento.cliente"
-              label="Cliente"
-              outlined
-              dense
-            />
-            <v-text-field
               v-model="novoLancamento.valor"
               label="Valor"
               type="number"
@@ -229,6 +259,20 @@
               dense
               :rules="[v => !!v || 'Campo obrigatório']"
               prefix="R$"
+            />
+            <v-checkbox
+              v-model="novoLancamento.pago"
+              label="Pago"
+              dense
+            />
+            <v-select
+              v-if="tipoSelecionado === 'receita'"
+              v-model="novoLancamento.forma_pagamento"
+              :items="['Pix', 'Cartão', 'Boleto', 'Dinheiro']"
+              label="Forma de Pagamento"
+              outlined
+              dense
+              :rules="[v => !!v || 'Campo obrigatório']"
             />
           </v-form>
         </v-card-text>
@@ -289,172 +333,78 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue'
+import { ref, computed, watch, onMounted } from 'vue';
+import supabase from '@/config/supabase';
 
 interface Lancamento {
-  id: number
-  tipo: string
-  categoria: string
-  observacoes: string
-  recorrente: boolean
-  qtdMeses: number
-  vencimento: string
-  cliente: string
-  valor: number
-  tipoLancamento: 'receita' | 'despesa'
-  pago: boolean
+  id: string;
+  tipo: string;
+  categoria: string;
+  observacoes: string;
+  recorrente: boolean;
+  qtd_meses: number;
+  vencimento: string;
+  cliente: string;
+  valor: number;
+  tipo_lancamento: 'receita' | 'despesa';
+  pago: boolean;
+  id_sessao?: string;
+  id_mensalidade?: string;
+  id_despesa?: string;
+  id_pagamento?: string;
+  tipo_receita?: 'Sessão Avulsa' | 'Mensalidade';
+  forma_pagamento?: string;
 }
 
-const form = ref<{ validate: () => boolean } | null>(null)
-const tipoSelecionado = ref<'receita' | 'despesa'>('receita')
-const mesSelecionado = ref(4)
-const anoSelecionado = ref(2024)
-const anos = [2023, 2024, 2025]
-const meses = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez']
+const form = ref<{ validate: () => Promise<boolean> } | null>(null);
+const tipoSelecionado = ref<'receita' | 'despesa'>('receita');
+const mesSelecionado = ref(new Date().getMonth());
+const anoSelecionado = ref(new Date().getFullYear());
+const anos = Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - 2 + i);
+const meses = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
 
-const abrirModal = ref(false)
-const dialogConfirmacao = ref(false)
-const editando = ref(false)
-const lancamentoParaExcluir = ref<Lancamento | null>(null)
-const lancamentos = ref<Lancamento[]>([
-  // Receitas - Atendimentos
-  {
-    id: 1,
-    tipo: 'Atendimento Psicopedagógico',
-    categoria: 'Atendimento',
-    observacoes: 'Primeira sessão',
-    recorrente: false,
-    qtdMeses: 1,
-    vencimento: '2024-05-02',
-    cliente: 'Maria Silva',
-    valor: 250.00,
-    tipoLancamento: 'receita',
-    pago: true
-  },
-  {
-    id: 2,
-    tipo: 'Atendimento Psicopedagógico',
-    categoria: 'Atendimento',
-    observacoes: 'Sessão de acompanhamento',
-    recorrente: false,
-    qtdMeses: 1,
-    vencimento: '2024-05-05',
-    cliente: 'João Santos',
-    valor: 250.00,
-    tipoLancamento: 'receita',
-    pago: true
-  },
-  {
-    id: 3,
-    tipo: 'Atendimento Psicopedagógico',
-    categoria: 'Atendimento',
-    observacoes: 'Avaliação inicial',
-    recorrente: false,
-    qtdMeses: 1,
-    vencimento: '2024-05-10',
-    cliente: 'Ana Oliveira',
-    valor: 350.00,
-    tipoLancamento: 'receita',
-    pago: true
-  },
-  {
-    id: 4,
-    tipo: 'Atendimento Psicopedagógico',
-    categoria: 'Atendimento',
-    observacoes: 'Sessão de acompanhamento',
-    recorrente: false,
-    qtdMeses: 1,
-    vencimento: '2024-05-15',
-    cliente: 'Pedro Costa',
-    valor: 250.00,
-    tipoLancamento: 'receita',
-    pago: false
-  },
-  {
-    id: 5,
-    tipo: 'Atendimento Psicopedagógico',
-    categoria: 'Atendimento',
-    observacoes: 'Primeira sessão',
-    recorrente: false,
-    qtdMeses: 1,
-    vencimento: '2024-05-20',
-    cliente: 'Carla Mendes',
-    valor: 250.00,
-    tipoLancamento: 'receita',
-    pago: false
-  },
-  // Despesas
+const abrirModal = ref(false);
+const dialogConfirmacao = ref(false);
+const editando = ref(false);
+const lancamentoParaExcluir = ref<Lancamento | null>(null);
+const lancamentos = ref<Lancamento[]>([]);
+const sessoesDisponiveis = ref<{ id_sessao: string; descricao: string }[]>([]);
+const mensalidadesDisponiveis = ref<{ id_mensalidade: string; descricao: string }[]>([]);
 
-  {
-    id: 7,
-    tipo: 'Material de Trabalho',
-    categoria: 'Materiais',
-    observacoes: 'Compra de jogos e materiais',
-    recorrente: false,
-    qtdMeses: 1,
-    vencimento: '2024-05-08',
-    cliente: '',
-    valor: 350.00,
-    tipoLancamento: 'despesa',
-    pago: true
-  },
-  {
-    id: 8,
-    tipo: 'Internet',
-    categoria: 'Serviços',
-    observacoes: 'Pacote mensal',
-    recorrente: true,
-    qtdMeses: 12,
-    vencimento: '2024-05-10',
-    cliente: '',
-    valor: 150.00,
-    tipoLancamento: 'despesa',
-    pago: true
-  },
-  {
-    id: 9,
-    tipo: 'Energia Elétrica',
-    categoria: 'Serviços',
-    observacoes: 'Conta mensal',
-    recorrente: true,
-    qtdMeses: 12,
-    vencimento: '2024-05-15',
-    cliente: '',
-    valor: 200.00,
-    tipoLancamento: 'despesa',
-    pago: false
-  },
-  {
-    id: 10,
-    tipo: 'Assinatura de Software',
-    categoria: 'Serviços',
-    observacoes: 'Plano anual',
-    recorrente: true,
-    qtdMeses: 12,
-    vencimento: '2024-05-20',
-    cliente: '',
-    valor: 120.00,
-    tipoLancamento: 'despesa',
-    pago: false
-  }
-])
+const snackbar = ref(false);
+const snackbarMessage = ref('');
+const snackbarColor = ref('success');
 
-const snackbar = ref(false)
-const snackbarMessage = ref('')
-const snackbarColor = ref('success')
+const loading = ref(true);
+
+onMounted(async () => {
+  loading.value = true;
+  await Promise.all([
+    carregarLancamentos(),
+    carregarSessoesDisponiveis(),
+    carregarMensalidadesDisponiveis()
+  ]);
+  loading.value = false;
+});
 
 const novoLancamento = ref<Partial<Lancamento>>({
   tipo: '',
   categoria: '',
   observacoes: '',
   recorrente: false,
-  qtdMeses: 1,
+  qtd_meses: 1,
   vencimento: '',
   cliente: '',
   valor: 0,
-  tipoLancamento: tipoSelecionado.value,
-  pago: false
-})
+  tipo_lancamento: tipoSelecionado.value,
+  pago: false,
+  tipo_receita: '',
+  id_sessao: '',
+  id_mensalidade: '',
+  id_despesa: '',
+  id_pagamento: '',
+  forma_pagamento: ''
+});
 
 const headers = [
   { text: 'Descrição', value: 'tipo' },
@@ -464,48 +414,321 @@ const headers = [
   { text: 'Vencimento', value: 'vencimento' },
   { text: 'Status', value: 'pago' },
   { text: 'Ações', value: 'acoes', sortable: false }
-]
+];
 
 const lancamentosFiltrados = computed(() => {
-  return lancamentos.value.filter(lancamento => {
-    const data = new Date(lancamento.vencimento)
+  console.log('Filter criteria:', {
+    tipoSelecionado: tipoSelecionado.value,
+    anoSelecionado: anoSelecionado.value,
+    mesSelecionado: mesSelecionado.value
+  });
+  const filtered = lancamentos.value.filter(lancamento => {
+    const [year, month, day] = lancamento.vencimento.split('-').map(Number);
+    const data = new Date(year, month - 1, day);
+    const isValid = !isNaN(data.getTime());
+    console.log('Lancamento date:', {
+      id: lancamento.id,
+      vencimento: lancamento.vencimento,
+      year: isValid ? data.getFullYear() : 'Invalid',
+      month: isValid ? data.getMonth() : 'Invalid'
+    });
     return (
-      lancamento.tipoLancamento === tipoSelecionado.value &&
+      lancamento.tipo_lancamento === tipoSelecionado.value &&
+      isValid &&
       data.getFullYear() === anoSelecionado.value &&
       data.getMonth() === mesSelecionado.value
-    )
-  })
-})
+    );
+  });
+  console.log('Filtered lancamentos:', filtered);
+  return filtered;
+});
 
 const totalReceitas = computed(() => {
-  return lancamentos.value
-    .filter(l => l.tipoLancamento === 'receita' && 
-      new Date(l.vencimento).getFullYear() === anoSelecionado.value &&
-      new Date(l.vencimento).getMonth() === mesSelecionado.value)
-    .reduce((acc, curr) => acc + curr.valor, 0)
-})
+  const filtered = lancamentos.value.filter(l => {
+    const [year, month, day] = l.vencimento.split('-').map(Number);
+    const data = new Date(year, month - 1, day); // month is 0-based in JS
+    const isValid = !isNaN(data.getTime());
+    console.log('Receita filter:', {
+      id: l.id,
+      tipo_lancamento: l.tipo_lancamento,
+      vencimento: l.vencimento,
+      year: isValid ? data.getFullYear() : 'Invalid',
+      month: isValid ? data.getMonth() : 'Invalid',
+      anoSelecionado: anoSelecionado.value,
+      mesSelecionado: mesSelecionado.value,
+      valor: l.valor
+    });
+    return (
+      l.tipo_lancamento === 'receita' &&
+      isValid &&
+      data.getFullYear() === anoSelecionado.value &&
+      data.getMonth() === mesSelecionado.value
+    );
+  });
+  const total = filtered.reduce((acc, curr) => acc + (curr.valor || 0), 0);
+  console.log('Total Receitas:', total, 'Filtered entries:', filtered);
+  return total;
+});
 
 const totalDespesas = computed(() => {
-  return lancamentos.value
-    .filter(l => l.tipoLancamento === 'despesa' && 
-      new Date(l.vencimento).getFullYear() === anoSelecionado.value &&
-      new Date(l.vencimento).getMonth() === mesSelecionado.value)
-    .reduce((acc, curr) => acc + curr.valor, 0)
-})
+  const filtered = lancamentos.value.filter(l => {
+    const [year, month, day] = l.vencimento.split('-').map(Number);
+    const data = new Date(year, month - 1, day); // month is 0-based in JS
+    const isValid = !isNaN(data.getTime());
+    console.log('Despesa filter:', {
+      id: l.id,
+      tipo_lancamento: l.tipo_lancamento,
+      vencimento: l.vencimento,
+      year: isValid ? data.getFullYear() : 'Invalid',
+      month: isValid ? data.getMonth() : 'Invalid',
+      anoSelecionado: anoSelecionado.value,
+      mesSelecionado: mesSelecionado.value,
+      valor: l.valor
+    });
+    return (
+      l.tipo_lancamento === 'despesa' &&
+      isValid &&
+      data.getFullYear() === anoSelecionado.value &&
+      data.getMonth() === mesSelecionado.value
+    );
+  });
+  const total = filtered.reduce((acc, curr) => acc + (curr.valor || 0), 0);
+  console.log('Total Despesas:', total, 'Filtered entries:', filtered);
+  return total;
+});
 
 const lucro = computed(() => {
-  return totalReceitas.value - totalDespesas.value
-})
+  const result = totalReceitas.value - totalDespesas.value;
+  console.log('Lucro:', result, { totalReceitas: totalReceitas.value, totalDespesas: totalDespesas.value });
+  return result;
+});
 
 function formatarValor(valor: number) {
   return valor.toLocaleString('pt-BR', {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2
-  })
+  });
 }
 
 function formatarData(data: string) {
-  return new Date(data).toLocaleDateString('pt-BR')
+  return new Date(data).toLocaleDateString('pt-BR');
+}
+
+async function carregarSessoesDisponiveis() {
+  try {
+    const { data, error } = await supabase
+      .from('tb_sessao')
+      .select(`
+        id,
+        id_agendamento,
+        id_contrato,
+        tb_agendamento (
+          id_agendamento,
+          data_agendamento,
+          id_aprendente,
+          tb_aprendente (nome_aprendente)
+        )
+      `)
+      .is('id_contrato', null) // Avulsa sessions
+      .not('id', 'in', `(${lancamentos.value.filter(l => l.id_sessao).map(l => l.id_sessao).join(',') || '00000000-0000-0000-0000-000000000000'})`);
+    if (error) {
+      console.error('Erro ao carregar sessões disponíveis:', error);
+      throw error;
+    }
+    sessoesDisponiveis.value = data?.map(sessao => ({
+      id_sessao: sessao.id,
+      descricao: `${sessao.tb_agendamento?.tb_aprendente?.nome_aprendente || 'N/A'} - ${formatarData(sessao.tb_agendamento?.data_agendamento || new Date().toISOString())}`
+    })) || [];
+    console.log('Sessões disponíveis carregadas:', sessoesDisponiveis.value);
+  } catch (error) {
+    console.error('Erro ao carregar sessões:', error);
+    snackbarMessage.value = 'Erro ao carregar sessões disponíveis';
+    snackbarColor.value = 'error';
+    snackbar.value = true;
+  }
+}
+
+async function carregarMensalidadesDisponiveis() {
+  try {
+    const { data, error } = await supabase
+      .from('tb_mensalidade')
+      .select(`
+        id_mensalidade,
+        mes_referencia,
+        id_contrato,
+        tb_contrato (
+          id_responsavel,
+          tb_responsavel (nome)
+        )
+      `)
+      .eq('status_pagamento', 'Pago')
+      .not('id_mensalidade', 'in', `(${lancamentos.value.filter(l => l.id_mensalidade).map(l => l.id_mensalidade).join(',') || '00000000-0000-0000-0000-000000000000'})`);
+    if (error) {
+      console.error('Erro ao carregar mensalidades disponíveis:', error);
+      throw error;
+    }
+    mensalidadesDisponiveis.value = data?.map(mensalidade => ({
+      id_mensalidade: mensalidade.id_mensalidade,
+      descricao: `${mensalidade.tb_contrato?.tb_responsavel?.nome || 'N/A'} - ${mensalidade.mes_referencia.slice(0, 7)}`
+    })) || [];
+    console.log('Mensalidades disponíveis carregadas:', mensalidadesDisponiveis.value);
+  } catch (error) {
+    console.error('Erro ao carregar mensalidades:', error);
+    snackbarMessage.value = 'Erro ao carregar mensalidades disponíveis';
+    snackbarColor.value = 'error';
+    snackbar.value = true;
+  }
+}
+
+async function carregarLancamentos() {
+  try {
+    // Fetch avulsa session payments
+    const { data: pagamentos, error: pagamentosError } = await supabase
+      .from('tb_pagamento_sessao')
+      .select(`
+        id,
+        id_sessao,
+        id_pagamento,
+        tb_pagamento (
+          id_pagamento,
+          valor,
+          data_pagamento,
+          forma_pagamento,
+          comprovante_url
+        ),
+        tb_sessao (
+          id,
+          id_agendamento,
+          id_contrato,
+          tb_agendamento (
+            data_agendamento,
+            id_aprendente,
+            tb_aprendente (nome_aprendente)
+          )
+        )
+      `)
+      .is('tb_sessao.id_contrato', null);
+    if (pagamentosError) {
+      console.error('Erro ao carregar pagamentos:', pagamentosError);
+      throw pagamentosError;
+    }
+    console.log('Raw pagamentos data:', pagamentos);
+
+    const lancamentosPagamentos = pagamentos?.map(p => {
+      const vencimentoDate = p.tb_sessao?.tb_agendamento?.data_agendamento
+        ? new Date(p.tb_sessao.tb_agendamento.data_agendamento)
+        : p.tb_pagamento.data_pagamento
+          ? new Date(p.tb_pagamento.data_pagamento)
+          : new Date();
+      const vencimento = vencimentoDate.toISOString().split('T')[0];
+      console.log('Pagamento vencimento:', { id: p.id, vencimento });
+      return {
+        id: p.id,
+        tipo: 'Sessão Avulsa',
+        categoria: 'Atendimento',
+        observacoes: `Sessão para ${p.tb_sessao?.tb_agendamento?.tb_aprendente?.nome_aprendente || 'N/A'}`,
+        recorrente: false,
+        qtd_meses: 1,
+        vencimento,
+        cliente: p.tb_sessao?.tb_agendamento?.tb_aprendente?.nome_aprendente || 'N/A',
+        valor: p.tb_pagamento.valor || 0,
+        tipo_lancamento: 'receita' as const,
+        pago: !!p.tb_pagamento.data_pagamento,
+        id_sessao: p.id_sessao,
+        id_pagamento: p.id_pagamento,
+        tipo_receita: 'Sessão Avulsa' as const,
+        forma_pagamento: p.tb_pagamento.forma_pagamento
+      };
+    }) || [];
+    console.log('Mapped lancamentosPagamentos:', lancamentosPagamentos)
+
+    // Fetch mensalidade payments
+    const { data: mensalidades, error: mensalidadesError } = await supabase
+      .from('tb_mensalidade')
+      .select(`
+        id_mensalidade,
+        valor,
+        mes_referencia,
+        status_pagamento,
+        forma_pagamento,
+        comprovante_url,
+        data_pagamento,
+        id_contrato,
+        tb_contrato (
+          id_responsavel,
+          tb_responsavel (nome)
+        )
+      `)
+      .eq('status_pagamento', 'Pago');
+    if (mensalidadesError) {
+      console.error('Erro ao carregar mensalidades:', mensalidadesError);
+      throw mensalidadesError;
+    }
+    console.log('Raw mensalidades data:', mensalidades);
+
+    const lancamentosMensalidades = mensalidades?.map(m => {
+      const vencimentoDate = new Date(m.mes_referencia);
+      const vencimento = vencimentoDate.toISOString().split('T')[0];
+      console.log('Mensalidade vencimento:', { id: m.id_mensalidade, vencimento });
+      return {
+        id: m.id_mensalidade,
+        tipo: 'Mensalidade',
+        categoria: 'Contrato',
+        observacoes: `Mensalidade de ${m.mes_referencia.slice(0, 7)}`,
+        recorrente: true,
+        qtd_meses: 12,
+        vencimento,
+        cliente: m.tb_contrato?.tb_responsavel?.nome || 'N/A',
+        valor: m.valor || 0,
+        tipo_lancamento: 'receita' as const,
+        pago: m.status_pagamento === 'Pago',
+        id_mensalidade: m.id_mensalidade,
+        tipo_receita: 'Mensalidade' as const,
+        forma_pagamento: m.forma_pagamento
+      };
+    }) || [];
+    console.log('Mapped lancamentosMensalidades:', lancamentosMensalidades);
+
+    // Fetch expenses
+    const { data: despesas, error: despesasError } = await supabase
+      .from('tb_despesa')
+      .select('*');
+    if (despesasError) {
+      console.error('Erro ao carregar despesas:', despesasError);
+      throw despesasError;
+    }
+    console.log('Raw despesas data:', despesas);
+
+    const lancamentosDespesas = despesas?.map(d => {
+      const vencimentoDate = new Date(d.vencimento);
+      const vencimento = vencimentoDate.toISOString().split('T')[0];
+      console.log('Despesa vencimento:', { id: d.id_despesa, vencimento });
+      return {
+        id: d.id_despesa,
+        tipo: d.tipo,
+        categoria: d.categoria || 'Despesa',
+        observacoes: d.observacoes || '',
+        recorrente: d.recorrente,
+        qtd_meses: d.qtd_meses,
+        vencimento,
+        cliente: '',
+        valor: d.valor,
+        tipo_lancamento: 'despesa' as const,
+        pago: d.pago,
+        id_despesa: d.id_despesa
+      };
+    }) || [];
+    console.log('Mapped lancamentosDespesas:', lancamentosDespesas);
+
+    // Combine and assign
+    lancamentos.value = [...lancamentosPagamentos, ...lancamentosMensalidades, ...lancamentosDespesas];
+    console.log('Final lancamentos.value:', lancamentos.value);
+  } catch (error) {
+    console.error('Erro ao carregar lançamentos:', error);
+    snackbarMessage.value = 'Erro ao carregar lançamentos';
+    snackbarColor.value = 'error';
+    snackbar.value = true;
+  }
 }
 
 function limparFormulario() {
@@ -514,95 +737,194 @@ function limparFormulario() {
     categoria: '',
     observacoes: '',
     recorrente: false,
-    qtdMeses: 1,
+    qtd_meses: 1,
     vencimento: '',
     cliente: '',
     valor: 0,
-    tipoLancamento: tipoSelecionado.value,
-    pago: false
-  }
-  editando.value = false
+    tipo_lancamento: tipoSelecionado.value,
+    pago: false,
+    tipo_receita: '',
+    id_sessao: '',
+    id_mensalidade: '',
+    id_despesa: '',
+    id_pagamento: '',
+    forma_pagamento: ''
+  };
+  editando.value = false;
 }
 
-function salvarLancamento() {
-  if (!form.value?.validate()) return
+async function salvarLancamento() {
+  if (!form.value) return;
+  const valid = await form.value.validate();
+  if (!valid) return;
 
   try {
-    if (editando.value && novoLancamento.value.id) {
-      const index = lancamentos.value.findIndex(l => l.id === novoLancamento.value.id)
-      if (index !== -1) {
-        lancamentos.value[index] = { ...novoLancamento.value as Lancamento }
+    if (tipoSelecionado.value === 'receita') {
+      if (novoLancamento.value.tipo_receita === 'Sessão Avulsa') {
+        if (editando.value && novoLancamento.value.id_pagamento) {
+          // Update existing payment
+          await supabase
+            .from('tb_pagamento')
+            .update({
+              valor: novoLancamento.value.valor,
+              data_pagamento: novoLancamento.value.pago ? new Date().toISOString() : null,
+              forma_pagamento: novoLancamento.value.forma_pagamento
+            })
+            .eq('id_pagamento', novoLancamento.value.id_pagamento);
+          snackbarMessage.value = 'Receita de sessão avulsa atualizada!';
+        } else {
+          // Create new payment
+          const { data: pagamento } = await supabase
+            .from('tb_pagamento')
+            .insertインプット
+            .insert({
+              valor: novoLancamento.value.valor,
+              data_pagamento: novoLancamento.value.pago ? new Date().toISOString() : null,
+              forma_pagamento: novoLancamento.value.forma_pagamento
+            })
+            .select('id_pagamento')
+            .single();
+
+          await supabase
+            .from('tb_pagamento_sessao')
+            .insert({
+              id_sessao: novoLancamento.value.id_sessao,
+              id_pagamento: pagamento.id_pagamento
+            });
+          snackbarMessage.value = 'Receita de sessão avulsa salva!';
+        }
+      } else if (novoLancamento.value.tipo_receita === 'Mensalidade') {
+        // Update tb_mensalidade
+        await supabase
+          .from('tb_mensalidade')
+          .update({
+            valor: novoLancamento.value.valor,
+            status_pagamento: novoLancamento.value.pago ? 'Pago' : 'Pendente',
+            data_pagamento: novoLancamento.value.pago ? new Date().toISOString() : null,
+            forma_pagamento: novoLancamento.value.forma_pagamento
+          })
+          .eq('id_mensalidade', novoLancamento.value.id_mensalidade);
+        snackbarMessage.value = 'Receita de mensalidade salva!';
       }
-      snackbarMessage.value = 'Lançamento atualizado com sucesso!'
     } else {
-      const novoId = lancamentos.value.length > 0 
-        ? Math.max(...lancamentos.value.map(l => l.id)) + 1 
-        : 1
-      
-      lancamentos.value.push({
-        ...novoLancamento.value,
-        id: novoId,
-        valor: novoLancamento.value.valor || 0
-      } as Lancamento)
-      snackbarMessage.value = 'Lançamento adicionado com sucesso!'
+      // Create or update tb_despesa
+      if (editando.value && novoLancamento.value.id_despesa) {
+        await supabase
+          .from('tb_despesa')
+          .update({
+            tipo: novoLancamento.value.tipo,
+            categoria: novoLancamento.value.categoria,
+            observacoes: novoLancamento.value.observacoes,
+            recorrente: novoLancamento.value.recorrente,
+            qtd_meses: novoLancamento.value.qtd_meses,
+            vencimento: novoLancamento.value.vencimento,
+            valor: novoLancamento.value.valor,
+            pago: novoLancamento.value.pago
+          })
+          .eq('id_despesa', novoLancamento.value.id_despesa);
+        snackbarMessage.value = 'Despesa atualizada!';
+      } else {
+        await supabase
+          .from('tb_despesa')
+          .insert({
+            tipo: novoLancamento.value.tipo,
+            categoria: novoLancamento.value.categoria,
+            observacoes: novoLancamento.value.observacoes,
+            recorrente: novoLancamento.value.recorrente,
+            qtd_meses: novoLancamento.value.qtd_meses,
+            vencimento: novoLancamento.value.vencimento,
+            valor: novoLancamento.value.valor,
+            pago: novoLancamento.value.pago
+          });
+        snackbarMessage.value = 'Despesa salva!';
+      }
     }
-    snackbarColor.value = 'success'
-    abrirModal.value = false
-    limparFormulario()
-  } catch {
-    snackbarMessage.value = 'Erro ao salvar lançamento'
-    snackbarColor.value = 'error'
+
+    await carregarLancamentos();
+    await carregarSessoesDisponiveis();
+    await carregarMensalidadesDisponiveis();
+    snackbarColor.value = 'success';
+    abrirModal.value = false;
+    limparFormulario();
+  } catch (error) {
+    console.error('Erro ao salvar lançamento:', error);
+    snackbarMessage.value = 'Erro ao salvar lançamento';
+    snackbarColor.value = 'error';
   } finally {
-    snackbar.value = true
+    snackbar.value = true;
   }
 }
 
 function editarLancamento(lancamento: Lancamento) {
-  novoLancamento.value = { ...lancamento }
-  editando.value = true
-  abrirModal.value = true
+  novoLancamento.value = {
+    ...lancamento,
+    tipo_receita: lancamento.id_sessao ? 'Sessão Avulsa' : lancamento.id_mensalidade ? 'Mensalidade' : '',
+    forma_pagamento: lancamento.forma_pagamento
+  };
+  editando.value = true;
+  abrirModal.value = true;
 }
 
 function confirmarExclusao(lancamento: Lancamento) {
-  lancamentoParaExcluir.value = lancamento
-  dialogConfirmacao.value = true
+  lancamentoParaExcluir.value = lancamento;
+  dialogConfirmacao.value = true;
 }
 
-function excluirLancamento() {
-  if (!lancamentoParaExcluir.value) return
+async function excluirLancamento() {
+  if (!lancamentoParaExcluir.value) return;
 
   try {
-    lancamentos.value = lancamentos.value.filter(
-      l => l.id !== lancamentoParaExcluir.value?.id
-    )
-    snackbarMessage.value = 'Lançamento excluído com sucesso!'
-    snackbarColor.value = 'success'
-  } catch {
-    snackbarMessage.value = 'Erro ao excluir lançamento'
-    snackbarColor.value = 'error'
+    if (lancamentoParaExcluir.value.id_sessao) {
+      await supabase
+        .from('tb_pagamento_sessao')
+        .delete()
+        .eq('id', lancamentoParaExcluir.value.id);
+      await supabase
+        .from('tb_pagamento')
+        .delete()
+        .eq('id_pagamento', lancamentoParaExcluir.value.id_pagamento);
+    } else if (lancamentoParaExcluir.value.id_mensalidade) {
+      await supabase
+        .from('tb_mensalidade')
+        .update({ status_pagamento: 'Pendente', data_pagamento: null, forma_pagamento: null })
+        .eq('id_mensalidade', lancamentoParaExcluir.value.id_mensalidade);
+    } else if (lancamentoParaExcluir.value.id_despesa) {
+      await supabase
+        .from('tb_despesa')
+        .delete()
+        .eq('id_despesa', lancamentoParaExcluir.value.id_despesa);
+    }
+
+    await carregarLancamentos();
+    snackbarMessage.value = 'Lançamento excluído com sucesso!';
+    snackbarColor.value = 'success';
+  } catch (error) {
+    console.error('Erro ao excluir lançamento:', error);
+    snackbarMessage.value = 'Erro ao excluir lançamento';
+    snackbarColor.value = 'error';
   } finally {
-    dialogConfirmacao.value = false
-    lancamentoParaExcluir.value = null
-    snackbar.value = true
+    dialogConfirmacao.value = false;
+    lancamentoParaExcluir.value = null;
+    snackbar.value = true;
   }
 }
 
 function enviarMensagemWhatsApp(item: Lancamento) {
   const mensagem = item.pago
     ? `Olá! Confirmamos o recebimento do pagamento de R$ ${formatarValor(item.valor)} referente a ${item.tipo}.`
-    : `Olá! Lembramos que o pagamento de R$ ${formatarValor(item.valor)} referente a ${item.tipo} está pendente. Vencimento: ${formatarData(item.vencimento)}.`
+    : `Olá! Lembramos que o pagamento de R$ ${formatarValor(item.valor)} referente a ${item.tipo} está pendente. Vencimento: ${formatarData(item.vencimento)}.`;
   
-  const numero = item.cliente ? '5511999999999' : '' // Substitua pelo número real do cliente
-  const url = `https://wa.me/${numero}?text=${encodeURIComponent(mensagem)}`
-  window.open(url, '_blank')
+  const numero = item.cliente ? '5511999999999' : ''; // TODO: Fetch real client number from tb_responsavel
+  const url = `https://wa.me/${numero}?text=${encodeURIComponent(mensagem)}`;
+  window.open(url, '_blank');
 }
 
-// Atualizar o tipo de lançamento quando mudar o tipo selecionado
 watch(tipoSelecionado, (novoTipo) => {
-  if (novoLancamento.value) {
-    novoLancamento.value.tipoLancamento = novoTipo
-  }
-})
+  novoLancamento.value.tipo_lancamento = novoTipo;
+  limparFormulario();
+});
+
+
 </script>
 
 <style scoped>

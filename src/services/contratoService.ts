@@ -4,11 +4,13 @@ import Contrato from '@/models/Contrato'
 import { useShowErrorMessage } from '@/userCases/useShowErrorMessage'
 import { useStoreProfissional } from '@/stores/storeProfissional'
 import { DiasAtendimentosContratoService } from '@/services/DiasAtendimentosContratoService.ts'
+import { UploadService } from '@/services/UploadService'
 
 export class ContratoService {
   private showError = useShowErrorMessage().showError
   private profissionalStore = useStoreProfissional()
   private diasAtendimentoContratoService = new DiasAtendimentosContratoService();
+  private uploadService = new UploadService()
 
   async loadContratos(idResponsavel: string): Promise<Contrato[]> {
     try {
@@ -25,26 +27,21 @@ export class ContratoService {
     }
   }
 
-
-
-
-
-
-  async loadContratoPorAprendente(idAprendente: string): Promise<Contrato | null> {
+  async loadContratoPorAprendente(idAprendente: string): Promise<Contrato[] | null> {
     try {
       const { data, error } = await supabase
         .from('tb_contrato')
         .select('*')
-        .eq('id_aprendente', idAprendente).select()
+        .eq('id_aprendente', idAprendente)
+        .select()
 
       if (error) throw error
-      return data as Contrato
+      return data as Contrato[]
     } catch (err: any) {
       this.showError(err.message || 'Erro ao buscar contrato por aprendente')
       return null
     }
   }
-
 
   async adicionarAprendenteAoContrato(idContrato: string, idAprendente: string): Promise<void> {
     try {
@@ -67,16 +64,20 @@ export class ContratoService {
         .eq('cadastrado','TRUE')
         .select()
       if (error) throw error
-      return data as Contrato
+      return data as Contrato[]
     } catch (err: any) {
       this.showError(err.message || 'Erro ao buscar contrato por aprendente')
       return null
     }
   }
-
-  async addContrato(contrato: Contrato, idResponsavel:string, idAprendente:string): Promise<string | undefined> {
+  private async addContrato(
+    contrato: Contrato,
+    idResponsavel: string,
+    idAprendente: string,
+  ): Promise<string | undefined> {
     try {
       contrato.idProfissional = this.profissionalStore.profissionalDetails?.id || ''
+      const { data, error } = await supabase
       const searchedContratosAprendente =this.verificarContratosAtivosAprendente(idAprendente);
       if(searchedContratosAprendente != null){
         this.showError( 'Existe mais de 1 contrato ativo para esse aprendente')
@@ -93,14 +94,15 @@ export class ContratoService {
           id_responsavel: idResponsavel,
           id_profissional: contrato.idProfissional,
           id_aprendente: idAprendente || null,
-          cancelado: false
-          }
-        ).select()
+          cancelado: false,
+        })
+        .select()
+
 
       // add dias Atendimento Contrato
       this.addDiasAtendimentoNoContrato(contrato);
       if (error) throw error
-      return data?.[0]?.id_contrato;
+      return data?.[0]?.id_contrato
     } catch (err: any) {
       this.showError(err.message || 'Erro ao adicionar contrato')
     }
@@ -118,8 +120,8 @@ export class ContratoService {
         .from('tb_contrato')
         .update({
           cancelado: true,
+          motivo_cancelamento: motivo,
           cadastrado:false,
-          motivo_cancelamento: motivo
         })
         .eq('id_contrato', idContrato)
 
@@ -130,4 +132,91 @@ export class ContratoService {
     }
   }
 
+
+  async pagarMensalidadeContrato(mensalidade: {
+    id_contrato: string
+    mes_referencia: string
+    valor: number
+    forma_pagamento: string
+    comprovante?: File
+  }) {
+    let comprovante_url = null
+    if (mensalidade.comprovante) {
+      comprovante_url = await this.uploadService.uploadArquivo(
+        'pagamentos',
+        `mensalidade/${mensalidade.id_contrato}/${mensalidade.mes_referencia}`,
+        mensalidade.comprovante,
+      )
+    }
+
+    const { data: existingMensalidade, error: checkError } = await supabase
+      .from('tb_mensalidade')
+      .select('id_mensalidade, status_pagamento')
+      .eq('id_contrato', mensalidade.id_contrato)
+      .eq('mes_referencia', mensalidade.mes_referencia)
+      .maybeSingle()
+
+    if (checkError && checkError.code !== 'PGRST116') throw checkError
+
+    let mensalidadeData
+    if (existingMensalidade) {
+      if (existingMensalidade.status_pagamento === 'Pago') {
+        throw new Error('Mensalidade já está paga')
+      }
+      const { data, error } = await supabase
+        .from('tb_mensalidade')
+        .update({
+          valor: mensalidade.valor,
+          forma_pagamento: mensalidade.forma_pagamento,
+          comprovante_url,
+          status_pagamento: 'Pago',
+          data_pagamento: new Date().toISOString(),
+        })
+        .eq('id_mensalidade', existingMensalidade.id_mensalidade)
+        .select()
+        .single()
+      if (error) throw error
+      mensalidadeData = data
+    } else {
+      const { data, error } = await supabase
+        .from('tb_mensalidade')
+        .insert({
+          id_contrato: mensalidade.id_contrato,
+          mes_referencia: mensalidade.mes_referencia,
+          valor: mensalidade.valor,
+          forma_pagamento: mensalidade.forma_pagamento,
+          comprovante_url,
+          status_pagamento: 'Pago',
+          data_pagamento: new Date().toISOString(),
+        })
+        .select()
+        .single()
+      if (error) throw error
+      mensalidadeData = data
+    }
+
+    const { data: pagamentoData, error: pagamentoError } = await supabase
+      .from('tb_pagamento')
+      .upsert({
+        id_mensalidade: mensalidadeData.id_mensalidade,
+        valor: mensalidade.valor,
+        forma_pagamento: mensalidade.forma_pagamento,
+        comprovante_url,
+        data_pagamento: new Date().toISOString(),
+      })
+      .select()
+      .single()
+
+    if (pagamentoError) throw pagamentoError
+
+    return mensalidadeData
+  }
+  async getMensalidadesByContrato(id_contrato: string) {
+    const { data, error } = await supabase
+      .from('tb_mensalidade')
+      .select('*')
+      .eq('id_contrato', id_contrato)
+    if (error) throw error
+    return data
+  }
 }
