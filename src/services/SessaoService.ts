@@ -76,18 +76,18 @@ export class SessaoService {
   async getAllSessoes(options: GetAllSessoesOptions = {}) {
     const storeProfissional = useStoreProfissional();
     const { page = 1, pageSize = 10, clienteId = null } = options;
-
+  
     try {
       // Primeiro, buscar os agendamentos do profissional
       const { data: agendamentos, error: errorAg } = await supabase
         .from('tb_agendamento')
-        .select('id_agendamento')
+        .select('*')
         .eq('id_profissional', storeProfissional.profissionalDetails?.id);
-
+  
       if (errorAg) throw errorAg;
-
+  
       const agendamentoIds = agendamentos.map(a => a.id_agendamento);
-
+  
       // Construir a query base
       let query = supabase
         .from('tb_sessao')
@@ -101,7 +101,6 @@ export class SessaoService {
           resumo,
           fotos,
           id_agendamento,
-          id_contrato,
           tb_agendamento (
             id_agendamento,
             data_agendamento,
@@ -109,41 +108,49 @@ export class SessaoService {
             duracao,
             id_aprendente,
             responsavel_id,
-            id_profissional
+            id_profissional,
+            id_contrato
           )
         `, { count: 'exact' })
         .in('id_agendamento', agendamentoIds);
-
+  
       // Aplicar filtro por cliente se fornecido
       if (clienteId) {
         query = query.or(`tb_agendamento.id_aprendente.eq.${clienteId},tb_agendamento.responsavel_id.eq.${clienteId}`);
       }
-
+  
       // Aplicar ordenação por data
       query = query.order('tb_agendamento(data_agendamento)', { ascending: false });
-
+  
       // Aplicar paginação
       const from = (page - 1) * pageSize;
       const to = from + pageSize - 1;
       query = query.range(from, to);
-
+  
       const { data, error, count } = await query;
-
+  
       if (error) throw error;
-
-      console.log('Sessões carregadas:', data?.map(s => ({
+  
+      // Mapear os dados para incluir id_contrato no nível raiz
+      const mappedData = (data || []).map(session => ({
+        ...session,
+        id_contrato: session.tb_agendamento?.id_contrato || null
+      }));
+  
+      console.log('Sessões carregadas:', mappedData.map(s => ({
         id: s.id,
         id_contrato: s.id_contrato,
         tipo: s.id_contrato ? 'Contrato' : 'Avulsa'
       })));
-
-      return data || [];
+  
+      return mappedData;
     } catch (err: any) {
       console.error('Erro ao buscar sessões:', err);
       this.showError(err.message || 'Erro ao carregar sessões');
       return [];
     }
   }
+
   async getSessaoById(id: string): Promise<Sessao | null> {
     try {
       const { data, error } = await supabase

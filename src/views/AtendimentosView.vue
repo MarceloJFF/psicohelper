@@ -12,7 +12,7 @@
             <template v-slot:item="{ props, item }">
               <v-list-item v-bind="props" :key="item.raw.id" :value="item.raw.id">
                 <v-list-item-title>
-                  {{ item.raw.nomeAprendente}}
+                  {{ item.raw.nomeAprendente }}
                 </v-list-item-title>
               </v-list-item>
             </template>
@@ -66,7 +66,7 @@
                   {{ atendimento.status }}
                 </v-chip>
                 <div v-if="atendimento.id_contrato" class="text-caption mt-2">
-                  Contrato #{{ atendimento.id_contrato }}
+                  Contrato ID: {{ atendimento.id_contrato }}
                 </div>
               </v-col>
 
@@ -84,6 +84,11 @@
                   color="success" variant="outlined" class="ml-2" @click="abrirModalPagamentoIndividual(atendimento)">
                   Lançar Pagamento
                 </v-btn>
+                <div v-if="atendimento.id_contrato" class="text-caption mt-2">
+                  <v-chip variant="outlined" class="text-capitalize" style="width: 100;">
+                    CONTRATO
+                  </v-chip>
+                </div>
                 <v-btn
                   v-if="atendimento.status === 'Pago' && (atendimento.id_contrato === null || atendimento.id_contrato === undefined)"
                   color="error" variant="outlined" class="ml-2" @click="abrirModalPagamentoIndividual(atendimento)">
@@ -154,11 +159,7 @@
 
     <!-- Loading indicator -->
     <div v-if="isLoading" class="d-flex justify-center align-center my-4">
-      <v-progress-circular
-        indeterminate
-        color="primary"
-        size="32"
-      ></v-progress-circular>
+      <v-progress-circular indeterminate color="primary" size="32"></v-progress-circular>
     </div>
 
     <!-- End of list message -->
@@ -283,12 +284,14 @@ import { UploadService } from '@/services/UploadService';
 import { PagamentoService } from '@/services/PagamentoService';
 import { ContratoService } from '@/services/contratoService';
 import supabase from '@/config/supabase';
+import { AgendamentoService } from '@/services/AgendamentoService';
 
 const sessaoService = new SessaoService();
 const aprendenteService = new AprendenteService();
 const uploadService = new UploadService();
 const pagamentoService = new PagamentoService();
 const contratoService = new ContratoService();
+const agendamentoService = new AgendamentoService();
 const atendimentos = ref<any[]>([]);
 const pacientes = ref<any[]>([]);
 const filtroPaciente = ref<string | null>(null);
@@ -387,6 +390,7 @@ const loadSessoes = async (reset = false) => {
     if (newSessoes.length > 0) {
       const novosAtendimentos: Atendimento[] = await Promise.all(
         newSessoes.map(async (sessao) => {
+
           const agendamento = sessao.tb_agendamento;
           const startTime = agendamento?.horario_inicio;
           const duracao = parseInt(agendamento?.duracao) || 60;
@@ -419,7 +423,8 @@ const loadSessoes = async (reset = false) => {
           let status = 'Pendente';
           let pagamentoData: any = null;
 
-          const idContrato = sessao.id_contrato || null;
+          const idContrato = sessao.id_contrato;
+
           console.log(`Processando sessão ${sessao.id}, id_contrato: ${idContrato}, tipo: ${idContrato ? 'Contrato' : 'Avulsa'}`);
 
           if (idContrato) {
