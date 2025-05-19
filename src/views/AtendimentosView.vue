@@ -320,6 +320,8 @@ async function loadSessoes() {
   try {
     const hoje = new Date().toISOString().split('T')[0];
     const sessoes = await sessaoService.getAllSessoes();
+    console.log(sessoes)
+
     atendimentos.value = await Promise.all(
       sessoes.map(async (sessao) => {
         const agendamento = sessao.tb_agendamento;
@@ -330,7 +332,7 @@ async function loadSessoes() {
         const horarioFim = endDateTime
           ? `${endDateTime.getHours().toString().padStart(2, '0')}:${endDateTime.getMinutes().toString().padStart(2, '0')}`
           : '';
-
+        console.log(agendamento)
         let paciente = 'N/A';
         let clienteId = agendamento?.id_aprendente || agendamento?.responsavel_id || '';
         if (agendamento?.id_aprendente) {

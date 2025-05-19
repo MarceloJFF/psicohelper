@@ -69,6 +69,14 @@ export class SessaoService {
   // }
   async getAllSessoes() {
     const storeProfissional = useStoreProfissional();
+    const { data: agendamentos, error: errorAg } = await supabase
+      .from('tb_agendamento')
+      .select('id_agendamento')
+      .eq('id_profissional', storeProfissional.profissionalDetails?.id);
+
+    if (errorAg) throw errorAg;
+
+    const agendamentoIds = agendamentos.map(a => a.id_agendamento);
     const { data, error } = await supabase
       .from('tb_sessao')
       .select(`
@@ -91,8 +99,35 @@ export class SessaoService {
           responsavel_id,
           id_profissional
         )
-      `)
-      .filter('tb_agendamento.id_profissional', 'eq', storeProfissional.profissionalDetails?.id); // <- filtro aninhado aqui
+      `).in('id_agendamento', agendamentoIds); // <- aqui o filtro funciona
+
+        if (error) throw error;
+          return data;
+
+    // const { data, error } = await supabase
+    //   .from('tb_sessao')
+    //   .select(`
+    //     id,
+    //     pre_sessao,
+    //     queixas,
+    //     evolucao,
+    //     habilidades_trabalhadas,
+    //     futuras_acoes,
+    //     resumo,
+    //     fotos,
+    //     id_agendamento,
+    //     id_contrato,
+    //     tb_agendamento (
+    //       id_agendamento,
+    //       data_agendamento,
+    //       horario_inicio,
+    //       duracao,
+    //       id_aprendente,
+    //       responsavel_id,
+    //       id_profissional
+    //     )
+    //   `)
+    //   .filter('tb_agendamento.id_profissional', 'eq', storeProfissional.profissionalDetails?.id); // <- filtro aninhado aqui
 
     if (error) {
       console.error('Erro ao buscar sessões:', error);
