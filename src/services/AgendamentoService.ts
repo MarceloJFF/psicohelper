@@ -25,7 +25,7 @@ export class AgendamentoService {
             tipo_atendimento: agendamento.tipoAtendimento,
             valor_atendimento: agendamento.valorAtendimento,
             observacoes: agendamento.observacoes,
-            id_contrato: agendamento.id_contrato,
+            id_contrato: agendamento.idContrato,
             color: agendamento.color,
           },
         ])

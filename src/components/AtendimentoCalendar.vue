@@ -403,12 +403,13 @@ async function saveEvent() {
     if (actualTipoAtendimento === 'Contrato' && cliente.id) {
       const contratoService = new ContratoService();
       const contratos = await contratoService.loadContratoPorAprendente(cliente.id);
+      
       if (contratos.length === 0) {
         showMessage('Nenhum contrato ativo encontrado para a aprendente.');
         return;
       }
       // We'll use the first contract
-      eventData.value.idContrato = contratos[0].idContrato;
+      eventData.value.idContrato = contratos[0].id_contrato;
     }
 
     // Create object matching database schema
@@ -430,6 +431,7 @@ async function saveEvent() {
       id_agendamento: eventData.value.id ? eventData.value.id.replace('agendamento-', '') : null,
     };
 
+    console.log(agendamento)
     let agendamentoId = eventData.value.id ? eventData.value.id.replace('agendamento-', '') : '';
     const isUpdate = !!agendamentoId;
 
@@ -475,6 +477,7 @@ async function saveEvent() {
         color: agendamento.color,
         clienteId: agendamento.id_aprendente,
       };
+      console.log(agendamentoToCreate)
 
       const response = await agendamentoService.createAgendamento(agendamentoToCreate);
       if (response) {
