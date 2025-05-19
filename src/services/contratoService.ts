@@ -77,7 +77,6 @@ export class ContratoService {
   ): Promise<string | undefined> {
     try {
       contrato.idProfissional = this.profissionalStore.profissionalDetails?.id || ''
-      const { data, error } = await supabase
       const searchedContratosAprendente =this.verificarContratosAtivosAprendente(idAprendente);
       if(searchedContratosAprendente != null){
         this.showError( 'Existe mais de 1 contrato ativo para esse aprendente')
@@ -109,7 +108,7 @@ export class ContratoService {
   }
 
   private addDiasAtendimentoNoContrato(contrato:Contrato){
-    for(diaAtendimentoContrato of contrato.diasAtendimento){
+    for(diaAtendimentoContrato of contrato?.diasAtendimento){
       this.diasAtendimentoContratoService.addDiasAtendimento(diaAtendimentoContrato);
     }
   }
