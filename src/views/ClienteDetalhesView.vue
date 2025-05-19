@@ -178,15 +178,15 @@
                             Cancelar
                           </v-btn>
 
-                          <v-btn
-                            v-if="!contrato.cancelado"
-                            color="primary"
-                            size="small"
-                            @click="editarContrato(contrato)"
-                          >
-                            <v-icon left>mdi-pencil</v-icon>
-                            Editar
-                          </v-btn>
+<!--                          <v-btn-->
+<!--                            v-if="!contrato.cancelado"-->
+<!--                            color="primary"-->
+<!--                            size="small"-->
+<!--                            @click="editarContrato(contrato)"-->
+<!--                          >-->
+<!--                            <v-icon left>mdi-pencil</v-icon>-->
+<!--                            Editar-->
+<!--                          </v-btn>-->
                         </div>
                       </v-card>
                     </v-timeline-item>
@@ -506,23 +506,34 @@ const editarContrato = (contrato: Contrato) => {
   modalContrato.value = true
 }
 
-const cancelarContrato = async (contrato: Contrato) => {
+const cancelarContrato = (contrato: Contrato) => {
+  contratoSelecionado.value = contrato
+  modoCancelamento.value = 'cancelar'
   dialogCancelamento.value = true
-  await contratoService.inativarContrato(contrato.id,motivoCancelamento.value);
 }
 
 
 
 const confirmarAcao = async () => {
   try {
+    if (!motivoCancelamento.value || !contratoSelecionado.value) {
+      snackbarMessage.value = 'Preencha o motivo do cancelamento/inativação.'
+      snackbarColor.value = 'error'
+      snackbar.value = true
+      return
+    }
+    console.log(contratoSelecionado.value)
+    await contratoService.inativarContrato(contratoSelecionado.value.id_contrato, motivoCancelamento.value)
 
-    dialogCancelamento.value = false
-    snackbarMessage.value = `${modoCancelamento.value === 'cancelar' ? 'Cancelado' : 'Inativado'} com sucesso`
+
+    snackbarMessage.value = 'Contrato atualizado com sucesso.'
     snackbarColor.value = 'success'
     snackbar.value = true
-    await buscarContratos()
+    dialogCancelamento.value = false
+    await buscarContratos() // Atualiza a lista
   } catch (error) {
-    snackbarMessage.value = 'Erro ao processar a ação'
+    console.error('Erro ao confirmar ação:', error)
+    snackbarMessage.value = 'Erro ao realizar a operação.'
     snackbarColor.value = 'error'
     snackbar.value = true
   }

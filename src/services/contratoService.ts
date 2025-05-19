@@ -118,6 +118,7 @@ export class ContratoService {
           cancelado: true,
           motivo_cancelamento: motivo,
           cadastrado:false,
+          data_cancelamento: new Date().toISOString(),
         })
         .eq('id_contrato', idContrato)
 
