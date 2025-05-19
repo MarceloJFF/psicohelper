@@ -67,6 +67,9 @@
           <v-icon left>mdi-plus</v-icon>
           Novo Lançamento
         </v-btn>
+        <v-btn color="info" @click="mostrarTudo = !mostrarTudo" class="ml-2">
+          {{ mostrarTudo ? 'Aplicar Filtros' : 'Mostrar Tudo' }}
+        </v-btn>
       </v-col>
     </v-row>
 
@@ -235,6 +238,8 @@ const snackbarColor = ref('success');
 
 const loading = ref(true);
 
+const mostrarTudo = ref(false);
+
 onMounted(async () => {
   loading.value = true;
   await Promise.all([
@@ -275,21 +280,13 @@ const headers = [
 ];
 
 const lancamentosFiltrados = computed(() => {
-  console.log('Filter criteria:', {
-    tipoSelecionado: tipoSelecionado.value,
-    anoSelecionado: anoSelecionado.value,
-    mesSelecionado: mesSelecionado.value
-  });
-  const filtered = lancamentos.value.filter(lancamento => {
+  if (mostrarTudo.value) {
+    return lancamentos.value;
+  }
+  return lancamentos.value.filter(lancamento => {
     const [year, month, day] = lancamento.vencimento.split('-').map(Number);
     const data = new Date(year, month - 1, day);
     const isValid = !isNaN(data.getTime());
-    console.log('Lancamento date:', {
-      id: lancamento.id,
-      vencimento: lancamento.vencimento,
-      year: isValid ? data.getFullYear() : 'Invalid',
-      month: isValid ? data.getMonth() : 'Invalid'
-    });
     return (
       lancamento.tipo_lancamento === tipoSelecionado.value &&
       isValid &&
@@ -297,8 +294,6 @@ const lancamentosFiltrados = computed(() => {
       data.getMonth() === mesSelecionado.value
     );
   });
-  console.log('Filtered lancamentos:', filtered);
-  return filtered;
 });
 
 const totalReceitas = computed(() => {
@@ -439,67 +434,59 @@ async function carregarMensalidadesDisponiveis() {
 
 async function carregarLancamentos() {
   try {
-    // Fetch avulsa session payments
-    const { data: pagamentos, error: pagamentosError } = await supabase
-      .from('tb_pagamento_sessao')
+    // Fetch all sessions
+    const { data: sessoes, error: sessoesError } = await supabase
+      .from('tb_sessao')
       .select(`
         id,
-        id_sessao,
-        id_pagamento,
-        tb_pagamento (
-          id_pagamento,
-          valor,
-          data_pagamento,
-          forma_pagamento,
-          comprovante_url
-        ),
-        tb_sessao (
-          id,
+        id_agendamento,
+        id_contrato,
+        tb_agendamento (
           id_agendamento,
-          id_contrato,
-          tb_agendamento (
-            data_agendamento,
-            id_aprendente,
-            tb_aprendente (nome_aprendente)
+          data_agendamento,
+          id_aprendente,
+          tb_aprendente (nome_aprendente)
+        ),
+        tb_pagamento_sessao (
+          id,
+          id_pagamento,
+          tb_pagamento (
+            id_pagamento,
+            valor,
+            data_pagamento,
+            forma_pagamento,
+            comprovante_url
           )
         )
-      `)
-      .is('tb_sessao.id_contrato', null);
-    if (pagamentosError) {
-      console.error('Erro ao carregar pagamentos:', pagamentosError);
-      throw pagamentosError;
-    }
-    console.log('Raw pagamentos data:', pagamentos);
+      `);
+    if (sessoesError) throw sessoesError;
 
-    const lancamentosPagamentos = pagamentos?.map(p => {
-      const vencimentoDate = p.tb_sessao?.tb_agendamento?.data_agendamento
-        ? new Date(p.tb_sessao.tb_agendamento.data_agendamento)
-        : p.tb_pagamento.data_pagamento
-          ? new Date(p.tb_pagamento.data_pagamento)
-          : new Date();
+    const lancamentosSessoes = sessoes?.map(s => {
+      const pagamento = s.tb_pagamento_sessao?.tb_pagamento;
+      const vencimentoDate = s.tb_agendamento?.data_agendamento
+        ? new Date(s.tb_agendamento.data_agendamento)
+        : new Date();
       const vencimento = vencimentoDate.toISOString().split('T')[0];
-      console.log('Pagamento vencimento:', { id: p.id, vencimento });
       return {
-        id: p.id,
-        tipo: 'Sessão Avulsa',
+        id: s.tb_pagamento_sessao?.id || `sessao-${s.id}`,
+        tipo: s.id_contrato ? 'Sessão Contratada' : 'Sessão Avulsa',
         categoria: 'Atendimento',
-        observacoes: `Sessão para ${p.tb_sessao?.tb_agendamento?.tb_aprendente?.nome_aprendente || 'N/A'}`,
-        recorrente: false,
-        qtd_meses: 1,
+        observacoes: `Sessão para ${s.tb_agendamento?.tb_aprendente?.nome_aprendente || 'N/A'}`,
+        recorrente: !!s.id_contrato,
+        qtd_meses: s.id_contrato ? 12 : 1,
         vencimento,
-        cliente: p.tb_sessao?.tb_agendamento?.tb_aprendente?.nome_aprendente || 'N/A',
-        valor: p.tb_pagamento.valor || 0,
+        cliente: s.tb_agendamento?.tb_aprendente?.nome_aprendente || 'N/A',
+        valor: pagamento?.valor || 0,
         tipo_lancamento: 'receita' as const,
-        pago: !!p.tb_pagamento.data_pagamento,
-        id_sessao: p.id_sessao,
-        id_pagamento: p.id_pagamento,
-        tipo_receita: 'Sessão Avulsa' as const,
-        forma_pagamento: p.tb_pagamento.forma_pagamento
+        pago: !!pagamento?.data_pagamento,
+        id_sessao: s.id,
+        id_pagamento: pagamento?.id_pagamento,
+        tipo_receita: s.id_contrato ? 'Mensalidade' : 'Sessão Avulsa',
+        forma_pagamento: pagamento?.forma_pagamento || null
       };
     }) || [];
-    console.log('Mapped lancamentosPagamentos:', lancamentosPagamentos)
 
-    // Fetch mensalidade payments
+    // Fetch all mensalidades (unchanged)
     const { data: mensalidades, error: mensalidadesError } = await supabase
       .from('tb_mensalidade')
       .select(`
@@ -515,17 +502,12 @@ async function carregarLancamentos() {
           id_responsavel,
           tb_responsavel:tb_responsavel!tb_responsavel_id_contrato_fkey (nome)
         )
-      `)
-    if (mensalidadesError) {
-      console.error('Erro ao carregar mensalidades:', mensalidadesError);
-      throw mensalidadesError;
-    }
-    console.log('Raw mensalidades data:', mensalidades);
+      `);
+    if (mensalidadesError) throw mensalidadesError;
 
     const lancamentosMensalidades = mensalidades?.map(m => {
       const vencimentoDate = new Date(m.mes_referencia);
       const vencimento = vencimentoDate.toISOString().split('T')[0];
-      console.log('Mensalidade vencimento:', { id: m.id_mensalidade, vencimento });
       return {
         id: m.id_mensalidade,
         tipo: 'Mensalidade',
@@ -543,22 +525,16 @@ async function carregarLancamentos() {
         forma_pagamento: m.forma_pagamento
       };
     }) || [];
-    console.log('Mapped lancamentosMensalidades:', lancamentosMensalidades);
 
-    // Fetch expenses
+    // Fetch all expenses (unchanged)
     const { data: despesas, error: despesasError } = await supabase
       .from('tb_despesa')
       .select('*');
-    if (despesasError) {
-      console.error('Erro ao carregar despesas:', despesasError);
-      throw despesasError;
-    }
-    console.log('Raw despesas data:', despesas);
+    if (despesasError) throw despesasError;
 
     const lancamentosDespesas = despesas?.map(d => {
       const vencimentoDate = new Date(d.vencimento);
       const vencimento = vencimentoDate.toISOString().split('T')[0];
-      console.log('Despesa vencimento:', { id: d.id_despesa, vencimento });
       return {
         id: d.id_despesa,
         tipo: d.tipo,
@@ -574,11 +550,8 @@ async function carregarLancamentos() {
         id_despesa: d.id_despesa
       };
     }) || [];
-    console.log('Mapped lancamentosDespesas:', lancamentosDespesas);
 
-    // Combine and assign
-    lancamentos.value = [...lancamentosPagamentos, ...lancamentosMensalidades, ...lancamentosDespesas];
-    console.log('Final lancamentos.value:', lancamentos.value);
+    lancamentos.value = [...lancamentosSessoes, ...lancamentosMensalidades, ...lancamentosDespesas];
   } catch (error) {
     console.error('Erro ao carregar lançamentos:', error);
     snackbarMessage.value = 'Erro ao carregar lançamentos';

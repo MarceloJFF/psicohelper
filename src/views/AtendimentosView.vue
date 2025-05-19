@@ -26,9 +26,9 @@
             :disabled="!filtroPaciente">
             Pagar Mensalidade de Contrato
           </v-btn>
-          <v-btn style="width: 100%;" color="success" variant="outlined" @click="abrirModalPagamentoLote">
+          <!-- <v-btn style="width: 100%;" color="success" variant="outlined" @click="abrirModalPagamentoLote">
             Pagar Sessões Avulsas em Lote
-          </v-btn>
+          </v-btn> -->
           <span v-if="!filtroPaciente"
             style="font-size: 15px; color: gray; margin-top: 4px; margin-left: 4px; font-style: italic;">Selecione um
             paciente
