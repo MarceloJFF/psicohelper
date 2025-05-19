@@ -1,22 +1,10 @@
-import { createRouter, createWebHistory } from 'vue-router'
-import supabase from '@/config/supabase.js'
-import {useStoreAuth} from '@/stores/storeAuth'
-import DefaultLayout from '@/views/DefaultLayout.vue'
-import InventarioView from '@/views/InventarioView.vue'
-import CalendarioAgendamento from '@/views/CalendarioAgendamento.vue'
-import FinanceiroView from '@/views/FinanceiroView.vue'
-import RelatoriosView from '@/views/RelatoriosView.vue'
-import ClienteListagemView from '@/views/ClienteListagemView.vue'
-import AddClienteView from '@/views/AddClienteView.vue'
-import ClienteDetalhesView from '@/views/ClienteDetalhesView.vue'
-import AtendimentosView from '@/views/AtendimentosView.vue'
-import Configuracao from '@/views/Configuracao.vue'
-import AboutView from '@/views/AboutView.vue'
-import Home from '@/views/Home.vue'
-import GerenciarClientesView from '@/views/GerenciarClientesView.vue'
-import { watch } from 'vue'
 
-// Aqui você poderia importar a tela de Login também futuramente.
+import DefaultLayout from '@/views/DefaultLayout.vue'
+
+import { createRouter, createWebHistory } from 'vue-router'
+import { useStoreAuth } from '@/stores/storeAuth'
+
+// Layout padrão (carregado diretamente pois é o "shell" do app)
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -24,7 +12,7 @@ const router = createRouter({
     {
       path: '/login',
       name: 'login',
-      component: () => import('@/views/AuthForm.vue') // ou LoginView.vue
+      component: () => import('@/views/AuthForm.vue') // Lazy loading
     },
     {
       path: '/',
@@ -33,95 +21,87 @@ const router = createRouter({
         {
           path: '',
           name: 'home',
-          component: Home,
+          component: () => import('@/views/Home.vue'),
           meta: { requiresAuth: true }
         },
         {
           path: 'calendario',
           name: 'calendario',
-          component: CalendarioAgendamento,
+          component: () => import('@/views/CalendarioAgendamento.vue'),
           meta: { requiresAuth: true }
-
         },
         {
           path: 'financeiro',
           name: 'financeiro',
-          component: FinanceiroView,
+          component: () => import('@/views/FinanceiroView.vue'),
           meta: { requiresAuth: true }
         },
         {
           path: 'relatorios',
           name: 'relatorios',
-          component: RelatoriosView,
+          component: () => import('@/views/RelatoriosView.vue'),
           meta: { requiresAuth: true }
-
         },
         {
           path: 'clientes',
           name: 'clientes',
-          component: ClienteListagemView,
+          component: () => import('@/views/ClienteListagemView.vue'),
           meta: { requiresAuth: true }
-
         },
         {
           path: 'clientes/add',
           name: 'clientes-add',
-          component: AddClienteView,
+          component: () => import('@/views/AddClienteView.vue'),
           meta: { requiresAuth: true }
-
         },
         {
           path: 'clientes/gerenciar',
           name: 'gerenciar-clientes',
-          component: GerenciarClientesView,
+          component: () => import('@/views/GerenciarClientesView.vue'),
           meta: { requiresAuth: true }
         },
         {
           path: '/clientes/:idResponsavel/dependentes/:idAprendente?/detalhes',
           name: 'cliente-detalhes',
-          component: ClienteDetalhesView,
+          component: () => import('@/views/ClienteDetalhesView.vue'),
           meta: { requiresAuth: true }
         },
-
         {
           path: 'inventario',
           name: 'inventario',
-          component: InventarioView,
+          component: () => import('@/views/InventarioView.vue'),
           meta: { requiresAuth: true }
-
         },
         {
           path: 'atendimentos',
           name: 'atendimentos',
-          component: AtendimentosView,
+          component: () => import('@/views/AtendimentosView.vue'),
           meta: { requiresAuth: true }
-
         },
         {
           path: 'configuracoes',
           name: 'configuracoes',
-          component: Configuracao,
+          component: () => import('@/views/Configuracao.vue'),
           meta: { requiresAuth: true }
-
         },
         {
           path: 'about',
           name: 'about',
-          component: AboutView,
+          component: () => import('@/views/AboutView.vue'),
           meta: { requiresAuth: true }
-
         }
       ]
     }
   ]
 })
 
+
 router.beforeEach(async (to, from, next) => {
   const storeAuth = useStoreAuth()
   // Aguarda a sessão carregar
   if (!storeAuth.sessionLoaded) {
     // Aguarda no máximo 2 segundos para sessionLoaded ficar true
-    const waitForSession = async (timeout = 2000) => {
+    const waitForSession = async (timeout = 1000) => {
       const start = Date.now()
       while (!storeAuth.sessionLoaded && Date.now() - start < timeout) {
         await new Promise(r => setTimeout(r, 50))
@@ -129,7 +109,7 @@ router.beforeEach(async (to, from, next) => {
     }
     await waitForSession()
   }
-  
+
 
   const isAuthenticated = !!storeAuth.userDetails.id
 
