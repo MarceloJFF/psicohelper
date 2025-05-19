@@ -13,6 +13,7 @@ export class DiasAtendimentosContratoService {
         .select('*')
         .eq('contrato_id', contratoId)
       if (error) throw error
+      console.log('data', data)
       return data as DiasAtendimentoContrato[]
     } catch (err: any) {
       this.showError(err.message || 'Erro ao carregar dias de atendimento')
@@ -33,7 +34,7 @@ export class DiasAtendimentosContratoService {
         .from('tb_dias_atendimento_contrato')
         .insert(payload).select()
 
-
+      console.log('data', data)
       if (error) throw error
     } catch (err: any) {
       this.showError(err.message || 'Erro ao adicionar dias de atendimento')

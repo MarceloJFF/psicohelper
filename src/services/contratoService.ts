@@ -77,8 +77,8 @@ export class ContratoService {
   ): Promise<string | undefined> {
     try {
       contrato.idProfissional = this.profissionalStore.profissionalDetails?.id || ''
-      const searchedContratosAprendente =this.verificarContratosAtivosAprendente(idAprendente);
-      if(searchedContratosAprendente != null){
+      const searchedContratosAprendente =await this.verificarContratosAtivosAprendente(idAprendente);
+      if(searchedContratosAprendente.length>0){
         this.showError( 'Existe mais de 1 contrato ativo para esse aprendente')
         return;
       }
@@ -96,21 +96,18 @@ export class ContratoService {
           cancelado: false,
         })
         .select()
-
-
-      // add dias Atendimento Contrato
-      this.addDiasAtendimentoNoContrato(contrato);
       if (error) throw error
+      // add dias Atendimento Contrato
+      contrato.idContrato = data?.[0]?.id_contrato
+      await this.addDiasAtendimentoNoContrato(contrato);
       return data?.[0]?.id_contrato
     } catch (err: any) {
       this.showError(err.message || 'Erro ao adicionar contrato')
     }
   }
 
-  private addDiasAtendimentoNoContrato(contrato:Contrato){
-    for(diaAtendimentoContrato of contrato?.diasAtendimento){
-      this.diasAtendimentoContratoService.addDiasAtendimento(diaAtendimentoContrato);
-    }
+  private async  addDiasAtendimentoNoContrato(contrato:Contrato) {
+    await this.diasAtendimentoContratoService.addDiasAtendimento(contrato.diasAtendimento, contrato.idContrato);
   }
 
   async inativarContrato(idContrato: string, motivo: string): Promise<void> {

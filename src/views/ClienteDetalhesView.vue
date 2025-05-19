@@ -157,10 +157,10 @@
                             {{ contrato.cancelado || contrato.vencido ? 'Cancelado/inativo' : (contrato.cadastrado ? 'Ativo' : 'Inativo') }}
                           </v-chip>
                         </div>
-                        <strong>Valor:</strong> R$ {{ contrato.valorMensal }}<br />
+                        <strong>Valor:</strong> R$ {{ contrato.valor_mensal }}<br />
                         <strong>Duração:</strong> {{ contrato.duracao }} meses<br />
                         <strong>Vencimento:</strong> {{ contrato.vencimento }}<br />
-                        <strong>Descrição:</strong> {{ contrato.descricaoServico }}<br />
+                        <strong>Descrição:</strong> {{ contrato.descricao_servico }}<br />
                         <strong>Dias: </strong>
                         <v-chip v-for="dia in contrato.diasAtendimento" :key="dia.dia" class="ma-1">
                           {{ dia.dia }} ({{ dia.inicio }} - {{ dia.fim }})
@@ -333,7 +333,7 @@ import Contrato from '@/models/Contrato'
 import { useStoreConfig } from '@/stores/storeConfig'
 import { DocumentoService } from '@/services/DocumentoService'
 import supabase from '@/config/supabase'
-import  Documento from '@/models/Documento'
+import Documento from '@/models/Documento'
 import { ModeloAnamneseService } from '@/services/ModeloAnamneseService'
 import { AnamneseService } from '@/services/AnamneseService'
 
@@ -487,9 +487,13 @@ const salvarAnamnese = async () => {
 
 const buscarContratos = async () => {
   contratos.value = await contratoService.loadContratoPorAprendente(idAprendente);
+  console.log("carregando contratos")
   for (const contrato of contratos.value) {
+    console.log(contrato)
     contrato.diasAtendimento = await diasAtendimento.loadDiasAtendimento(contrato.id_contrato)
   }
+  console.log(contratos.value)
+
 }
 
 const abrirModalContrato = () => {
