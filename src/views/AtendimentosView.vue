@@ -65,9 +65,6 @@
                   class="text-capitalize pa-2" small>
                   {{ atendimento.status }}
                 </v-chip>
-                <div v-if="atendimento.id_contrato" class="text-caption mt-2">
-                  Contrato ID: {{ atendimento.id_contrato }}
-                </div>
               </v-col>
 
               <v-spacer />
