@@ -33,28 +33,12 @@
     <!-- Filtros -->
     <v-row align="center" justify="space-between" class="mb-4">
       <v-col cols="12" md="3">
-        <v-select
-          v-model="anoSelecionado"
-          :items="anos"
-          label="Ano"
-          dense
-          outlined
-        ></v-select>
+        <v-select v-model="anoSelecionado" :items="anos" label="Ano" dense outlined></v-select>
       </v-col>
       <v-col cols="12" md="9">
-        <v-btn-toggle
-          v-model="mesSelecionado"
-          class="d-flex flex-wrap"
-          dense
-          mandatory
-        >
-          <v-btn
-            v-for="(mes, index) in meses"
-            :key="index"
-            :value="index"
-            class="ma-1"
-            :color="mesSelecionado === index ? 'primary' : undefined"
-          >
+        <v-btn-toggle v-model="mesSelecionado" class="d-flex flex-wrap" dense mandatory>
+          <v-btn v-for="(mes, index) in meses" :key="index" :value="index" class="ma-1"
+            :color="mesSelecionado === index ? 'primary' : undefined">
             {{ mes }}
           </v-btn>
         </v-btn-toggle>
@@ -64,22 +48,13 @@
     <!-- Botões Receitas / Despesas -->
     <v-row class="mb-4">
       <v-col cols="6">
-        <v-btn
-          block
-          :color="tipoSelecionado === 'receita' ? 'green' : 'grey'"
-          dark
-          @click="tipoSelecionado = 'receita'"
-        >
+        <v-btn block :color="tipoSelecionado === 'receita' ? 'green' : 'grey'" dark
+          @click="tipoSelecionado = 'receita'">
           Receitas
         </v-btn>
       </v-col>
       <v-col cols="6">
-        <v-btn
-          block
-          :color="tipoSelecionado === 'despesa' ? 'red' : 'grey'"
-          dark
-          @click="tipoSelecionado = 'despesa'"
-        >
+        <v-btn block :color="tipoSelecionado === 'despesa' ? 'red' : 'grey'" dark @click="tipoSelecionado = 'despesa'">
           Despesas
         </v-btn>
       </v-col>
@@ -88,10 +63,7 @@
     <!-- Ações -->
     <v-row class="mb-4">
       <v-col>
-        <v-btn
-          color="primary"
-          @click="abrirModal = true"
-        >
+        <v-btn color="primary" @click="abrirModal = true">
           <v-icon left>mdi-plus</v-icon>
           Novo Lançamento
         </v-btn>
@@ -99,12 +71,7 @@
     </v-row>
 
     <!-- Tabela -->
-    <v-data-table
-      :headers="headers"
-      :items="lancamentosFiltrados"
-      class="elevation-1"
-      dense
-    >
+    <v-data-table :headers="headers" :items="lancamentosFiltrados" class="elevation-1" dense>
       <template v-slot:item="{ item }">
         <tr class="py-4">
           <td>{{ item.tipo }}</td>
@@ -114,39 +81,21 @@
           <td>{{ formatarData(item.vencimento) }}</td>
           <td>
             <div class="d-flex flex-column align-center" style="min-width: 120px">
-              <v-chip
-                :color="item.pago ? 'success' : 'warning'"
-                small
-                class="mb-2"
-              >
+              <v-chip :color="item.pago ? 'success' : 'warning'" small class="mb-2">
                 {{ item.pago ? 'Pago' : 'Pendente' }}
               </v-chip>
-              <v-btn
-                icon
-                x-small
-                color="green"
+              <v-btn icon x-small color="green"
                 :title="item.pago ? 'Enviar mensagem de confirmação de pagamento' : 'Enviar mensagem de cobrança'"
-                @click="enviarMensagemWhatsApp(item)"
-              >
+                @click="enviarMensagemWhatsApp(item)">
                 <v-icon>mdi-whatsapp</v-icon>
               </v-btn>
             </div>
           </td>
           <td>
-            <v-btn
-              icon
-              small
-              class="mr-2"
-              @click="editarLancamento(item)"
-            >
+            <v-btn icon small class="mr-2" @click="editarLancamento(item)">
               <v-icon>mdi-pencil</v-icon>
             </v-btn>
-            <v-btn
-              icon
-              small
-              color="error"
-              @click="confirmarExclusao(item)"
-            >
+            <v-btn icon small color="error" @click="confirmarExclusao(item)">
               <v-icon>mdi-delete</v-icon>
             </v-btn>
           </td>
@@ -162,133 +111,53 @@
         </v-card-title>
         <v-card-text>
           <v-form ref="form" @submit.prevent="salvarLancamento">
-            <v-select
-              v-if="tipoSelecionado === 'receita'"
-              v-model="novoLancamento.tipo_receita"
-              :items="['Sessão Avulsa', 'Mensalidade']"
-              label="Tipo de Receita"
-              outlined
-              dense
-              :rules="[v => !!v || 'Campo obrigatório']"
-            />
+            <v-select v-if="tipoSelecionado === 'receita'" v-model="novoLancamento.tipo_receita"
+              :items="['Sessão Avulsa', 'Mensalidade']" label="Tipo de Receita" outlined dense
+              :rules="[v => !!v || 'Campo obrigatório']" />
             <v-autocomplete
               v-if="!loading && tipoSelecionado === 'receita' && novoLancamento.tipo_receita === 'Sessão Avulsa'"
-              v-model="novoLancamento.id_sessao"
-              :items="sessoesDisponiveis"
-              item-title="descricao"
-              item-value="id_sessao"
-              label="Sessão"
-              outlined
-              dense
-              :rules="[v => !!v || 'Campo obrigatório']"
-            />
-            <v-progress-circular
-              v-else-if="loading"
-              indeterminate
-              color="primary"
-            ></v-progress-circular>
-            <v-autocomplete
-              v-if="tipoSelecionado === 'receita' && novoLancamento.tipo_receita === 'Mensalidade'"
-              v-model="novoLancamento.id_mensalidade"
-              :items="mensalidadesDisponiveis"
-              item-title="descricao"
-              item-value="id_mensalidade"
-              label="Mensalidade"
-              outlined
-              dense
-              :rules="[v => !!v || 'Campo obrigatório']"
-            />
-            <v-text-field
-              v-if="tipoSelecionado === 'despesa'"
-              v-model="novoLancamento.tipo"
-              label="Descrição"
-              :rules="[v => !!v || 'Campo obrigatório']"
-              outlined
-              dense
-            />
-            <v-text-field
-              v-model="novoLancamento.categoria"
-              label="Categoria"
-              outlined
-              dense
-            />
+              v-model="novoLancamento.id_sessao" :items="sessoesDisponiveis" item-title="descricao"
+              item-value="id_sessao" label="Sessão" outlined dense :rules="[v => !!v || 'Campo obrigatório']" />
+            <v-progress-circular v-else-if="loading" indeterminate color="primary"></v-progress-circular>
+            <v-autocomplete v-if="tipoSelecionado === 'receita' && novoLancamento.tipo_receita === 'Mensalidade'"
+              v-model="novoLancamento.id_mensalidade" :items="mensalidadesDisponiveis" item-title="descricao"
+              item-value="id_mensalidade" label="Mensalidade" outlined dense
+              :rules="[v => !!v || 'Campo obrigatório']" />
+            <v-text-field v-if="tipoSelecionado === 'despesa'" v-model="novoLancamento.tipo" label="Descrição"
+              :rules="[v => !!v || 'Campo obrigatório']" outlined dense />
+            <v-text-field v-model="novoLancamento.categoria" label="Categoria" outlined dense />
             <v-row>
               <v-col cols="8">
-                <v-text-field
-                  v-model="novoLancamento.observacoes"
-                  label="Observações"
-                  outlined
-                  dense
-                />
+                <v-text-field v-model="novoLancamento.observacoes" label="Observações" outlined dense />
               </v-col>
               <v-col cols="4">
-                <v-checkbox
-                  v-model="novoLancamento.recorrente"
-                  label="Recorrente"
-                  dense
-                />
+                <v-checkbox v-model="novoLancamento.recorrente" label="Recorrente" dense />
               </v-col>
             </v-row>
             <v-row>
               <v-col cols="6">
-                <v-text-field
-                  v-model="novoLancamento.qtd_meses"
-                  label="Quantidade de meses"
-                  type="number"
-                  outlined
-                  dense
-                  :disabled="!novoLancamento.recorrente"
-                />
+                <v-text-field v-model="novoLancamento.qtd_meses" label="Quantidade de meses" type="number" outlined
+                  dense :disabled="!novoLancamento.recorrente" />
               </v-col>
               <v-col cols="6">
-                <v-text-field
-                  v-model="novoLancamento.vencimento"
-                  label="Vencimento"
-                  type="date"
-                  outlined
-                  dense
-                  :rules="[v => !!v || 'Campo obrigatório']"
-                />
+                <v-text-field v-model="novoLancamento.vencimento" label="Vencimento" type="date" outlined dense
+                  :rules="[v => !!v || 'Campo obrigatório']" />
               </v-col>
             </v-row>
-            <v-text-field
-              v-model="novoLancamento.valor"
-              label="Valor"
-              type="number"
-              outlined
-              dense
-              :rules="[v => !!v || 'Campo obrigatório']"
-              prefix="R$"
-            />
-            <v-checkbox
-              v-model="novoLancamento.pago"
-              label="Pago"
-              dense
-            />
-            <v-select
-              v-if="tipoSelecionado === 'receita'"
-              v-model="novoLancamento.forma_pagamento"
-              :items="['Pix', 'Cartão', 'Boleto', 'Dinheiro']"
-              label="Forma de Pagamento"
-              outlined
-              dense
-              :rules="[v => !!v || 'Campo obrigatório']"
-            />
+            <v-text-field v-model="novoLancamento.valor" label="Valor" type="number" outlined dense
+              :rules="[v => !!v || 'Campo obrigatório']" prefix="R$" />
+            <v-checkbox v-model="novoLancamento.pago" label="Pago" dense />
+            <v-select v-if="tipoSelecionado === 'receita'" v-model="novoLancamento.forma_pagamento"
+              :items="['Pix', 'Cartão', 'Boleto', 'Dinheiro']" label="Forma de Pagamento" outlined dense
+              :rules="[v => !!v || 'Campo obrigatório']" />
           </v-form>
         </v-card-text>
         <v-card-actions>
           <v-spacer />
-          <v-btn
-            color="grey"
-            text
-            @click="abrirModal = false"
-          >
+          <v-btn color="grey" text @click="abrirModal = false">
             Cancelar
           </v-btn>
-          <v-btn
-            color="primary"
-            @click="salvarLancamento"
-          >
+          <v-btn color="primary" @click="salvarLancamento">
             Salvar
           </v-btn>
         </v-card-actions>
@@ -304,17 +173,10 @@
         </v-card-text>
         <v-card-actions>
           <v-spacer />
-          <v-btn
-            color="grey"
-            text
-            @click="dialogConfirmacao = false"
-          >
+          <v-btn color="grey" text @click="dialogConfirmacao = false">
             Cancelar
           </v-btn>
-          <v-btn
-            color="error"
-            @click="excluirLancamento"
-          >
+          <v-btn color="error" @click="excluirLancamento">
             Excluir
           </v-btn>
         </v-card-actions>
@@ -322,11 +184,7 @@
     </v-dialog>
 
     <!-- Snackbar -->
-    <v-snackbar
-      v-model="snackbar"
-      :color="snackbarColor"
-      timeout="3000"
-    >
+    <v-snackbar v-model="snackbar" :color="snackbarColor" timeout="3000">
       {{ snackbarMessage }}
     </v-snackbar>
   </v-container>
@@ -558,11 +416,10 @@ async function carregarMensalidadesDisponiveis() {
         id_contrato,
         tb_contrato (
           id_responsavel,
-          tb_responsavel (nome)
+          tb_responsavel:tb_responsavel!tb_responsavel_id_contrato_fkey (nome)
         )
       `)
-      .eq('status_pagamento', 'Pago')
-      .not('id_mensalidade', 'in', `(${lancamentos.value.filter(l => l.id_mensalidade).map(l => l.id_mensalidade).join(',') || '00000000-0000-0000-0000-000000000000'})`);
+      .not('id_mensalidade', 'in', `(${lancamentos.value.filter(lancamento => lancamento.id_mensalidade).map(l => l.id_mensalidade).join(',') || '00000000-0000-0000-0000-000000000000'})`);
     if (error) {
       console.error('Erro ao carregar mensalidades disponíveis:', error);
       throw error;
@@ -656,10 +513,9 @@ async function carregarLancamentos() {
         id_contrato,
         tb_contrato (
           id_responsavel,
-          tb_responsavel (nome)
+          tb_responsavel:tb_responsavel!tb_responsavel_id_contrato_fkey (nome)
         )
       `)
-      .eq('status_pagamento', 'Pago');
     if (mensalidadesError) {
       console.error('Erro ao carregar mensalidades:', mensalidadesError);
       throw mensalidadesError;
@@ -913,7 +769,7 @@ function enviarMensagemWhatsApp(item: Lancamento) {
   const mensagem = item.pago
     ? `Olá! Confirmamos o recebimento do pagamento de R$ ${formatarValor(item.valor)} referente a ${item.tipo}.`
     : `Olá! Lembramos que o pagamento de R$ ${formatarValor(item.valor)} referente a ${item.tipo} está pendente. Vencimento: ${formatarData(item.vencimento)}.`;
-  
+
   const numero = item.cliente ? '5511999999999' : ''; // TODO: Fetch real client number from tb_responsavel
   const url = `https://wa.me/${numero}?text=${encodeURIComponent(mensagem)}`;
   window.open(url, '_blank');
