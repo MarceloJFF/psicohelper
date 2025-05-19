@@ -400,11 +400,11 @@ async function saveEvent() {
     const actualTipoAtendimento = tipoAtendimento || 'Avulso';
 
     // Check for contract if selected
-    if (actualTipoAtendimento === 'Contrato' && cliente.idResponsavel) {
+    if (actualTipoAtendimento === 'Contrato' && cliente.id) {
       const contratoService = new ContratoService();
-      const contratos = await contratoService.loadContratos(cliente.idResponsavel);
+      const contratos = await contratoService.loadContratoPorAprendente(cliente.id);
       if (contratos.length === 0) {
-        showMessage('Nenhum contrato ativo encontrado para o responsável.');
+        showMessage('Nenhum contrato ativo encontrado para a aprendente.');
         return;
       }
       // We'll use the first contract

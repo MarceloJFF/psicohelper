@@ -12,7 +12,7 @@
             <template v-slot:item="{ props, item }">
               <v-list-item v-bind="props" :key="item.raw.id" :value="item.raw.id">
                 <v-list-item-title>
-                  {{ item.raw.displayName || 'N/A' }}
+                  {{ item.raw.nomeAprendente}}
                 </v-list-item-title>
               </v-list-item>
             </template>
@@ -449,12 +449,11 @@ async function loadSessoes() {
 
 async function loadPacientes() {
   try {
-    const clientes = await aprendenteService.buscarClientesPorNome('');
+    const clientes = await aprendenteService.loadAprendentesPorProfissionalENome('')
     pacientes.value = clientes.map((cliente) => ({
       id: cliente.id,
-      displayName: cliente.displayName || cliente.nome || cliente.responsavel || 'N/A',
-      aprendente: cliente.nome,
-      responsavel: cliente.responsavel
+      aprendente: cliente.nomeAprendente,
+      responsavel: cliente.nomeResponsavel
     }));
     console.log('Pacientes carregados:', pacientes.value);
   } catch (err) {

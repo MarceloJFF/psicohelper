@@ -12,12 +12,12 @@ export class ContratoService {
   private diasAtendimentoContratoService = new DiasAtendimentosContratoService();
   private uploadService = new UploadService()
 
-  async loadContratos(idResponsavel: string): Promise<Contrato[]> {
+  async loadContratos(idAprendente: string): Promise<Contrato[]> {
     try {
       const { data, error } = await supabase
         .from('tb_contrato')
         .select('*')
-        .eq('id_responsavel', idResponsavel)
+        .eq('id_aprendente', idAprendente)
 
       if (error) throw error
       return data as Contrato[]
@@ -33,6 +33,7 @@ export class ContratoService {
         .from('tb_contrato')
         .select('*')
         .eq('id_aprendente', idAprendente)
+        .eq('cancelado','FALSE')
         .select()
 
       if (error) throw error

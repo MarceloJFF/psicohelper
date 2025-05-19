@@ -1,5 +1,6 @@
 import supabase from '@/config/supabase';
 import { useShowErrorMessage } from '@/userCases/useShowErrorMessage';
+import { useStoreProfissional } from '@/stores/storeProfissional.ts'
 
 interface Sessao {
   id?: string;
@@ -67,6 +68,7 @@ export class SessaoService {
   //   }
   // }
   async getAllSessoes() {
+    const storeProfissional = useStoreProfissional();
     const { data, error } = await supabase
       .from('tb_sessao')
       .select(`
@@ -86,9 +88,12 @@ export class SessaoService {
           horario_inicio,
           duracao,
           id_aprendente,
-          responsavel_id
+          responsavel_id,
+          id_profissional
         )
-      `);
+      `)
+      .filter('tb_agendamento.id_profissional', 'eq', storeProfissional.profissionalDetails?.id); // <- filtro aninhado aqui
+
     if (error) {
       console.error('Erro ao buscar sessões:', error);
       throw error;
@@ -116,13 +121,13 @@ export class SessaoService {
   }
   async updateSessao(id: string, sessao: Partial<Sessao>): Promise<void> {
     console.log("updateSessao:", id, sessao);
-    
+
     try {
       const { error } = await supabase
         .from('tb_sessao')
         .update(sessao)
         .eq('id', id);
-      
+
       if (error) throw error;
     } catch (err: any) {
       this.showError(err.message || 'Erro ao atualizar sessão');
@@ -137,7 +142,7 @@ export class SessaoService {
         .select('*')
         .eq('id_agendamento', idAgendamento)
         .single();
-      
+
       if (error) throw error;
       return data;
     } catch (err: any) {
