@@ -39,7 +39,7 @@
 
     <v-divider class="my-6" />
 
-    <v-alert v-if="!Object.keys(atendimentosAgrupados).length" type="info">
+    <v-alert v-if="!Object.keys(atendimentosAgrupados).length && !isLoading" type="info">
       Nenhuma sessão encontrada para o filtro selecionado.
     </v-alert>
 
@@ -150,6 +150,20 @@
           </v-list-item>
         </v-list>
       </v-card>
+    </div>
+
+    <!-- Loading indicator -->
+    <div v-if="isLoading" class="d-flex justify-center align-center my-4">
+      <v-progress-circular
+        indeterminate
+        color="primary"
+        size="32"
+      ></v-progress-circular>
+    </div>
+
+    <!-- End of list message -->
+    <div v-if="!hasMoreData && Object.keys(atendimentosAgrupados).length > 0" class="text-center my-4 text-grey">
+      Não há mais sessões para carregar
     </div>
 
     <!-- Diálogo de Pagamento Individual -->
@@ -298,6 +312,39 @@ const mesReferencia = ref<number | null>(null);
 const atendimentosSelecionados = ref<any[]>([]);
 const loadingMensalidades = ref(false);
 
+// Pagination state
+const pageSize = 10;
+const currentPage = ref(1);
+const hasMoreData = ref(true);
+const isLoadingMore = ref(false);
+
+interface Sessao {
+  id: string;
+  pre_sessao?: string;
+  queixas?: string;
+  evolucao?: string;
+  habilidades_trabalhadas?: string;
+  futuras_acoes?: string;
+  resumo?: string;
+  fotos?: string[];
+  id_agendamento?: number;
+  id_contrato?: string;
+  tb_agendamento?: {
+    id_agendamento: number;
+    data_agendamento: string;
+    horario_inicio: string;
+    duracao: number;
+    id_aprendente: string;
+    responsavel_id: string;
+    id_profissional: string;
+  };
+}
+
+interface Cliente {
+  id: string;
+  nome: string;
+}
+
 async function handleFileChange(files: File[] | null) {
   uploadError.value = null;
   uploadSuccess.value = false;
@@ -316,138 +363,167 @@ async function handleFileChange(files: File[] | null) {
   }
 }
 
-async function loadSessoes() {
-  try {
-    const hoje = new Date().toISOString().split('T')[0];
-    const sessoes = await sessaoService.getAllSessoes();
-    console.log(sessoes)
-
-    atendimentos.value = await Promise.all(
-      sessoes.map(async (sessao) => {
-        const agendamento = sessao.tb_agendamento;
-        const startTime = agendamento?.horario_inicio;
-        const duracao = parseInt(agendamento?.duracao) || 60;
-        const startDateTime = startTime ? new Date(`1970-01-01T${startTime}`) : null;
-        const endDateTime = startDateTime ? new Date(startDateTime.getTime() + duracao * 60000) : null;
-        const horarioFim = endDateTime
-          ? `${endDateTime.getHours().toString().padStart(2, '0')}:${endDateTime.getMinutes().toString().padStart(2, '0')}`
-          : '';
-        console.log(agendamento)
-        let paciente = 'N/A';
-        let clienteId = agendamento?.id_aprendente || agendamento?.responsavel_id || '';
-        if (agendamento?.id_aprendente) {
-          if (aprendenteCache.has(agendamento.id_aprendente)) {
-            paciente = aprendenteCache.get(agendamento.id_aprendente).nome_aprendente;
-          } else {
-            const aprendente = await aprendenteService.getAprendenteById(agendamento.id_aprendente);
-            paciente = aprendente?.nome_aprendente || 'N/A';
-            aprendenteCache.set(agendamento.id_aprendente, aprendente);
-          }
-        } else if (agendamento?.responsavel_id) {
-          const responsavel = await supabase
-            .from('tb_responsavel')
-            .select('nome')
-            .eq('id_responsavel', agendamento.responsavel_id)
-            .single();
-          paciente = responsavel.data?.nome || 'N/A';
-        }
-
-        const anexos = sessao.fotos ? sessao.fotos.split(',').filter((url: string) => url) : [];
-        let status = 'Pendente';
-        let pagamentoData: any = null;
-
-        const idContrato = sessao.id_contrato || null;
-        console.log(`Processando sessão ${sessao.id}, id_contrato: ${idContrato}, tipo: ${idContrato ? 'Contrato' : 'Avulsa'}`);
-
-        if (idContrato) {
-          const mesReferencia = new Date(agendamento?.data_agendamento).toISOString().slice(0, 7) + '-01';
-          const { data: mensalidade } = await supabase
-            .from('tb_mensalidade')
-            .select('id_mensalidade, valor, forma_pagamento, comprovante_url, status_pagamento')
-            .eq('id_contrato', idContrato)
-            .eq('mes_referencia', mesReferencia)
-            .eq('status_pagamento', 'Pago')
-            .maybeSingle();
-          if (mensalidade) {
-            status = 'Pago';
-            pagamentoData = {
-              id_mensalidade: mensalidade.id_mensalidade,
-              valor: mensalidade.valor,
-              forma_pagamento: mensalidade.forma_pagamento,
-              comprovante_url: mensalidade.comprovante_url
-            };
-            console.log(`Sessão ${sessao.id} marcada como Pago por mensalidade:`, mensalidade);
-          } else {
-            console.log(`Sessão ${sessao.id} sem mensalidade paga para ${mesReferencia}`);
-          }
-        } else {
-          const pagamento = await pagamentoService.getPagamentoBySessao(sessao.id);
-          if (pagamento) {
-            status = 'Pago';
-            pagamentoData = {
-              id_pagamento: pagamento.id_pagamento,
-              valor: pagamento.valor,
-              forma_pagamento: pagamento.forma_pagamento,
-              comprovante_url: pagamento.comprovante_url
-            };
-            console.log(`Sessão ${sessao.id} marcada como Pago por pagamento avulso:`, pagamento);
-          } else {
-            console.log(`Sessão ${sessao.id} sem pagamento avulso`);
-          }
-        }
-
-        const atendimento = {
-          id: sessao.id,
-          data: agendamento?.data_agendamento || '',
-          horario: startTime || '',
-          horario_fim: horarioFim,
-          paciente,
-          clienteId,
-          id_aprendente: agendamento?.id_aprendente,
-          responsavel_id: agendamento?.responsavel_id,
-          id_agendamento: agendamento?.id_agendamento,
-          id_contrato: idContrato,
-          avatar: '',
-          status,
-          id_pagamento: pagamentoData?.id_pagamento,
-          id_mensalidade: pagamentoData?.id_mensalidade,
-          valor_pagamento: pagamentoData?.valor,
-          forma_pagamento: pagamentoData?.forma_pagamento,
-          comprovante_url: pagamentoData?.comprovante_url,
-          anotacao: null,
-          showDetails: false,
-          isEditing: false,
-          preSessao: sessao.pre_sessao || '',
-          queixas: sessao.queixas || '',
-          evolucaoAtual: sessao.evolucao || '',
-          habilidadesTrabalhadas: sessao.habilidades_trabalhadas || '',
-          futurasAcoes: sessao.futuras_acoes || '',
-          anexos,
-          anexosTemporarios: anexos.map(url => ({ url, name: url.split('/').pop() })),
-          anexosParaExcluir: [] as string[],
-          novosAnexos: [] as File[],
-          uploadError: '',
-          resumo: sessao.resumo || ''
-        };
-
-        return atendimento;
-      })
-    );
-    console.log('Atendimentos carregados:', atendimentos.value.map(a => ({
-      id: a.id,
-      clienteId: a.clienteId,
-      id_aprendente: a.id_aprendente,
-      responsavel_id: a.responsavel_id,
-      paciente: a.paciente,
-      status: a.status,
-      id_contrato: a.id_contrato,
-      tipo_sessao: a.id_contrato ? 'Contrato' : 'Avulsa'
-    })));
-  } catch (err) {
-    console.error('Erro ao carregar sessões:', err);
-    uploadError.value = 'Erro ao carregar sessões: ' + (err as Error).message;
+const loadSessoes = async (reset = false) => {
+  if (reset) {
+    currentPage.value = 1;
+    atendimentos.value = [];
+    hasMoreData.value = true;
   }
-}
+
+  if (!hasMoreData.value || isLoadingMore.value) return;
+
+  isLoadingMore.value = true;
+  try {
+    const newSessoes: Sessao[] = await sessaoService.getAllSessoes({
+      page: currentPage.value,
+      pageSize: pageSize.value,
+      clienteId: filtroPaciente.value
+    });
+
+    if (newSessoes.length < pageSize.value) {
+      hasMoreData.value = false;
+    }
+
+    if (newSessoes.length > 0) {
+      const novosAtendimentos: Atendimento[] = await Promise.all(
+        newSessoes.map(async (sessao) => {
+          const agendamento = sessao.tb_agendamento;
+          const startTime = agendamento?.horario_inicio;
+          const duracao = parseInt(agendamento?.duracao) || 60;
+          const startDateTime = startTime ? new Date(`1970-01-01T${startTime}`) : null;
+          const endDateTime = startDateTime ? new Date(startDateTime.getTime() + duracao * 60000) : null;
+          const horarioFim = endDateTime
+            ? `${endDateTime.getHours().toString().padStart(2, '0')}:${endDateTime.getMinutes().toString().padStart(2, '0')}`
+            : '';
+          console.log(agendamento)
+          let paciente = 'N/A';
+          let clienteId = agendamento?.id_aprendente || agendamento?.responsavel_id || '';
+          if (agendamento?.id_aprendente) {
+            if (aprendenteCache.has(agendamento.id_aprendente)) {
+              paciente = aprendenteCache.get(agendamento.id_aprendente).nome_aprendente;
+            } else {
+              const aprendente = await aprendenteService.getAprendenteById(agendamento.id_aprendente);
+              paciente = aprendente?.nome_aprendente || 'N/A';
+              aprendenteCache.set(agendamento.id_aprendente, aprendente);
+            }
+          } else if (agendamento?.responsavel_id) {
+            const responsavel = await supabase
+              .from('tb_responsavel')
+              .select('nome')
+              .eq('id_responsavel', agendamento.responsavel_id)
+              .single();
+            paciente = responsavel.data?.nome || 'N/A';
+          }
+
+          const anexos = sessao.fotos ? sessao.fotos.split(',').filter((url: string) => url) : [];
+          let status = 'Pendente';
+          let pagamentoData: any = null;
+
+          const idContrato = sessao.id_contrato || null;
+          console.log(`Processando sessão ${sessao.id}, id_contrato: ${idContrato}, tipo: ${idContrato ? 'Contrato' : 'Avulsa'}`);
+
+          if (idContrato) {
+            const mesReferencia = new Date(agendamento?.data_agendamento).toISOString().slice(0, 7) + '-01';
+            const { data: mensalidade } = await supabase
+              .from('tb_mensalidade')
+              .select('id_mensalidade, valor, forma_pagamento, comprovante_url, status_pagamento')
+              .eq('id_contrato', idContrato)
+              .eq('mes_referencia', mesReferencia)
+              .eq('status_pagamento', 'Pago')
+              .maybeSingle();
+            if (mensalidade) {
+              status = 'Pago';
+              pagamentoData = {
+                id_mensalidade: mensalidade.id_mensalidade,
+                valor: mensalidade.valor,
+                forma_pagamento: mensalidade.forma_pagamento,
+                comprovante_url: mensalidade.comprovante_url
+              };
+              console.log(`Sessão ${sessao.id} marcada como Pago por mensalidade:`, mensalidade);
+            } else {
+              console.log(`Sessão ${sessao.id} sem mensalidade paga para ${mesReferencia}`);
+            }
+          } else {
+            const pagamento = await pagamentoService.getPagamentoBySessao(sessao.id);
+            if (pagamento) {
+              status = 'Pago';
+              pagamentoData = {
+                id_pagamento: pagamento.id_pagamento,
+                valor: pagamento.valor,
+                forma_pagamento: pagamento.forma_pagamento,
+                comprovante_url: pagamento.comprovante_url
+              };
+              console.log(`Sessão ${sessao.id} marcada como Pago por pagamento avulso:`, pagamento);
+            } else {
+              console.log(`Sessão ${sessao.id} sem pagamento avulso`);
+            }
+          }
+
+          const atendimento = {
+            id: sessao.id,
+            data: agendamento?.data_agendamento || '',
+            horario: startTime || '',
+            horario_fim: horarioFim,
+            paciente,
+            clienteId,
+            id_aprendente: agendamento?.id_aprendente,
+            responsavel_id: agendamento?.responsavel_id,
+            id_agendamento: agendamento?.id_agendamento,
+            id_contrato: idContrato,
+            avatar: '',
+            status,
+            id_pagamento: pagamentoData?.id_pagamento,
+            id_mensalidade: pagamentoData?.id_mensalidade,
+            valor_pagamento: pagamentoData?.valor,
+            forma_pagamento: pagamentoData?.forma_pagamento,
+            comprovante_url: pagamentoData?.comprovante_url,
+            anotacao: null,
+            showDetails: false,
+            isEditing: false,
+            preSessao: sessao.pre_sessao || '',
+            queixas: sessao.queixas || '',
+            evolucaoAtual: sessao.evolucao || '',
+            habilidadesTrabalhadas: sessao.habilidades_trabalhadas || '',
+            futurasAcoes: sessao.futuras_acoes || '',
+            anexos,
+            anexosTemporarios: anexos.map(url => ({ url, name: url.split('/').pop() })),
+            anexosParaExcluir: [] as string[],
+            novosAnexos: [] as File[],
+            uploadError: '',
+            resumo: sessao.resumo || ''
+          };
+
+          return atendimento;
+        })
+      );
+      console.log('Atendimentos carregados:', novosAtendimentos.map(a => ({
+        id: a.id,
+        clienteId: a.clienteId,
+        id_aprendente: a.id_aprendente,
+        responsavel_id: a.responsavel_id,
+        paciente: a.paciente,
+        status: a.status,
+        id_contrato: a.id_contrato,
+        tipo_sessao: a.id_contrato ? 'Contrato' : 'Avulsa'
+      })));
+
+      if (reset) {
+        atendimentos.value = novosAtendimentos;
+      } else {
+        atendimentos.value = [...atendimentos.value, ...novosAtendimentos];
+      }
+
+      currentPage.value++;
+      hasMoreData.value = newSessoes.length === pageSize;
+    }
+  } catch (error: unknown) {
+    console.error('Erro ao carregar sessões:', error);
+    uploadError.value = 'Erro ao carregar sessões: ' + (error instanceof Error ? error.message : 'Erro desconhecido');
+  } finally {
+    isLoadingMore.value = false;
+    isLoading.value = false;
+  }
+};
 
 async function loadPacientes() {
   try {
@@ -964,9 +1040,34 @@ const menus = [
   }
 ];
 
+// Intersection Observer for infinite scroll
+const observerTarget = ref<HTMLElement | null>(null);
+
 onMounted(() => {
-  loadSessoes();
+  const observer = new IntersectionObserver(
+    (entries) => {
+      if (entries[0].isIntersecting && hasMoreData.value && !isLoadingMore.value) {
+        loadSessoes();
+      }
+    },
+    {
+      rootMargin: '100px',
+      threshold: 0.1
+    }
+  );
+
+  if (observerTarget.value) {
+    observer.observe(observerTarget.value);
+  }
+
+  // Initial load
+  loadSessoes(true);
   loadPacientes();
+});
+
+// Reset pagination when filter changes
+watch(filtroPaciente, () => {
+  loadSessoes(true);
 });
 </script>
 
@@ -985,5 +1086,10 @@ onMounted(() => {
 
 .sessoes {
   background-color: #f9f9f9 !important;
+}
+
+.observer-target {
+  height: 20px;
+  width: 100%;
 }
 </style>

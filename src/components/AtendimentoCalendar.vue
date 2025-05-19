@@ -1,5 +1,14 @@
 <template>
   <v-container>
+    <!-- Loading Overlay -->
+    <v-overlay v-model="isLoading" class="align-center justify-center">
+      <v-progress-circular
+        color="primary"
+        indeterminate
+        size="64"
+      ></v-progress-circular>
+    </v-overlay>
+
     <!-- Botão de novo atendimento -->
     <v-btn color="primary" @click="openEventModal" prepend-icon="mdi-plus">
       Novo Atendimento
@@ -130,7 +139,7 @@ const storeConfig = useStoreConfig()
 const storeAuth = useStoreAuth()
 const storeCalendario = useStoreCalendario()
 const { showError } = useShowErrorMessage()
-const isLoading = ref(false)
+const isLoading = ref(true)
 const searchQuery = ref('')
 const aprendenteService = new AprendenteService()
 const agendamentoService = new AgendamentoService()
@@ -813,5 +822,9 @@ watch(searchQuery, async (val) => {
     font-size: 0.8rem;
     padding: 5px 10px;
   }
+}
+
+.v-overlay {
+  z-index: 9999;
 }
 </style>

@@ -14,6 +14,12 @@ interface Sessao {
   id_agendamento?: number;
 }
 
+interface GetAllSessoesOptions {
+  page?: number;
+  pageSize?: number;
+  clienteId?: string | null;
+}
+
 export class SessaoService {
   private showError = useShowErrorMessage().showError;
 
@@ -67,78 +73,76 @@ export class SessaoService {
   //     return [];
   //   }
   // }
-  async getAllSessoes() {
+  async getAllSessoes(options: GetAllSessoesOptions = {}) {
     const storeProfissional = useStoreProfissional();
-    const { data: agendamentos, error: errorAg } = await supabase
-      .from('tb_agendamento')
-      .select('id_agendamento')
-      .eq('id_profissional', storeProfissional.profissionalDetails?.id);
+    const { page = 1, pageSize = 10, clienteId = null } = options;
 
-    if (errorAg) throw errorAg;
+    try {
+      // Primeiro, buscar os agendamentos do profissional
+      const { data: agendamentos, error: errorAg } = await supabase
+        .from('tb_agendamento')
+        .select('id_agendamento')
+        .eq('id_profissional', storeProfissional.profissionalDetails?.id);
 
-    const agendamentoIds = agendamentos.map(a => a.id_agendamento);
-    const { data, error } = await supabase
-      .from('tb_sessao')
-      .select(`
-        id,
-        pre_sessao,
-        queixas,
-        evolucao,
-        habilidades_trabalhadas,
-        futuras_acoes,
-        resumo,
-        fotos,
-        id_agendamento,
-        id_contrato,
-        tb_agendamento (
+      if (errorAg) throw errorAg;
+
+      const agendamentoIds = agendamentos.map(a => a.id_agendamento);
+
+      // Construir a query base
+      let query = supabase
+        .from('tb_sessao')
+        .select(`
+          id,
+          pre_sessao,
+          queixas,
+          evolucao,
+          habilidades_trabalhadas,
+          futuras_acoes,
+          resumo,
+          fotos,
           id_agendamento,
-          data_agendamento,
-          horario_inicio,
-          duracao,
-          id_aprendente,
-          responsavel_id,
-          id_profissional
-        )
-      `).in('id_agendamento', agendamentoIds); // <- aqui o filtro funciona
+          id_contrato,
+          tb_agendamento (
+            id_agendamento,
+            data_agendamento,
+            horario_inicio,
+            duracao,
+            id_aprendente,
+            responsavel_id,
+            id_profissional
+          )
+        `, { count: 'exact' })
+        .in('id_agendamento', agendamentoIds);
 
-        if (error) throw error;
-          return data;
+      // Aplicar filtro por cliente se fornecido
+      if (clienteId) {
+        query = query.or(`tb_agendamento.id_aprendente.eq.${clienteId},tb_agendamento.responsavel_id.eq.${clienteId}`);
+      }
 
-    // const { data, error } = await supabase
-    //   .from('tb_sessao')
-    //   .select(`
-    //     id,
-    //     pre_sessao,
-    //     queixas,
-    //     evolucao,
-    //     habilidades_trabalhadas,
-    //     futuras_acoes,
-    //     resumo,
-    //     fotos,
-    //     id_agendamento,
-    //     id_contrato,
-    //     tb_agendamento (
-    //       id_agendamento,
-    //       data_agendamento,
-    //       horario_inicio,
-    //       duracao,
-    //       id_aprendente,
-    //       responsavel_id,
-    //       id_profissional
-    //     )
-    //   `)
-    //   .filter('tb_agendamento.id_profissional', 'eq', storeProfissional.profissionalDetails?.id); // <- filtro aninhado aqui
+      // Aplicar ordenação por data
+      query = query.order('tb_agendamento(data_agendamento)', { ascending: false });
 
-    if (error) {
-      console.error('Erro ao buscar sessões:', error);
-      throw error;
+      // Aplicar paginação
+      const from = (page - 1) * pageSize;
+      const to = from + pageSize - 1;
+      query = query.range(from, to);
+
+      const { data, error, count } = await query;
+
+      if (error) throw error;
+
+      console.log('Sessões carregadas:', data?.map(s => ({
+        id: s.id,
+        id_contrato: s.id_contrato,
+        tipo: s.id_contrato ? 'Contrato' : 'Avulsa'
+      })));
+
+      return data || [];
+    } catch (err: any) {
+      console.error('Erro ao buscar sessões:', err);
+      this.showError(err.message || 'Erro ao carregar sessões');
+      return [];
     }
-    console.log('Sessões carregadas:', data.map(s => ({
-      id: s.id,
-      id_contrato: s.id_contrato,
-      tipo: s.id_contrato ? 'Contrato' : 'Avulsa'
-    })));
-    return data;
   }
   async getSessaoById(id: string): Promise<Sessao | null> {
     try {

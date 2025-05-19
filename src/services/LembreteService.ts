@@ -6,11 +6,11 @@ export interface Lembrete {
   id?: string;
   created_at?: string;
   descricao: string;
-  data_expiraca: string; // formato: 'HH:mm:ss' ou 'YYYY-MM-DD' se alterar tipo
+  data_expiracao: string; // formato: 'HH:mm:ss' ou 'YYYY-MM-DD' se alterar tipo
   feito: boolean;
   cancelado?: boolean;
   idProfissional: string;
-  data_concluse?: string;
+  data_conclusao?: string;
 }
 
 export class LembreteService {
@@ -23,11 +23,11 @@ export class LembreteService {
         .insert([
           {
             descricao: lembrete.descricao,
-            data_expiraca: lembrete.data_expiraca,
+            data_expiracao: lembrete.data_expiracao,
             feito: lembrete.feito,
             cancelado: lembrete.cancelado || false,
             idProfissional: lembrete.idProfissional,
-            data_concluse: lembrete.data_concluse || null,
+            data_conclusao: lembrete.data_conclusao || null,
           },
         ])
         .select();
@@ -45,10 +45,10 @@ export class LembreteService {
         .from('tb_lembrete')
         .update({
           descricao: lembrete.descricao,
-          data_expiraca: lembrete.data_expiraca,
+          data_expiracao: lembrete.data_expiracao,
           feito: lembrete.feito,
           cancelado: lembrete.cancelado,
-          data_concluse: lembrete.data_concluse || null,
+          data_conclusao: lembrete.data_conclusao || null,
         })
         .eq('id', lembrete.id)
         .eq('idProfissional', lembrete.idProfissional);
@@ -93,7 +93,7 @@ export class LembreteService {
         .from('tb_lembrete')
         .select('*')
         .eq('idProfissional', idProfissional)
-        .order('data_expiraca', { ascending: true });
+        .order('data_expiracao', { ascending: true });
       if (error) throw error;
       return data as Lembrete[];
     } catch (err: any) {

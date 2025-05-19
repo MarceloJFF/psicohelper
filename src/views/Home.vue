@@ -15,41 +15,41 @@
             </v-btn>
           </div>
           <v-date-picker
-  v-model="selectedDate"
-  color="deep-purple-lighten-1"
-  locale="pt-BR"
-  show-adjacent-months
-  hide-header
-  size="small"
-  elevation="0"
-  class="mb-4 bg-grey-lighten-4 rounded-lg border"
-  style="border: 1px solid #ccc;"
-/>
-
+            v-model="selectedDate"
+            color="deep-purple-lighten-1"
+            locale="pt-BR"
+            show-adjacent-months
+            hide-header
+            size="small"
+            elevation="0"
+            class="mb-4 bg-grey-lighten-4 rounded-lg border"
+            style="border: 1px solid #ccc;"
+            @update:model-value="carregarLembretes"
+          />
 
           <v-list class="pa-4" lines="two">
             <v-list-item
-              v-for="(item, index) in lembretes"
-              :key="index"
+              v-for="lembrete in lembretesFiltrados"
+              :key="lembrete.id"
               class="rounded-lg mb-2 transition-swing"
               :class="{
-                'bg-deep-purple-lighten-5': item.done,
-                'border-left-4 border-deep-purple': !item.done && isUrgente(item.dataExpiracao)
+                'bg-deep-purple-lighten-5': lembrete.feito,
+                  'border-left-4 border-deep-purple': !lembrete.feito && isUrgente(lembrete.data_expiracao)
               }"
             >
               <template #prepend>
                 <v-avatar color="deep-purple-lighten-3" size="40">
-                  <v-icon>{{ item.icon }}</v-icon>
+                  <v-icon>mdi-bell</v-icon>
                 </v-avatar>
               </template>
 
-              <v-list-item-title class="font-weight-medium">{{ item.titulo }}</v-list-item-title>
+              <v-list-item-title class="font-weight-medium">{{ lembrete.descricao }}</v-list-item-title>
               <v-list-item-subtitle>
                 <div class="d-flex align-center">
                   <v-icon size="small" color="deep-purple" class="mr-1">mdi-calendar</v-icon>
-                  {{ formatarData(item.dataExpiracao) }}
+                  {{ formatarData(lembrete.data_expiracao) }}
                   <v-chip
-                    v-if="isUrgente(item.dataExpiracao)"
+                    v-if="isUrgente(lembrete.data_expiracao)"
                     size="small"
                     color="error"
                     class="ml-2"
@@ -57,7 +57,6 @@
                     Urgente
                   </v-chip>
                 </div>
-                <div v-if="item.subtitulo" class="mt-1">{{ item.subtitulo }}</div>
               </v-list-item-subtitle>
 
               <template #append>
@@ -66,16 +65,16 @@
                     icon
                     variant="text"
                     color="deep-purple"
-                    @click="toggleFeito(index)"
+                    @click="toggleFeito(lembrete)"
                     class="mr-2"
                   >
-                    <v-icon>{{ item.done ? 'mdi-check-circle' : 'mdi-checkbox-blank-circle-outline' }}</v-icon>
+                    <v-icon>{{ lembrete.feito ? 'mdi-check-circle' : 'mdi-checkbox-blank-circle-outline' }}</v-icon>
                   </v-btn>
                   <v-btn
                     icon
                     variant="text"
                     color="error"
-                    @click="removerLembrete(index)"
+                    @click="removerLembrete(lembrete.id!)"
                   >
                     <v-icon>mdi-delete</v-icon>
                   </v-btn>
@@ -93,7 +92,7 @@
               <v-img
                 src="src/assets/mascote.png"
                 max-width="400"
-                class=" mascote"
+                class="mascote"
                 :class="{ 'mascote-happy': lembretesCompletos > 0 }"
               ></v-img>
             </div>
@@ -122,22 +121,13 @@
         <v-card-text>
           <v-form @submit.prevent="salvarLembrete">
             <v-text-field
-              v-model="novoLembrete.titulo"
-              label="Título"
+              v-model="novoLembrete.descricao"
+              label="Descrição"
               required
             ></v-text-field>
             <v-text-field
-              v-model="novoLembrete.subtitulo"
-              label="Subtítulo"
-            ></v-text-field>
-            <v-select
-              v-model="novoLembrete.icon"
-              :items="icones"
-              label="Ícone"
-            ></v-select>
-            <v-text-field
-              v-model="novoLembrete.dataExpiracao"
-              type="date"
+              v-model="novoLembrete.data_expiracao"
+              type="datetime-local"
               label="Data de Expiração"
               required
             ></v-text-field>
@@ -154,57 +144,33 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
+import { LembreteService, type Lembrete } from '@/services/LembreteService'
+import { useStoreProfissional } from '@/stores/storeProfissional'
+
+const storeProfissional = useStoreProfissional()
+const lembreteService = new LembreteService()
 
 const selectedDate = ref(new Date().toISOString().substr(0, 10))
 const dialogNovoLembrete = ref(false)
+const lembretes = ref<Lembrete[]>([])
 
-const icones = [
-  { title: 'Paciente', value: 'mdi-account' },
-  { title: 'Consulta', value: 'mdi-calendar-clock' },
-  { title: 'Atividade', value: 'mdi-pencil' },
-  { title: 'Documento', value: 'mdi-file-document' },
-  { title: 'Lembrete', value: 'mdi-bell' },
-]
-
-const novoLembrete = ref({
-  titulo: '',
-  subtitulo: '',
-  icon: 'mdi-bell',
-  dataExpiracao: '',
-  done: false
+const novoLembrete = ref<Lembrete>({
+  descricao: '',
+  data_expiracao: '',
+  feito: false,
+  idProfissional: storeProfissional.profissionalDetails?.id || '',
 })
 
-const lembretes = ref([
-  {
-    titulo: 'Revisar plano terapêutico do João',
-    subtitulo: 'Revisar',
-    icon: 'mdi-account',
-    dataExpiracao: '2024-03-25',
-    done: true,
-  },
-  {
-    titulo: '16:00 Consulta com Mariana',
-    icon: 'mdi-calendar-clock',
-    dataExpiracao: '2024-03-24',
-    done: false,
-  },
-  {
-    titulo: 'Preparar atividade de leitura',
-    icon: 'mdi-pencil',
-    dataExpiracao: '2024-03-26',
-    done: false,
-  },
-  {
-    titulo: 'Enviar relatório de avaliação',
-    icon: 'mdi-file-document',
-    dataExpiracao: '2024-03-23',
-    done: false,
-  },
-])
+const lembretesFiltrados = computed(() => {
+  return lembretes.value.filter(lembrete => {
+    const dataLembrete = new Date(lembrete.data_expiracao).toISOString().split('T')[0]
+    return dataLembrete === selectedDate.value
+  })
+})  
 
 const lembretesCompletos = computed(() => {
-  return lembretes.value.filter(item => item.done).length
+  return lembretes.value.filter(item => item.feito).length
 })
 
 const mensagemMascote = computed(() => {
@@ -214,34 +180,55 @@ const mensagemMascote = computed(() => {
   return 'Vamos organizar o dia com carinho? 🌟'
 })
 
-const toggleFeito = (index: number) => {
-  lembretes.value[index].done = !lembretes.value[index].done
+const carregarLembretes = async () => {
+  if (storeProfissional.profissionalDetails?.id) {
+    const lembretesCarregados = await lembreteService.buscarLembretesDoProfissional(storeProfissional.profissionalDetails.id)
+    if (lembretesCarregados) {
+      lembretes.value = lembretesCarregados
+    }
+  }
 }
 
-const removerLembrete = (index: number) => {
-  lembretes.value.splice(index, 1)
+const toggleFeito = async (lembrete: Lembrete) => {
+  lembrete.feito = !lembrete.feito
+  lembrete.data_conclusao = lembrete.feito ? new Date().toISOString() : undefined
+  await lembreteService.atualizarLembrete(lembrete)
+  await carregarLembretes()
+}
+
+const removerLembrete = async (id: string) => {
+  if (storeProfissional.profissionalDetails?.id) {
+    await lembreteService.deletarLembrete(id, storeProfissional.profissionalDetails.id)
+    await carregarLembretes()
+  }
 }
 
 const adicionarLembrete = () => {
   novoLembrete.value = {
-    titulo: '',
-    subtitulo: '',
-    icon: 'mdi-bell',
-    dataExpiracao: '',
-    done: false
+    descricao: '',
+    data_expiracao: '',
+    feito: false,
+    idProfissional: storeProfissional.profissionalDetails?.id || '',
   }
   dialogNovoLembrete.value = true
 }
 
-const salvarLembrete = () => {
-  if (novoLembrete.value.titulo && novoLembrete.value.dataExpiracao) {
-    lembretes.value.push({ ...novoLembrete.value })
+const salvarLembrete = async () => {
+  if (novoLembrete.value.descricao && novoLembrete.value.data_expiracao ) {
+    await lembreteService.criarLembrete(novoLembrete.value)
     dialogNovoLembrete.value = false
+    await carregarLembretes()
   }
 }
 
 const formatarData = (data: string) => {
-  return new Date(data).toLocaleDateString('pt-BR')
+  return new Date(data).toLocaleDateString('pt-BR', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit'
+  })
 }
 
 const isUrgente = (data: string) => {
@@ -251,6 +238,10 @@ const isUrgente = (data: string) => {
   const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
   return diffDays <= 2 && diffDays >= 0
 }
+
+onMounted(() => {
+  carregarLembretes()
+})
 </script>
 
 <style scoped>
