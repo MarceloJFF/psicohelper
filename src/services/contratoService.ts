@@ -9,8 +9,24 @@ import { UploadService } from '@/services/UploadService'
 export class ContratoService {
   private showError = useShowErrorMessage().showError
   private profissionalStore = useStoreProfissional()
-  private diasAtendimentoContratoService = new DiasAtendimentosContratoService();
+  private diasAtendimentoContratoService = new DiasAtendimentosContratoService()
   private uploadService = new UploadService()
+
+  async getContratoById(id: string): Promise<Contrato | null> {
+    try {
+      const { data, error } = await supabase
+        .from('tb_contrato')
+        .select('*')
+        .eq('id_contrato', id)
+        .single()
+
+      if (error) throw error
+      return data as Contrato
+    } catch (err: any) {
+      this.showError(err.message || 'Erro ao buscar contrato')
+      return null
+    }
+  }
 
   async loadContratos(idAprendente: string): Promise<Contrato[]> {
     try {
@@ -33,7 +49,7 @@ export class ContratoService {
         .from('tb_contrato')
         .select('*')
         .eq('id_aprendente', idAprendente)
-        .eq('cancelado','FALSE')
+        .eq('cancelado', 'FALSE')
         .select()
 
       if (error) throw error
@@ -62,7 +78,7 @@ export class ContratoService {
         .from('tb_contrato')
         .select('id')
         .eq('id_aprendente', idAprendente)
-        .eq('cadastrado','TRUE')
+        .eq('cadastrado', 'TRUE')
         .select()
       if (error) throw error
       return data as Contrato[]
@@ -78,12 +94,13 @@ export class ContratoService {
   ): Promise<string | undefined> {
     try {
       contrato.idProfissional = this.profissionalStore.profissionalDetails?.id || ''
-      const searchedContratosAprendente =await this.verificarContratosAtivosAprendente(idAprendente);
-      if(searchedContratosAprendente.length>0){
-        this.showError( 'Existe mais de 1 contrato ativo para esse aprendente')
-        return;
+      const searchedContratosAprendente =
+        await this.verificarContratosAtivosAprendente(idAprendente)
+      if (searchedContratosAprendente.length > 0) {
+        this.showError('Existe mais de 1 contrato ativo para esse aprendente')
+        return
       }
-      const {data, error } = await supabase
+      const { data, error } = await supabase
         .from('tb_contrato')
         .insert({
           valor_mensal: contrato.valorMensal,
@@ -100,15 +117,18 @@ export class ContratoService {
       if (error) throw error
       // add dias Atendimento Contrato
       contrato.idContrato = data?.[0]?.id_contrato
-      await this.addDiasAtendimentoNoContrato(contrato);
+      await this.addDiasAtendimentoNoContrato(contrato)
       return data?.[0]?.id_contrato
     } catch (err: any) {
       this.showError(err.message || 'Erro ao adicionar contrato')
     }
   }
 
-  private async  addDiasAtendimentoNoContrato(contrato:Contrato) {
-    await this.diasAtendimentoContratoService.addDiasAtendimento(contrato.diasAtendimento, contrato.idContrato);
+  private async addDiasAtendimentoNoContrato(contrato: Contrato) {
+    await this.diasAtendimentoContratoService.addDiasAtendimento(
+      contrato.diasAtendimento,
+      contrato.idContrato,
+    )
   }
 
   async inativarContrato(idContrato: string, motivo: string): Promise<void> {
@@ -118,18 +138,17 @@ export class ContratoService {
         .update({
           cancelado: true,
           motivo_cancelamento: motivo,
-          cadastrado:false,
+          cadastrado: false,
           data_cancelamento: new Date().toISOString(),
         })
         .eq('id_contrato', idContrato)
 
       if (error) throw error
-      else alert("Cancelado com sucesso")
+      else alert('Cancelado com sucesso')
     } catch (err: any) {
       this.showError(err.message || 'Erro ao cancelar contrato')
     }
   }
-
 
   async pagarMensalidadeContrato(mensalidade: {
     id_contrato: string

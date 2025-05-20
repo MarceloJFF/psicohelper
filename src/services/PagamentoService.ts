@@ -115,7 +115,13 @@ export class PagamentoService {
       console.error(`Erro ao buscar pagamento para sessão ${id_sessao}:`, error)
       throw error
     }
-    console.log(`Pagamento para sessão ${id_sessao}:`, data)
+    // console.log(`Pagamento para sessão ${id_sessao}:`, data)
+    return data
+  }
+
+  async getAllPagamentos() {
+    const { data, error } = await supabase.from('tb_pagamento').select('*')
+    if (error) throw error
     return data
   }
 }

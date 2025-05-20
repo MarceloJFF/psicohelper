@@ -78,7 +78,7 @@
                 </v-btn>
                 <v-btn
                   v-if="atendimento.status === 'Pendente' && (atendimento.id_contrato == null || atendimento.id_contrato == undefined)"
-                  color="success" variant="outlined" class="ml-2" @click="abrirModalPagamentoIndividual(atendimento)">
+                  color="success" variant="outlined" class="ml-2" @click="abrirModalLançarPagamentoIndividual(atendimento)">
                   Lançar Pagamento
                 </v-btn>
                 <div v-if="atendimento.id_contrato" class="text-caption mt-2">
@@ -88,7 +88,7 @@
                 </div>
                 <v-btn
                   v-if="atendimento.status === 'Pago' && (atendimento.id_contrato === null || atendimento.id_contrato === undefined)"
-                  color="error" variant="outlined" class="ml-2" @click="abrirModalPagamentoIndividual(atendimento)">
+                  color="error" variant="outlined" class="ml-2" @click="abrirModalLançarPagamentoIndividual(atendimento)">
                   Editar Pagamento
                 </v-btn>
                 <!-- <v-btn v-if="atendimento.status === 'Pago' && !atendimento.id_contrato" color="error" variant="outlined"
@@ -753,12 +753,13 @@ async function salvarEdicao(atendimento: any) {
   }
 }
 
-function abrirModalPagamentoIndividual(atendimento: any) {
+function abrirModalLançarPagamentoIndividual(atendimento: any) {
   atendimentoSelecionado.value = atendimento;
   valorPago.value = atendimento.valor_pagamento || null;
   formaPagamento.value = atendimento.forma_pagamento || null;
   comprovanteImagem.value = null;
   modalPagamentoIndividual.value = true;
+  console.log('atendimento selecionado:', atendimentoSelecionado.value);  
 }
 
 function cancelarPagamentoIndividual() {
