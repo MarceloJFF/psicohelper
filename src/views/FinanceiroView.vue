@@ -30,6 +30,21 @@
       </v-col>
     </v-row>
 
+    <!-- Filtros -->
+    <v-row align="center" justify="space-between" class="mb-4">
+      <v-col cols="12" md="3">
+        <v-select v-model="anoSelecionado" :items="anos" label="Ano" dense outlined></v-select>
+      </v-col>
+      <v-col cols="12" md="9">
+        <v-btn-toggle v-model="mesSelecionado" class="d-flex flex-wrap" dense mandatory>
+          <v-btn v-for="(mes, index) in meses" :key="index" :value="index" class="ma-1"
+            :color="mesSelecionado === index ? 'primary' : undefined">
+            {{ mes }}
+          </v-btn>
+        </v-btn-toggle>
+      </v-col>
+    </v-row>
+
     <!-- Tabs -->
     <v-tabs v-model="activeTab" background-color="transparent" color="primary" grow class="mb-4">
       <v-tab value="receitas">Receitas</v-tab>
@@ -38,9 +53,17 @@
 
     <!-- Tab Content -->
     <v-window v-model="activeTab">
-      <!-- Receitas Tab (Avulsa Sessions) -->
+      <!-- Receitas Tab -->
       <v-window-item value="receitas">
-        <v-data-table :headers="receitasHeaders" :items="lancamentosReceitas" class="elevation-1" dense>
+        <v-row class="mb-4">
+          <v-col>
+            <v-btn color="primary" @click="abrirModalReceita = true">
+              <v-icon left>mdi-plus</v-icon>
+              Nova Receita
+            </v-btn>
+          </v-col>
+        </v-row>
+        <v-data-table :headers="receitasHeaders" :items="lancamentosReceitasFiltrados" class="elevation-1" dense>
           <template v-slot:item="{ item }">
             <tr>
               <td>{{ item.tipo }}</td>
@@ -48,14 +71,21 @@
               <td>R$ {{ formatarValor(item.valor) }}</td>
               <td>{{ formatarData(item.vencimento) }}</td>
               <td>
-                <v-chip :color="item.pago ? 'success' : 'warning'" small>
-                  {{ item.pago ? 'Pago' : 'Pendente' }}
-                </v-chip>
+                <div class="d-flex flex-column align-center" style="min-width: 120px">
+                  <v-chip :color="item.pago ? 'success' : 'warning'" small class="mb-2">
+                    {{ item.pago ? 'Pago' : 'Pendente' }}
+                  </v-chip>
+                  <v-btn icon x-small color="green"
+                    :title="item.pago ? 'Enviar mensagem de confirmação de pagamento' : 'Enviar mensagem de cobrança'"
+                    @click="enviarMensagemWhatsApp(item)">
+                    <v-icon>mdi-whatsapp</v-icon>
+                  </v-btn>
+                </div>
               </td>
               <td>
                 <v-btn icon small class="mr-2" @click="editarLancamento(item)">
                   <v-icon>mdi-pencil</v-icon>
-                </v-btn>
+                  jus </v-btn>
                 <v-btn icon small color="error" @click="confirmarExclusao(item)">
                   <v-icon>mdi-delete</v-icon>
                 </v-btn>
@@ -71,11 +101,11 @@
           <v-col>
             <v-btn color="primary" @click="abrirModal = true">
               <v-icon left>mdi-plus</v-icon>
-              Novo Lançamento
+              Nova Despesa
             </v-btn>
           </v-col>
         </v-row>
-        <v-data-table :headers="despesasHeaders" :items="lancamentosDespesas" class="elevation-1" dense>
+        <v-data-table :headers="despesasHeaders" :items="lancamentosDespesasFiltrados" class="elevation-1" dense>
           <template v-slot:item="{ item }">
             <tr>
               <td>{{ item.tipo }}</td>
@@ -101,7 +131,7 @@
       </v-window-item>
     </v-window>
 
-    <!-- Modal Lançamento (Despesas Only) -->
+    <!-- Modal Despesa -->
     <v-dialog v-model="abrirModal" max-width="600px">
       <v-card>
         <v-card-title>
@@ -141,7 +171,7 @@
       </v-card>
     </v-dialog>
 
-    <!-- Modal Editar Receita (Avulsa Session) -->
+    <!-- Modal Receita -->
     <v-dialog v-model="abrirModalReceita" max-width="600px">
       <v-card>
         <v-card-title>
@@ -149,8 +179,16 @@
         </v-card-title>
         <v-card-text>
           <v-form ref="formReceita" @submit.prevent="salvarLancamento">
-            <v-autocomplete v-model="novoLancamento.id_sessao" :items="sessoesDisponiveis" item-title="descricao"
+            <v-select v-model="novoLancamento.tipo_receita" :items="['Sessão Avulsa', 'Mensalidade']"
+              label="Tipo de Receita" outlined dense :rules="[v => !!v || 'Campo obrigatório']" />
+            <v-autocomplete v-if="!loading && novoLancamento.tipo_receita === 'Sessão Avulsa'"
+              v-model="novoLancamento.id_sessao" :items="sessoesDisponiveis" item-title="descricao"
               item-value="id_sessao" label="Sessão" outlined dense :rules="[v => !!v || 'Campo obrigatório']" />
+            <v-progress-circular v-else-if="loading && novoLancamento.tipo_receita === 'Sessão Avulsa'" indeterminate
+              color="primary"></v-progress-circular>
+            <v-autocomplete v-if="novoLancamento.tipo_receita === 'Mensalidade'" v-model="novoLancamento.id_mensalidade"
+              :items="mensalidadesDisponiveis" item-title="descricao" item-value="id_mensalidade" label="Mensalidade"
+              outlined dense :rules="[v => !!v || 'Campo obrigatório']" />
             <v-text-field v-model="novoLancamento.valor" label="Valor" type="number" outlined dense
               :rules="[v => !!v || 'Campo obrigatório']" prefix="R$" />
             <v-select v-model="novoLancamento.forma_pagamento" :items="['Pix', 'Cartão', 'Boleto', 'Dinheiro']"
@@ -197,10 +235,8 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue';
+import { ref, computed, watch, onMounted } from 'vue';
 import supabase from '@/config/supabase';
-import { SessaoService } from '@/services/SessaoService';
-import { PagamentoService } from '@/services/PagamentoService';
 
 interface Lancamento {
   id: string;
@@ -215,21 +251,30 @@ interface Lancamento {
   tipo_lancamento: 'receita' | 'despesa';
   pago: boolean;
   id_sessao?: string;
+  id_mensalidade?: string;
+  id_despesa?: string;
   id_pagamento?: string;
+  tipo_receita?: 'Sessão Avulsa' | 'Mensalidade';
   forma_pagamento?: string;
 }
 
 const form = ref<{ validate: () => Promise<boolean> } | null>(null);
 const formReceita = ref<{ validate: () => Promise<boolean> } | null>(null);
 const activeTab = ref('receitas');
+const mesSelecionado = ref(new Date().getMonth());
+const anoSelecionado = ref(new Date().getFullYear());
+const anos = Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - 2 + i);
+const meses = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
+
 const abrirModal = ref(false);
 const abrirModalReceita = ref(false);
 const dialogConfirmacao = ref(false);
 const editando = ref(false);
 const lancamentoParaExcluir = ref<Lancamento | null>(null);
-const lancamentosReceitas = ref<Lancamento[]>([]);
-const lancamentosDespesas = ref<Lancamento[]>([]);
+const lancamentos = ref<Lancamento[]>([]);
 const sessoesDisponiveis = ref<{ id_sessao: string; descricao: string }[]>([]);
+const mensalidadesDisponiveis = ref<{ id_mensalidade: string; descricao: string }[]>([]);
+
 const snackbar = ref(false);
 const snackbarMessage = ref('');
 const snackbarColor = ref('success');
@@ -244,9 +289,12 @@ const novoLancamento = ref<Partial<Lancamento>>({
   vencimento: '',
   cliente: '',
   valor: 0,
-  tipo_lancamento: 'despesa',
+  tipo_lancamento: 'receita',
   pago: false,
+  tipo_receita: '',
   id_sessao: '',
+  id_mensalidade: '',
+  id_despesa: '',
   id_pagamento: '',
   forma_pagamento: ''
 });
@@ -269,14 +317,40 @@ const despesasHeaders = [
   { title: 'Ações', key: 'acoes', sortable: false }
 ];
 
+const lancamentosReceitasFiltrados = computed(() => {
+  return lancamentos.value.filter(l => {
+    const [year, month, day] = l.vencimento.split('-').map(Number);
+    const data = new Date(year, month - 1, day);
+    const isValid = !isNaN(data.getTime());
+    return (
+      l.tipo_lancamento === 'receita' &&
+      isValid &&
+      data.getFullYear() === anoSelecionado.value &&
+      data.getMonth() === mesSelecionado.value
+    );
+  });
+});
+
+const lancamentosDespesasFiltrados = computed(() => {
+  return lancamentos.value.filter(l => {
+    const [year, month, day] = l.vencimento.split('-').map(Number);
+    const data = new Date(year, month - 1, day);
+    const isValid = !isNaN(data.getTime());
+    return (
+      l.tipo_lancamento === 'despesa' &&
+      isValid &&
+      data.getFullYear() === anoSelecionado.value &&
+      data.getMonth() === mesSelecionado.value
+    );
+  });
+});
+
 const totalReceitas = computed(() => {
-  return lancamentosReceitas.value
-    .reduce((acc, curr) => acc + (curr.valor || 0), 0);
+  return lancamentosReceitasFiltrados.value.reduce((acc, curr) => acc + (curr.valor || 0), 0);
 });
 
 const totalDespesas = computed(() => {
-  return lancamentosDespesas.value
-    .reduce((acc, curr) => acc + (curr.valor || 0), 0);
+  return lancamentosDespesasFiltrados.value.reduce((acc, curr) => acc + (curr.valor || 0), 0);
 });
 
 const lucro = computed(() => {
@@ -292,67 +366,6 @@ function formatarValor(valor: number) {
 
 function formatarData(data: string) {
   return new Date(data).toLocaleDateString('pt-BR');
-}
-const sessaoService = new SessaoService()
-const pagamentoService = new PagamentoService()
-async function carregarLancamentos() {
-  try {
-    // Fetch avulsa sessions (id_contrato is null)
-    const sessoes = await sessaoService.getAllSessoes();
-    const pagamentos = await pagamentoService.getAllPagamentos();
-
-    
-    lancamentosReceitas.value = sessoes?.map(s => {
-      const pagamento = pagamentos.find(p => p.id_pagamento === s);
-      const vencimentoDate = s.tb_agendamento?.data_agendamento
-        ? new Date(s.tb_agendamento.data_agendamento)
-        : new Date();
-      const vencimento = vencimentoDate.toISOString().split('T')[0];
-      return {
-        id: s.tb_pagamento_sessao?.id || `sessao-${s.id}`,
-        tipo: 'Sessão Avulsa',
-        cliente: s.tb_agendamento?.tb_aprendente?.nome_aprendente || 'N/A',
-        valor: pagamento?.valor || 0,
-        vencimento,
-        tipo_lancamento: 'receita' as const,
-        pago: !!pagamento?.data_pagamento,
-        id_sessao: s.id,
-        id_pagamento: pagamento?.id_pagamento,
-        forma_pagamento: pagamento?.forma_pagamento || null
-      };
-    }) || [];
-    console.log('Receitas (avulsa sessions) carregadas:', lancamentosReceitas.value);
-
-    // Fetch all expenses
-    const { data: despesas, error: despesasError } = await supabase
-      .from('tb_despesa')
-      .select('*');
-    if (despesasError) throw despesasError;
-
-    lancamentosDespesas.value = despesas?.map(d => {
-      const vencimentoDate = new Date(d.vencimento);
-      const vencimento = vencimentoDate.toISOString().split('T')[0];
-      return {
-        id: d.id_despesa,
-        tipo: d.tipo,
-        categoria: d.categoria || 'Despesa',
-        observacoes: d.observacoes || '',
-        recorrente: d.recorrente,
-        qtd_meses: d.qtd_meses,
-        vencimento,
-        valor: d.valor,
-        tipo_lancamento: 'despesa' as const,
-        pago: d.pago,
-        id_despesa: d.id_despesa
-      };
-    }) || [];
-    console.log('Despesas carregadas:', lancamentosDespesas.value);
-  } catch (error) {
-    console.error('Erro ao carregar lançamentos:', error);
-    snackbarMessage.value = 'Erro ao carregar lançamentos';
-    snackbarColor.value = 'error';
-    snackbar.value = true;
-  }
 }
 
 async function carregarSessoesDisponiveis() {
@@ -371,16 +384,173 @@ async function carregarSessoesDisponiveis() {
         )
       `)
       .is('id_contrato', null)
-      .not('id', 'in', `(${lancamentosReceitas.value.filter(l => l.id_sessao).map(l => l.id_sessao).join(',') || '00000000-0000-0000-0000-000000000000'})`);
+      .not('id', 'in', `(${lancamentos.value.filter(l => l.id_sessao).map(l => l.id_sessao).join(',') || '00000000-0000-0000-0000-000000000000'})`);
     if (error) throw error;
     sessoesDisponiveis.value = data?.map(sessao => ({
       id_sessao: sessao.id,
       descricao: `${sessao.tb_agendamento?.tb_aprendente?.nome_aprendente || 'N/A'} - ${formatarData(sessao.tb_agendamento?.data_agendamento || new Date().toISOString())}`
     })) || [];
-    console.log('Sessões disponíveis carregadas:', sessoesDisponiveis.value);
   } catch (error) {
     console.error('Erro ao carregar sessões:', error);
     snackbarMessage.value = 'Erro ao carregar sessões disponíveis';
+    snackbarColor.value = 'error';
+    snackbar.value = true;
+  }
+}
+
+async function carregarMensalidadesDisponiveis() {
+  try {
+    const { data, error } = await supabase
+      .from('tb_mensalidade')
+      .select(`
+        id_mensalidade,
+        mes_referencia,
+        id_contrato,
+        tb_contrato (
+          id_responsavel,
+          tb_responsavel:tb_responsavel!tb_responsavel_id_contrato_fkey (nome)
+        )
+      `)
+      .eq('status_pagamento', 'Pago')
+      .not('id_mensalidade', 'in', `(${lancamentos.value.filter(l => l.id_mensalidade).map(l => l.id_mensalidade).join(',') || '00000000-0000-0000-0000-000000000000'})`);
+    if (error) throw error;
+    mensalidadesDisponiveis.value = data?.map(mensalidade => ({
+      id_mensalidade: mensalidade.id_mensalidade,
+      descricao: `${mensalidade.tb_contrato?.tb_responsavel?.nome || 'N/A'} - ${mensalidade.mes_referencia.slice(0, 7)}`
+    })) || [];
+  } catch (error) {
+    console.error('Erro ao carregar mensalidades:', error);
+    snackbarMessage.value = 'Erro ao carregar mensalidades disponíveis';
+    snackbarColor.value = 'error';
+    snackbar.value = true;
+  }
+}
+
+async function carregarLancamentos() {
+  try {
+    // Fetch avulsa session payments
+    const { data: pagamentos, error: pagamentosError } = await supabase
+      .from('tb_pagamento_sessao')
+      .select(`
+        id,
+        id_sessao,
+        id_pagamento,
+        tb_pagamento (
+          id_pagamento,
+          valor,
+          data_pagamento,
+          forma_pagamento
+        ),
+        tb_sessao (
+          id,
+          id_agendamento,
+          id_contrato,
+          tb_agendamento (
+            data_agendamento,
+            id_aprendente,
+            tb_aprendente (nome_aprendente)
+          )
+        )
+      `)
+      .is('tb_sessao.id_contrato', null);
+    if (pagamentosError) throw pagamentosError;
+
+    const lancamentosPagamentos = pagamentos?.map(p => {
+      const vencimentoDate = p.tb_sessao?.tb_agendamento?.data_agendamento
+        ? new Date(p.tb_sessao.tb_agendamento.data_agendamento)
+        : p.tb_pagamento.data_pagamento
+          ? new Date(p.tb_pagamento.data_pagamento)
+          : new Date();
+      const vencimento = vencimentoDate.toISOString().split('T')[0];
+      return {
+        id: p.id,
+        tipo: 'Sessão Avulsa',
+        categoria: 'Atendimento',
+        observacoes: `Sessão para ${p.tb_sessao?.tb_agendamento?.tb_aprendente?.nome_aprendente || 'N/A'}`,
+        recorrente: false,
+        qtd_meses: 1,
+        vencimento,
+        cliente: p.tb_sessao?.tb_agendamento?.tb_aprendente?.nome_aprendente || 'N/A',
+        valor: p.tb_pagamento.valor || 0,
+        tipo_lancamento: 'receita' as const,
+        pago: !!p.tb_pagamento.data_pagamento,
+        id_sessao: p.id_sessao,
+        id_pagamento: p.id_pagamento,
+        tipo_receita: 'Sessão Avulsa' as const,
+        forma_pagamento: p.tb_pagamento.forma_pagamento
+      };
+    }) || [];
+
+    // Fetch mensalidade payments
+    const { data: mensalidades, error: mensalidadesError } = await supabase
+      .from('tb_mensalidade')
+      .select(`
+        id_mensalidade,
+        valor,
+        mes_referencia,
+        status_pagamento,
+        forma_pagamento,
+        data_pagamento,
+        id_contrato,
+        tb_contrato (
+          id_responsavel,
+          tb_responsavel:tb_responsavel!tb_responsavel_id_contrato_fkey (nome)
+        )
+      `)
+      .eq('status_pagamento', 'Pago');
+    if (mensalidadesError) throw mensalidadesError;
+
+    const lancamentosMensalidades = mensalidades?.map(m => {
+      const vencimentoDate = new Date(m.mes_referencia);
+      const vencimento = vencimentoDate.toISOString().split('T')[0];
+      return {
+        id: m.id_mensalidade,
+        tipo: 'Mensalidade',
+        categoria: 'Contrato',
+        observacoes: `Mensalidade de ${m.mes_referencia.slice(0, 7)}`,
+        recorrente: true,
+        qtd_meses: 12,
+        vencimento,
+        cliente: m.tb_contrato?.tb_responsavel?.nome || 'N/A',
+        valor: m.valor || 0,
+        tipo_lancamento: 'receita' as const,
+        pago: m.status_pagamento === 'Pago',
+        id_mensalidade: m.id_mensalidade,
+        tipo_receita: 'Mensalidade' as const,
+        forma_pagamento: m.forma_pagamento
+      };
+    }) || [];
+
+    // Fetch expenses
+    const { data: despesas, error: despesasError } = await supabase
+      .from('tb_despesa')
+      .select('*');
+    if (despesasError) throw despesasError;
+
+    const lancamentosDespesas = despesas?.map(d => {
+      const vencimentoDate = new Date(d.vencimento);
+      const vencimento = vencimentoDate.toISOString().split('T')[0];
+      return {
+        id: d.id_despesa,
+        tipo: d.tipo,
+        categoria: d.categoria || 'Despesa',
+        observacoes: d.observacoes || '',
+        recorrente: d.recorrente,
+        qtd_meses: d.qtd_meses,
+        vencimento,
+        cliente: '',
+        valor: d.valor,
+        tipo_lancamento: 'despesa' as const,
+        pago: d.pago,
+        id_despesa: d.id_despesa
+      };
+    }) || [];
+
+    // Combine all lancamentos
+    lancamentos.value = [...lancamentosPagamentos, ...lancamentosMensalidades, ...lancamentosDespesas];
+  } catch (error) {
+    console.error('Erro ao carregar lançamentos:', error);
+    snackbarMessage.value = 'Erro ao carregar lançamentos';
     snackbarColor.value = 'error';
     snackbar.value = true;
   }
@@ -398,7 +568,10 @@ function limparFormulario() {
     valor: 0,
     tipo_lancamento: activeTab.value === 'receitas' ? 'receita' : 'despesa',
     pago: false,
+    tipo_receita: '',
     id_sessao: '',
+    id_mensalidade: '',
+    id_despesa: '',
     id_pagamento: '',
     forma_pagamento: ''
   };
@@ -413,39 +586,50 @@ async function salvarLancamento() {
 
   try {
     if (activeTab.value === 'receitas') {
-      // Handle receita (avulsa session)
-      if (editando.value && novoLancamento.value.id_pagamento) {
+      if (novoLancamento.value.tipo_receita === 'Sessão Avulsa') {
+        if (editando.value && novoLancamento.value.id_pagamento) {
+          await supabase
+            .from('tb_pagamento')
+            .update({
+              valor: novoLancamento.value.valor,
+              data_pagamento: novoLancamento.value.pago ? new Date().toISOString() : null,
+              forma_pagamento: novoLancamento.value.forma_pagamento
+            })
+            .eq('id_pagamento', novoLancamento.value.id_pagamento);
+          snackbarMessage.value = 'Receita de sessão avulsa atualizada!';
+        } else {
+          const { data: pagamento } = await supabase
+            .from('tb_pagamento')
+            .insert({
+              valor: novoLancamento.value.valor,
+              data_pagamento: novoLancamento.value.pago ? new Date().toISOString() : null,
+              forma_pagamento: novoLancamento.value.forma_pagamento
+            })
+            .select('id_pagamento')
+            .single();
+
+          await supabase
+            .from('tb_pagamento_sessao')
+            .insert({
+              id_sessao: novoLancamento.value.id_sessao,
+              id_pagamento: pagamento.id_pagamento
+            });
+          snackbarMessage.value = 'Receita de sessão avulsa salva!';
+        }
+      } else if (novoLancamento.value.tipo_receita === 'Mensalidade') {
         await supabase
-          .from('tb_pagamento')
+          .from('tb_mensalidade')
           .update({
             valor: novoLancamento.value.valor,
+            status_pagamento: novoLancamento.value.pago ? 'Pago' : 'Pendente',
             data_pagamento: novoLancamento.value.pago ? new Date().toISOString() : null,
             forma_pagamento: novoLancamento.value.forma_pagamento
           })
-          .eq('id_pagamento', novoLancamento.value.id_pagamento);
-        snackbarMessage.value = 'Receita atualizada!';
-      } else {
-        const { data: pagamento } = await supabase
-          .from('tb_pagamento')
-          .insert({
-            valor: novoLancamento.value.valor,
-            data_pagamento: novoLancamento.value.pago ? new Date().toISOString() : null,
-            forma_pagamento: novoLancamento.value.forma_pagamento
-          })
-          .select('id_pagamento')
-          .single();
-
-        await supabase
-          .from('tb_pagamento_sessao')
-          .insert({
-            id_sessao: novoLancamento.value.id_sessao,
-            id_pagamento: pagamento.id_pagamento
-          });
-        snackbarMessage.value = 'Receita salva!';
+          .eq('id_mensalidade', novoLancamento.value.id_mensalidade);
+        snackbarMessage.value = 'Receita de mensalidade salva!';
       }
     } else {
-      // Handle despesa
-      if (editando.value && novoLancamento.value.id) {
+      if (editando.value && novoLancamento.value.id_despesa) {
         await supabase
           .from('tb_despesa')
           .update({
@@ -458,7 +642,7 @@ async function salvarLancamento() {
             valor: novoLancamento.value.valor,
             pago: novoLancamento.value.pago
           })
-          .eq('id_despesa', novoLancamento.value.id);
+          .eq('id_despesa', novoLancamento.value.id_despesa);
         snackbarMessage.value = 'Despesa atualizada!';
       } else {
         await supabase
@@ -479,6 +663,7 @@ async function salvarLancamento() {
 
     await carregarLancamentos();
     await carregarSessoesDisponiveis();
+    await carregarMensalidadesDisponiveis();
     snackbarColor.value = 'success';
     abrirModal.value = false;
     abrirModalReceita.value = false;
@@ -493,7 +678,10 @@ async function salvarLancamento() {
 }
 
 function editarLancamento(lancamento: Lancamento) {
-  novoLancamento.value = { ...lancamento };
+  novoLancamento.value = {
+    ...lancamento,
+    tipo_receita: lancamento.id_sessao ? 'Sessão Avulsa' : lancamento.id_mensalidade ? 'Mensalidade' : ''
+  };
   editando.value = true;
   if (lancamento.tipo_lancamento === 'receita') {
     abrirModalReceita.value = true;
@@ -511,7 +699,7 @@ async function excluirLancamento() {
   if (!lancamentoParaExcluir.value) return;
 
   try {
-    if (lancamentoParaExcluir.value.tipo_lancamento === 'receita') {
+    if (lancamentoParaExcluir.value.id_sessao) {
       await supabase
         .from('tb_pagamento_sessao')
         .delete()
@@ -522,15 +710,21 @@ async function excluirLancamento() {
           .delete()
           .eq('id_pagamento', lancamentoParaExcluir.value.id_pagamento);
       }
-    } else {
+    } else if (lancamentoParaExcluir.value.id_mensalidade) {
+      await supabase
+        .from('tb_mensalidade')
+        .update({ status_pagamento: 'Pendente', data_pagamento: null, forma_pagamento: null })
+        .eq('id_mensalidade', lancamentoParaExcluir.value.id_mensalidade);
+    } else if (lancamentoParaExcluir.value.id_despesa) {
       await supabase
         .from('tb_despesa')
         .delete()
-        .eq('id_despesa', lancamentoParaExcluir.value.id);
+        .eq('id_despesa', lancamentoParaExcluir.value.id_despesa);
     }
 
     await carregarLancamentos();
     await carregarSessoesDisponiveis();
+    await carregarMensalidadesDisponiveis();
     snackbarMessage.value = 'Lançamento excluído com sucesso!';
     snackbarColor.value = 'success';
   } catch (error) {
@@ -544,11 +738,29 @@ async function excluirLancamento() {
   }
 }
 
+function enviarMensagemWhatsApp(item: Lancamento) {
+  const mensagem = item.pago
+    ? `Olá! Confirmamos o recebimento do pagamento de R$ ${formatarValor(item.valor)} referente a ${item.tipo}.`
+    : `Olá! Lembramos que o pagamento de R$ ${formatarValor(item.valor)} referente a ${item.tipo} está pendente. Vencimento: ${formatarData(item.vencimento)}.`;
+
+  const numero = item.cliente ? '5511999999999' : ''; // TODO: Fetch real client number
+  const url = `https://wa.me/${numero}?text=${encodeURIComponent(mensagem)}`;
+  window.open(url, '_blank');
+}
+
 onMounted(async () => {
   loading.value = true;
-  await carregarLancamentos();
-  await carregarSessoesDisponiveis();
+  await Promise.all([
+    carregarLancamentos(),
+    carregarSessoesDisponiveis(),
+    carregarMensalidadesDisponiveis()
+  ]);
   loading.value = false;
+});
+
+watch(activeTab, (newTab) => {
+  novoLancamento.value.tipo_lancamento = newTab === 'receitas' ? 'receita' : 'despesa';
+  limparFormulario();
 });
 </script>
 
