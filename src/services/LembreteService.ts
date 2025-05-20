@@ -10,7 +10,7 @@ export interface Lembrete {
   feito: boolean;
   cancelado?: boolean;
   idProfissional: string;
-  data_conclusao?: string;
+  data_conclusao?: string | null;
 }
 
 export class LembreteService {
@@ -96,6 +96,30 @@ export class LembreteService {
         .order('data_expiracao', { ascending: true });
       if (error) throw error;
       return data as Lembrete[];
+    } catch (err: any) {
+      this.showError(err.message || 'Erro ao carregar os lembretes');
+      return null;
+    }
+  }
+
+  async buscarLembretesPorData(idProfissional: string, data: string): Promise<Lembrete[] | null> {
+    try {
+      const dataInicio = new Date(data);
+      dataInicio.setHours(0, 0, 0, 0);
+      
+      const dataFim = new Date(data);
+      dataFim.setHours(23, 59, 59, 999);
+
+      const { data: lembretes, error } = await supabase
+        .from('tb_lembrete')
+        .select('*')
+        .eq('idProfissional', idProfissional)
+        .gte('data_expiracao', dataInicio.toISOString())
+        .lte('data_expiracao', dataFim.toISOString())
+        .order('data_expiracao', { ascending: true });
+
+      if (error) throw error;
+      return lembretes as Lembrete[];
     } catch (err: any) {
       this.showError(err.message || 'Erro ao carregar os lembretes');
       return null;

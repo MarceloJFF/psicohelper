@@ -100,8 +100,7 @@
             </v-card>
           </v-col>
 
-          <v-col cols="5" md="4" class="d-flex flex-column">
-            <todo class="mb-3" />
+          <v-col cols="4" md="3" class="d-flex flex-column">
             <calendario-diario class="flex-grow-1" />
           </v-col>
         </v-row>
@@ -158,7 +157,6 @@ import { useRouter } from 'vue-router'
 import { ResponsavelService } from '@/services/responsavelService'
 import Responsavel from '@/models/Responsavel'
 import CalendarioDiario from '@/components/calendario-diario.vue'
-import Todo from '@/components/todo.vue'
 import ModalGenerico from '@/components/ModalGenerico.vue'
 import { AprendenteService } from '@/services/AprendenteService'
 import ViewAprendenteLogadoProfissional from '@/models/ViewAprendenteLogadoProfissional'

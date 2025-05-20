@@ -243,22 +243,23 @@ export class AprendenteService {
 
       if (error) throw error;
 
-      console.log('Dados brutos de vw_aprendente_responsavel:', data);
+      console.log('Dados brutos da busca:', data);
 
       return data
         .map((item: any) => {
-          const id = item.id_aprendente || item.id_responsavel;
+          // Sempre usa o id_aprendente
+          const id = item.id_aprendente;
           if (!id) {
-            console.error('Item sem id_aprendente ou id_responsavel:', item);
+            console.error('Item sem id_aprendente:', item);
             return null;
           }
           const result = {
             id,
             id_responsavel: item.id_responsavel,
             id_aprendente: item.id_aprendente,
-            nome: item.nome_aprendente || item.nome_responsavel || 'N/A',
+            nome: item.nome_aprendente || 'N/A',
             responsavel: item.nome_responsavel || 'N/A',
-            displayName: `Aprendente: ${item.nome_aprendente || 'N/A'} Responsavel: ${item.nome_responsavel || 'N/A'}`,
+            displayName: `${item.nome_aprendente || 'N/A'} (Responsável: ${item.nome_responsavel || 'N/A'})`,
           };
           console.log('Item mapeado:', result);
           return result;

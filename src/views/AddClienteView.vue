@@ -213,7 +213,6 @@
 
           <!-- Coluna lateral (to-do + calendário) -->
           <v-col cols="5" md="4" class="d-flex flex-column w-100">
-            <todo class="mb-3" />
             <calendario-diario class="flex-grow-1" />
           </v-col>
         </v-row>
@@ -251,7 +250,6 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import {useRouter} from 'vue-router'
-import Todo from '@/components/todo.vue'
 import CalendarioDiario from '@/components/calendario-diario.vue'
 import ModalContrato from '@/components/ModalContrato.vue'
 import { ContratoService } from '@/services/contratoService.ts'

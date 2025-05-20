@@ -116,7 +116,7 @@ export class SessaoService {
   
       // Aplicar filtro por cliente se fornecido
       if (clienteId) {
-        query = query.or(`tb_agendamento.id_aprendente.eq.${clienteId},tb_agendamento.responsavel_id.eq.${clienteId}`);
+        query = query.or(`id_aprendente.eq.${clienteId},responsavel_id.eq.${clienteId}`, { foreignTable: 'tb_agendamento' });
       }
   
       // Aplicar ordenação por data

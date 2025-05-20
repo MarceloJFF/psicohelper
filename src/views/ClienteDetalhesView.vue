@@ -244,7 +244,6 @@
 
       <!-- Coluna lateral -->
       <v-col cols="5" md="4" class="d-flex flex-column">
-        <todo class="mb-3" />
         <calendario-diario class="flex-grow-1" />
       </v-col>
     </v-row>
@@ -323,7 +322,6 @@
 import { ref, onMounted, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import CalendarioDiario from '@/components/calendario-diario.vue'
-import Todo from '@/components/todo.vue'
 import ResumoCliente from '@/components/ResumoResponsavel.vue'
 import ModalContrato from '@/components/ModalContrato.vue'
 import { ResponsavelService } from '@/services/responsavelService.ts'

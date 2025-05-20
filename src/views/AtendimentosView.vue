@@ -12,7 +12,7 @@
             <template v-slot:item="{ props, item }">
               <v-list-item v-bind="props" :key="item.raw.id" :value="item.raw.id">
                 <v-list-item-title>
-                  {{ item.raw.nomeAprendente }}
+                  {{ item.raw.nomeAprendente}}
                 </v-list-item-title>
               </v-list-item>
             </template>
@@ -22,17 +22,11 @@
       <v-row>
         <v-col cols="6"
           style="display: flex; justify-content: center; align-items: flex-start; flex-direction: column; gap: 2vh;">
-          <v-btn style="width: 100%;" color="success" variant="outlined" @click="abrirModalMensalidade"
+          <v-btn style="width: 100%;" color="success" variant="outlined" @click="abrirModalPagamento"
             :disabled="!filtroPaciente">
-            Pagar Mensalidade de Contrato
+            Pagar Sessão
           </v-btn>
-          <!-- <v-btn style="width: 100%;" color="success" variant="outlined" @click="abrirModalPagamentoLote">
-            Pagar Sessões Avulsas em Lote
-          </v-btn> -->
-          <span v-if="!filtroPaciente"
-            style="font-size: 15px; color: gray; margin-top: 4px; margin-left: 4px; font-style: italic;">Selecione um
-            paciente
-            para pagar mensalidades ou sessões avulsas.</span>
+        
         </v-col>
       </v-row>
     </v-container>
@@ -61,15 +55,34 @@
                 <div class="font-weight-medium pa-2">
                   Aprendente: {{ atendimento.paciente }}
                 </div>
-                <v-chip :color="atendimento.status === 'Pago' ? 'success' : 'error'" variant="outlined"
-                  class="text-capitalize pa-2" small>
-                  {{ atendimento.status }}
-                </v-chip>
+                <div class="d-flex align-center gap-2 pa-2">
+                  <v-chip :color="atendimento.status === 'Pago' ? 'success' : 'error'" variant="outlined" class="text-capitalize" small>
+                    {{ atendimento.status }}
+                  </v-chip>
+                  <v-chip :color="atendimento.id_contrato ? 'primary' : 'secondary'" variant="outlined" class="text-capitalize" small>
+                    {{ atendimento.id_contrato ? 'Contrato' : 'Avulsa' }}
+                  </v-chip>
+                </div>
+                <div v-if="atendimento.id_contrato" class="text-caption mt-2">
+                  Contrato #{{ atendimento.id_contrato }}
+                </div>
+                <div v-if="atendimento.status === 'Pago'" class="mt-2">
+                  <div class="text-caption">
+                    <strong>Valor Pago:</strong> R$ {{ atendimento.valor_pagamento?.toFixed(2) }}
+                  </div>
+                  <div class="text-caption">
+                    <strong>Forma de Pagamento:</strong> {{ atendimento.forma_pagamento }}
+                  </div>
+                  <div v-if="atendimento.comprovante_url" class="mt-1">
+                    <v-btn size="small" color="info" variant="text" @click="visualizarComprovante(atendimento.comprovante_url)">
+                      Ver Comprovante
+                    </v-btn>
+                  </div>
+                </div>
               </v-col>
 
               <v-spacer />
               <v-col cols="12" sm="6" class="d-flex align-center">
-                <!-- {{ atendimento }} -->
                 <v-btn icon @click="atendimento.showDetails = !atendimento.showDetails">
                   <v-icon>{{ atendimento.showDetails ? 'mdi-eye-off' : 'mdi-eye' }}</v-icon>
                 </v-btn>
@@ -77,24 +90,15 @@
                   {{ atendimento.showDetails ? 'Ocultar Detalhes' : 'Mostrar Detalhes' }}
                 </v-btn>
                 <v-btn
-                  v-if="atendimento.status === 'Pendente' && (atendimento.id_contrato == null || atendimento.id_contrato == undefined)"
-                  color="success" variant="outlined" class="ml-2" @click="abrirModalPagamentoIndividual(atendimento)">
-                  Lançar Pagamento
+                  v-if="atendimento.status === 'Pendente'"
+                  color="success" variant="outlined" class="ml-2" @click="abrirModalPagamento(atendimento)">
+                  Pagar
                 </v-btn>
-                <div v-if="atendimento.id_contrato" class="text-caption mt-2">
-                  <v-chip variant="outlined" class="text-capitalize" style="width: 100;">
-                    CONTRATO
-                  </v-chip>
-                </div>
                 <v-btn
-                  v-if="atendimento.status === 'Pago' && (atendimento.id_contrato === null || atendimento.id_contrato === undefined)"
-                  color="error" variant="outlined" class="ml-2" @click="abrirModalPagamentoIndividual(atendimento)">
+                  v-if="atendimento.status === 'Pago'"
+                  color="error" variant="outlined" class="ml-2" @click="abrirModalPagamento(atendimento)">
                   Editar Pagamento
                 </v-btn>
-                <!-- <v-btn v-if="atendimento.status === 'Pago' && !atendimento.id_contrato" color="error" variant="outlined"
-                  class="ml-2" @click="abrirModalPagamentoIndividual(atendimento)">
-                  Editar Pagamento
-                </v-btn> -->
               </v-col>
             </v-row>
 
@@ -156,7 +160,11 @@
 
     <!-- Loading indicator -->
     <div v-if="isLoading" class="d-flex justify-center align-center my-4">
-      <v-progress-circular indeterminate color="primary" size="32"></v-progress-circular>
+      <v-progress-circular
+        indeterminate
+        color="primary"
+        size="32"
+      ></v-progress-circular>
     </div>
 
     <!-- End of list message -->
@@ -164,11 +172,11 @@
       Não há mais sessões para carregar
     </div>
 
-    <!-- Diálogo de Pagamento Individual -->
-    <v-dialog v-model="modalPagamentoIndividual" max-width="500">
+    <!-- Diálogo de Pagamento -->
+    <v-dialog v-model="modalPagamento" max-width="500">
       <v-card>
         <v-card-title class="text-h6">
-          {{ atendimentoSelecionado?.status === 'Pago' ? 'Editar Pagamento' : 'Lançar Pagamento' }}
+          {{ atendimentoSelecionado?.status === 'Pago' ? 'Editar Pagamento' : 'Registrar Pagamento' }}
         </v-card-title>
         <v-card-text>
           <p><strong>Paciente:</strong> {{ atendimentoSelecionado?.paciente }}</p>
@@ -190,81 +198,9 @@
         </v-card-text>
         <v-card-actions>
           <v-spacer />
-          <v-btn text @click="cancelarPagamentoIndividual">Cancelar</v-btn>
-          <v-btn color="primary" @click="confirmarPagamentoIndividual"
+          <v-btn text @click="cancelarPagamento">Cancelar</v-btn>
+          <v-btn color="primary" @click="confirmarPagamento"
             :disabled="uploading || !valorPago || !formaPagamento" :loading="uploading">
-            Confirmar
-          </v-btn>
-        </v-card-actions>
-      </v-card>
-    </v-dialog>
-
-    <!-- Diálogo de Pagamento em Lote (Apenas Avulsas) -->
-    <v-dialog v-model="modalPagamentoLote" max-width="800">
-      <v-card>
-        <v-card-title class="text-h6">Lançar Pagamento em Lote (Sessões Avulsas)</v-card-title>
-        <v-card-text>
-          <v-data-table
-            :headers="[{ title: 'Selecionar', key: 'select', sortable: false }, { title: 'Data', key: 'data' }, { title: 'Paciente', key: 'paciente' }]"
-            :items="atendimentosPendentes" show-select v-model="atendimentosSelecionados" item-key="id">
-            <template v-slot:item.data="{ item }">
-              {{ formatarData(item.data) }}
-            </template>
-          </v-data-table>
-          <v-text-field v-model.number="valorPago" label="Valor Total" type="number"
-            :rules="[v => v > 0 || 'O valor deve ser maior que zero']" required />
-          <v-select v-model="formaPagamento" label="Forma de Pagamento" :items="['Dinheiro', 'Pix', 'Cartão']"
-            :rules="[v => !!v || 'Selecione uma forma de pagamento']" required />
-          <v-file-input label="Anexar comprovante" accept="image/*" v-model="comprovanteImagem" :loading="uploading"
-            @change="handleFileChange" />
-          <v-alert v-if="uploadError" type="error" class="mt-2">
-            {{ uploadError }}
-          </v-alert>
-          <v-alert v-if="uploadSuccess" type="success" class="mt-2">
-            Pagamento registrado com sucesso!
-          </v-alert>
-        </v-card-text>
-        <v-card-actions>
-          <v-spacer />
-          <v-btn text @click="cancelarPagamentoLote">Cancelar</v-btn>
-          <v-btn color="primary" @click="confirmarPagamentoLote"
-            :disabled="uploading || !valorPago || !formaPagamento || !atendimentosSelecionados.length"
-            :loading="uploading">
-            Confirmar
-          </v-btn>
-        </v-card-actions>
-      </v-card>
-    </v-dialog>
-
-    <!-- Diálogo de Pagamento de Mensalidade -->
-    <v-dialog v-model="modalMensalidade" max-width="600">
-      <v-card>
-        <v-card-title class="text-h6">Pagar Mensalidade de Contrato</v-card-title>
-        <v-card-text>
-          <v-autocomplete v-model="contratoSelecionado" :items="contratos" label="Selecionar Contrato"
-            item-title="id_contrato" item-value="id_contrato" clearable @update:modelValue="loadMensalidades" />
-          <v-select v-if="contratoSelecionado" v-model="mesReferencia" label="Mês de Referência"
-            :items="mensalidadesPendentes" item-title="mes_referencia_display" item-value="mes_referencia_cycle"
-            :loading="loadingMensalidades" />
-          <v-text-field v-model.number="valorPago" label="Valor da Mensalidade" type="number"
-            :rules="[v => v > 0 || 'O valor deve ser maior que zero']" required />
-          <v-select v-model="formaPagamento" label="Forma de Pagamento" :items="['Dinheiro', 'Pix', 'Cartão']"
-            :rules="[v => !!v || 'Selecione uma forma de pagamento']" required />
-          <v-file-input label="Anexar comprovante" accept="image/*" v-model="comprovanteImagem" :loading="uploading"
-            @change="handleFileChange" />
-          <v-alert v-if="uploadError" type="error" class="mt-2">
-            {{ uploadError }}
-          </v-alert>
-          <v-alert v-if="uploadSuccess" type="success" class="mt-2">
-            Mensalidade registrada com sucesso!
-          </v-alert>
-        </v-card-text>
-        <v-card-actions>
-          <v-spacer />
-          <v-btn text @click="cancelarMensalidade">Cancelar</v-btn>
-          <v-btn color="primary" @click="confirmarMensalidade"
-            :disabled="uploading || !valorPago || !formaPagamento || !contratoSelecionado || !mesReferencia"
-            :loading="uploading">
             Confirmar
           </v-btn>
         </v-card-actions>
@@ -281,23 +217,19 @@ import { UploadService } from '@/services/UploadService';
 import { PagamentoService } from '@/services/PagamentoService';
 import { ContratoService } from '@/services/contratoService';
 import supabase from '@/config/supabase';
-import { AgendamentoService } from '@/services/AgendamentoService';
 
 const sessaoService = new SessaoService();
 const aprendenteService = new AprendenteService();
 const uploadService = new UploadService();
 const pagamentoService = new PagamentoService();
 const contratoService = new ContratoService();
-const agendamentoService = new AgendamentoService();
 const atendimentos = ref<any[]>([]);
 const pacientes = ref<any[]>([]);
 const filtroPaciente = ref<string | null>(null);
 const searchQuery = ref('');
 const isLoading = ref(false);
 const aprendenteCache = new Map();
-const modalPagamentoIndividual = ref(false);
-const modalPagamentoLote = ref(false);
-const modalMensalidade = ref(false);
+const modalPagamento = ref(false);
 const atendimentoSelecionado = ref<any>(null);
 const valorPago = ref<number | null>(null);
 const formaPagamento = ref<string | null>(null);
@@ -306,7 +238,6 @@ const uploading = ref(false);
 const uploadError = ref<string | null>(null);
 const uploadSuccess = ref<boolean>(false);
 const contratos = ref<any[]>([]);
-const contratoSelecionado = ref<string | null>(null);
 const mensalidadesPendentes = ref<any[]>([]);
 const mesReferencia = ref<number | null>(null);
 const atendimentosSelecionados = ref<any[]>([]);
@@ -363,7 +294,7 @@ async function handleFileChange(files: File[] | null) {
   }
 }
 
-const loadSessoes = async (reset = false) => {
+async function loadSessoes(reset = false) {
   if (reset) {
     currentPage.value = 1;
     atendimentos.value = [];
@@ -376,18 +307,17 @@ const loadSessoes = async (reset = false) => {
   try {
     const newSessoes: Sessao[] = await sessaoService.getAllSessoes({
       page: currentPage.value,
-      pageSize: pageSize.value,
+      pageSize: pageSize,
       clienteId: filtroPaciente.value
     });
 
-    if (newSessoes.length < pageSize.value) {
+    if (newSessoes.length < pageSize) {
       hasMoreData.value = false;
     }
 
     if (newSessoes.length > 0) {
-      const novosAtendimentos: Atendimento[] = await Promise.all(
+      const novosAtendimentos = await Promise.all(
         newSessoes.map(async (sessao) => {
-
           const agendamento = sessao.tb_agendamento;
           const startTime = agendamento?.horario_inicio;
           const duracao = parseInt(agendamento?.duracao) || 60;
@@ -396,9 +326,9 @@ const loadSessoes = async (reset = false) => {
           const horarioFim = endDateTime
             ? `${endDateTime.getHours().toString().padStart(2, '0')}:${endDateTime.getMinutes().toString().padStart(2, '0')}`
             : '';
-          console.log(agendamento)
+
           let paciente = 'N/A';
-          let clienteId = agendamento?.id_aprendente || agendamento?.responsavel_id || '';
+          const clienteId = agendamento?.id_aprendente || agendamento?.responsavel_id || '';
           if (agendamento?.id_aprendente) {
             if (aprendenteCache.has(agendamento.id_aprendente)) {
               paciente = aprendenteCache.get(agendamento.id_aprendente).nome_aprendente;
@@ -418,47 +348,26 @@ const loadSessoes = async (reset = false) => {
 
           const anexos = sessao.fotos ? sessao.fotos.split(',').filter((url: string) => url) : [];
           let status = 'Pendente';
-          let pagamentoData: any = null;
+          let pagamentoData = null;
 
-          const idContrato = sessao.id_contrato;
+          // Verifica se existe pagamento para esta sessão
+          const { data: pagamentoSessao } = await supabase
+            .from('tb_pagamento_sessao')
+            .select('id_pagamento, valor, forma_pagamento, comprovante_url')
+            .eq('id_sessao', sessao.id)
+            .maybeSingle();
 
-          console.log(`Processando sessão ${sessao.id}, id_contrato: ${idContrato}, tipo: ${idContrato ? 'Contrato' : 'Avulsa'}`);
-
-          if (idContrato) {
-            const mesReferencia = new Date(agendamento?.data_agendamento).toISOString().slice(0, 7) + '-01';
-            const { data: mensalidade } = await supabase
-              .from('tb_mensalidade')
-              .select('id_mensalidade, valor, forma_pagamento, comprovante_url, status_pagamento')
-              .eq('id_contrato', idContrato)
-              .eq('mes_referencia', mesReferencia)
-              .eq('status_pagamento', 'Pago')
-              .maybeSingle();
-            if (mensalidade) {
-              status = 'Pago';
-              pagamentoData = {
-                id_mensalidade: mensalidade.id_mensalidade,
-                valor: mensalidade.valor,
-                forma_pagamento: mensalidade.forma_pagamento,
-                comprovante_url: mensalidade.comprovante_url
-              };
-              console.log(`Sessão ${sessao.id} marcada como Pago por mensalidade:`, mensalidade);
-            } else {
-              console.log(`Sessão ${sessao.id} sem mensalidade paga para ${mesReferencia}`);
-            }
+          if (pagamentoSessao) {
+            status = 'Pago';
+            pagamentoData = {
+              id_pagamento: pagamentoSessao.id_pagamento,
+              valor: pagamentoSessao.valor,
+              forma_pagamento: pagamentoSessao.forma_pagamento,
+              comprovante_url: pagamentoSessao.comprovante_url
+            };
+            console.log(`Sessão ${sessao.id} marcada como Pago:`, pagamentoSessao);
           } else {
-            const pagamento = await pagamentoService.getPagamentoBySessao(sessao.id);
-            if (pagamento) {
-              status = 'Pago';
-              pagamentoData = {
-                id_pagamento: pagamento.id_pagamento,
-                valor: pagamento.valor,
-                forma_pagamento: pagamento.forma_pagamento,
-                comprovante_url: pagamento.comprovante_url
-              };
-              console.log(`Sessão ${sessao.id} marcada como Pago por pagamento avulso:`, pagamento);
-            } else {
-              console.log(`Sessão ${sessao.id} sem pagamento avulso`);
-            }
+            console.log(`Sessão ${sessao.id} sem pagamento registrado`);
           }
 
           const atendimento = {
@@ -471,11 +380,10 @@ const loadSessoes = async (reset = false) => {
             id_aprendente: agendamento?.id_aprendente,
             responsavel_id: agendamento?.responsavel_id,
             id_agendamento: agendamento?.id_agendamento,
-            id_contrato: idContrato,
+            id_contrato: agendamento?.id_contrato || null,
             avatar: '',
             status,
             id_pagamento: pagamentoData?.id_pagamento,
-            id_mensalidade: pagamentoData?.id_mensalidade,
             valor_pagamento: pagamentoData?.valor,
             forma_pagamento: pagamentoData?.forma_pagamento,
             comprovante_url: pagamentoData?.comprovante_url,
@@ -498,16 +406,6 @@ const loadSessoes = async (reset = false) => {
           return atendimento;
         })
       );
-      console.log('Atendimentos carregados:', novosAtendimentos.map(a => ({
-        id: a.id,
-        clienteId: a.clienteId,
-        id_aprendente: a.id_aprendente,
-        responsavel_id: a.responsavel_id,
-        paciente: a.paciente,
-        status: a.status,
-        id_contrato: a.id_contrato,
-        tipo_sessao: a.id_contrato ? 'Contrato' : 'Avulsa'
-      })));
 
       if (reset) {
         atendimentos.value = novosAtendimentos;
@@ -525,7 +423,7 @@ const loadSessoes = async (reset = false) => {
     isLoadingMore.value = false;
     isLoading.value = false;
   }
-};
+}
 
 async function loadPacientes() {
   try {
@@ -544,6 +442,7 @@ async function loadPacientes() {
 async function loadContratos() {
   try {
     const clienteId = filtroPaciente.value;
+    console.log(filtroPaciente)
     if (clienteId) {
       contratos.value = await contratoService.loadContratos(clienteId);
     } else {
@@ -753,16 +652,16 @@ async function salvarEdicao(atendimento: any) {
   }
 }
 
-function abrirModalPagamentoIndividual(atendimento: any) {
+function abrirModalPagamento(atendimento: any) {
   atendimentoSelecionado.value = atendimento;
   valorPago.value = atendimento.valor_pagamento || null;
   formaPagamento.value = atendimento.forma_pagamento || null;
   comprovanteImagem.value = null;
-  modalPagamentoIndividual.value = true;
+  modalPagamento.value = true;
 }
 
-function cancelarPagamentoIndividual() {
-  modalPagamentoIndividual.value = false;
+function cancelarPagamento() {
+  modalPagamento.value = false;
   atendimentoSelecionado.value = null;
   valorPago.value = null;
   formaPagamento.value = null;
@@ -771,165 +670,40 @@ function cancelarPagamentoIndividual() {
   uploadSuccess.value = false;
 }
 
-async function confirmarPagamentoIndividual() {
+async function confirmarPagamento() {
   if (!atendimentoSelecionado.value || !valorPago.value || !formaPagamento.value) return;
 
+  uploading.value = true;
   try {
-    uploading.value = true;
     const pagamentoData = {
-      id_sessao: [atendimentoSelecionado.value.id],
+      id_sessao: atendimentoSelecionado.value.id,
       valor: valorPago.value,
       forma_pagamento: formaPagamento.value,
       comprovante: comprovanteImagem.value?.[0]
     };
 
-    if (atendimentoSelecionado.value.status === 'Pago') {
-      await pagamentoService.updatePagamento(atendimentoSelecionado.value.id_pagamento, pagamentoData);
-    } else {
-      const pagamento = await pagamentoService.createPagamento(pagamentoData);
-      atendimentoSelecionado.value.id_pagamento = pagamento.id_pagamento;
-      atendimentoSelecionado.value.status = 'Pago';
-    }
+    const { data: pagamento, error } = await supabase
+      .from('tb_pagamento_sessao')
+      .insert([pagamentoData])
+      .select()
+      .single();
 
+    if (error) throw error;
+    
+    // Atualiza o atendimento localmente
+    atendimentoSelecionado.value.status = 'Pago';
+    atendimentoSelecionado.value.id_pagamento = pagamento.id_pagamento;
     atendimentoSelecionado.value.valor_pagamento = valorPago.value;
     atendimentoSelecionado.value.forma_pagamento = formaPagamento.value;
-    atendimentoSelecionado.value.comprovante_url = comprovanteImagem.value?.[0]
-      ? await uploadService.uploadArquivo(
-        'pagamentos',
-        `comprovante/${atendimentoSelecionado.value.id}`,
-        comprovanteImagem.value[0]
-      )
-      : atendimentoSelecionado.value.comprovante_url;
+    atendimentoSelecionado.value.comprovante_url = pagamento.comprovante_url;
 
     uploadSuccess.value = true;
     setTimeout(() => {
-      cancelarPagamentoIndividual();
+      cancelarPagamento();
     }, 1000);
   } catch (err) {
     console.error('Erro ao salvar pagamento:', err);
     uploadError.value = 'Erro ao salvar pagamento: ' + (err as Error).message;
-  } finally {
-    uploading.value = false;
-  }
-}
-
-function abrirModalPagamentoLote() {
-  modalPagamentoLote.value = true;
-  atendimentosSelecionados.value = [];
-  valorPago.value = null;
-  formaPagamento.value = null;
-  comprovanteImagem.value = null;
-  uploadError.value = null;
-  uploadSuccess.value = false;
-}
-
-function cancelarPagamentoLote() {
-  modalPagamentoLote.value = false;
-  atendimentosSelecionados.value = [];
-  valorPago.value = null;
-  formaPagamento.value = null;
-  comprovanteImagem.value = null;
-  uploadError.value = null;
-  uploadSuccess.value = false;
-}
-
-async function confirmarPagamentoLote() {
-  try {
-    uploading.value = true;
-    if (!atendimentosSelecionados.value.length || !valorPago.value || !formaPagamento.value) return;
-
-    const pagamentoData = {
-      id_sessao: atendimentosSelecionados.value.map(a => a.id),
-      valor: valorPago.value,
-      forma_pagamento: formaPagamento.value,
-      comprovante: comprovanteImagem.value?.[0]
-    };
-    const pagamento = await pagamentoService.createPagamento(pagamentoData);
-    atendimentosSelecionados.value.forEach(atendimento => {
-      atendimento.status = 'Pago';
-      atendimento.id_pagamento = pagamento.id_pagamento;
-      atendimento.valor_pagamento = valorPago.value / atendimentosSelecionados.value.length;
-      atendimento.forma_pagamento = formaPagamento.value;
-      atendimento.comprovante_url = pagamento.comprovante_url;
-    });
-
-    uploadSuccess.value = true;
-    setTimeout(() => {
-      cancelarPagamentoLote();
-    }, 1000);
-  } catch (err) {
-    console.error('Erro ao salvar pagamento em lote:', err);
-    uploadError.value = 'Erro ao salvar pagamento: ' + (err as Error).message;
-  } finally {
-    uploading.value = false;
-  }
-}
-
-function abrirModalMensalidade() {
-  modalMensalidade.value = true;
-  contratoSelecionado.value = null;
-  mesReferencia.value = null;
-  mensalidadesPendentes.value = [];
-  valorPago.value = null;
-  formaPagamento.value = null;
-  comprovanteImagem.value = null;
-  uploadError.value = null;
-  uploadSuccess.value = false;
-}
-
-function cancelarMensalidade() {
-  modalMensalidade.value = false;
-  contratoSelecionado.value = null;
-  mesReferencia.value = null;
-  mensalidadesPendentes.value = [];
-  valorPago.value = null;
-  formaPagamento.value = null;
-  comprovanteImagem.value = null;
-  uploadError.value = null;
-  uploadSuccess.value = false;
-}
-
-async function confirmarMensalidade() {
-  try {
-    uploading.value = true;
-    if (!contratoSelecionado.value || !mesReferencia.value || !valorPago.value || !formaPagamento.value) return;
-
-    const selectedMensalidade = mensalidadesPendentes.value.find(
-      m => m.mes_referencia_cycle === mesReferencia.value
-    );
-    if (!selectedMensalidade) throw new Error('Mês de referência inválido');
-
-    if (!selectedMensalidade.mes_referencia_raw.match(/^\d{4}-\d{2}-\d{2}$/)) {
-      throw new Error('Formato de mês de referência inválido');
-    }
-
-    const mensalidadeData = {
-      id_contrato: contratoSelecionado.value,
-      mes_referencia: selectedMensalidade.mes_referencia_raw,
-      valor: valorPago.value,
-      forma_pagamento: formaPagamento.value,
-      comprovante: comprovanteImagem.value?.[0]
-    };
-    const mensalidade = await contratoService.pagarMensalidadeContrato(mensalidadeData);
-
-    const mes = new Date(selectedMensalidade.mes_referencia_raw).toISOString().slice(0, 7);
-    atendimentos.value.forEach(atendimento => {
-      if (atendimento.id_contrato === contratoSelecionado.value && atendimento.data.startsWith(mes)) {
-        atendimento.status = 'Pago';
-        atendimento.id_mensalidade = mensalidade.id_mensalidade;
-        atendimento.valor_pagamento = valorPago.value;
-        atendimento.forma_pagamento = formaPagamento.value;
-        atendimento.comprovante_url = mensalidade.comprovante_url;
-      }
-    });
-
-    uploadSuccess.value = true;
-    setTimeout(() => {
-      cancelarMensalidade();
-    }, 1000);
-  } catch (err) {
-    console.error('Erro ao salvar mensalidade:', err);
-    uploadError.value = 'Erro ao salvar mensalidade: ' + (err as Error).message;
   } finally {
     uploading.value = false;
   }
@@ -964,12 +738,13 @@ watch(searchQuery, async (newValue) => {
 
 watch(filtroPaciente, async (newValue) => {
   console.log('filtroPaciente alterado:', newValue, typeof newValue);
+  await loadPacientes();
+  console.log('filtroPaciente alterado:', newValue, typeof newValue);
   await loadContratos();
 });
 
 const atendimentosAgrupados = computed(() => {
   const agrupados: Record<string, typeof atendimentos.value> = {};
-
   const filtroId = typeof filtroPaciente.value === 'object' && filtroPaciente.value
     ? filtroPaciente.value.id
     : filtroPaciente.value;

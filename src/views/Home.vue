@@ -29,7 +29,7 @@
 
           <v-list class="pa-4" lines="two">
             <v-list-item
-              v-for="lembrete in lembretesFiltrados"
+              v-for="lembrete in lembretes"
               :key="lembrete.id"
               class="rounded-lg mb-2 transition-swing"
               :class="{
@@ -151,7 +151,9 @@ import { useStoreProfissional } from '@/stores/storeProfissional'
 const storeProfissional = useStoreProfissional()
 const lembreteService = new LembreteService()
 
-const selectedDate = ref(new Date().toISOString().substr(0, 10))
+// Inicializar com a data de hoje
+const hoje = new Date().toISOString().split('T')[0]
+const selectedDate = ref(hoje)
 const dialogNovoLembrete = ref(false)
 const lembretes = ref<Lembrete[]>([])
 
@@ -161,13 +163,6 @@ const novoLembrete = ref<Lembrete>({
   feito: false,
   idProfissional: storeProfissional.profissionalDetails?.id || '',
 })
-
-const lembretesFiltrados = computed(() => {
-  return lembretes.value.filter(lembrete => {
-    const dataLembrete = new Date(lembrete.data_expiracao).toISOString().split('T')[0]
-    return dataLembrete === selectedDate.value
-  })
-})  
 
 const lembretesCompletos = computed(() => {
   return lembretes.value.filter(item => item.feito).length
@@ -182,18 +177,30 @@ const mensagemMascote = computed(() => {
 
 const carregarLembretes = async () => {
   if (storeProfissional.profissionalDetails?.id) {
-    const lembretesCarregados = await lembreteService.buscarLembretesDoProfissional(storeProfissional.profissionalDetails.id)
+    const lembretesCarregados = await lembreteService.buscarLembretesPorData(
+      storeProfissional.profissionalDetails.id,
+      selectedDate.value
+    )
     if (lembretesCarregados) {
-      lembretes.value = lembretesCarregados
+      lembretes.value = lembretesCarregados.map(lembrete => ({
+        ...lembrete,
+        feito: Boolean(lembrete.feito),
+        data_conclusao: lembrete.data_conclusao || undefined
+      }))
     }
   }
 }
 
 const toggleFeito = async (lembrete: Lembrete) => {
-  lembrete.feito = !lembrete.feito
-  lembrete.data_conclusao = lembrete.feito ? new Date().toISOString() : undefined
-  await lembreteService.atualizarLembrete(lembrete)
-  await carregarLembretes()
+  try {
+    lembrete.feito = !lembrete.feito
+    lembrete.data_conclusao = lembrete.feito ? new Date().toISOString() : undefined
+    
+    await lembreteService.atualizarLembrete(lembrete)
+    await carregarLembretes()
+  } catch (error) {
+    console.error('Erro ao atualizar status do lembrete:', error)
+  }
 }
 
 const removerLembrete = async (id: string) => {
@@ -239,8 +246,9 @@ const isUrgente = (data: string) => {
   return diffDays <= 2 && diffDays >= 0
 }
 
-onMounted(() => {
-  carregarLembretes()
+onMounted(async () => {
+  // Carregar lembretes do dia atual ao montar o componente
+  await carregarLembretes()
 })
 </script>
 
