@@ -217,4 +217,5 @@ export class ContratoService {
     if (error) throw error
     return data
   }
+  
 }
