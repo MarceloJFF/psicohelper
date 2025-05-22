@@ -1,1096 +1,580 @@
+
 <template>
-  <v-container class="w-100">
-    <v-container class="sessoes rounded pa-8">
-      <h1 class="text-deep-purple-lighten-2 mb-4">
-        Controle do Pagamento das Sessões Realizadas
-      </h1>
-      <v-row justify="space-between">
-        <v-col cols="6">
-          <v-autocomplete v-model="filtroPaciente" :items="pacientes" v-model:search="searchQuery"
-            label="Filtrar por paciente" item-title="displayName" item-value="id" :loading="isLoading" clearable
-            :filter="() => true" :menu-props="{ maxHeight: 400 }" :return-object="false">
-            <template v-slot:item="{ props, item }">
-              <v-list-item v-bind="props" :key="item.raw.id" :value="item.raw.id">
-                <v-list-item-title>
-                  {{ item.raw.nomeAprendente }}
-                </v-list-item-title>
-              </v-list-item>
-            </template>
-          </v-autocomplete>
-        </v-col>
-      </v-row>
-      <v-row>
-        <v-col cols="6"
-          style="display: flex; justify-content: center; align-items: flex-start; flex-direction: column; gap: 2vh;">
-          <v-btn style="width: 100%;" color="success" variant="outlined" @click="abrirModalMensalidade"
-            :disabled="!filtroPaciente">
-            Pagar Mensalidade de Contrato
+  <v-container>
+    <h2 class="text-h4 mb-4">Financeiro</h2>
+
+    <!-- Filtros de ano e mês -->
+    <v-row align="center" class="mb-4">
+      <v-col cols="12" md="3">
+        <v-select
+          v-model="anoSelecionado"
+          :items="anosDisponiveis"
+          label="Ano"
+          dense
+          outlined
+        ></v-select>
+      </v-col>
+      <v-col cols="12" md="9">
+        <v-btn-toggle
+          v-model="mesSelecionado"
+          class="d-flex flex-wrap"
+          dense
+        >
+          <v-btn
+            v-for="(mes, index) in nomesMeses"
+            :key="index"
+            :value="index"
+            class="ma-1"
+            :color="mesSelecionado === index ? 'primary' : undefined"
+          >
+            {{ mes }}
           </v-btn>
-          <!-- <v-btn style="width: 100%;" color="success" variant="outlined" @click="abrirModalPagamentoLote">
-            Pagar Sessões Avulsas em Lote
-          </v-btn> -->
-          <span v-if="!filtroPaciente"
-            style="font-size: 15px; color: gray; margin-top: 4px; margin-left: 4px; font-style: italic;">Selecione um
-            paciente
-            para pagar mensalidades ou sessões avulsas.</span>
-        </v-col>
-      </v-row>
-    </v-container>
+        </v-btn-toggle>
+      </v-col>
+      <v-col cols="12">
+        <v-btn
+          color="info"
+          @click="exibirTudo = !exibirTudo"
+        >
+          {{ exibirTudo ? 'Filtrar por Data' : 'Mostrar Tudo' }}
+        </v-btn>
+      </v-col>
+    </v-row>
 
-    <v-divider class="my-6" />
+    <!-- Aba de sessões -->
+    <v-tabs v-model="abaAtiva" class="mb-4">
+      <v-tab value="sessoes">Sessões</v-tab>
+    </v-tabs>
 
-    <v-alert v-if="!Object.keys(atendimentosAgrupados).length && !isLoading" type="info">
-      Nenhuma sessão encontrada para o filtro selecionado.
-    </v-alert>
+    <!-- Lista de sessões -->
+    <v-window v-model="abaAtiva">
+      <v-window-item value="sessoes">
+        <!-- Mensagem se não houver sessões -->
+        <v-alert
+          v-if="!temSessoes && !estaCarregando"
+          type="info"
+        >
+          Nenhuma sessão encontrada.
+        </v-alert>
 
-    <div v-for="(grupo, data) in atendimentosAgrupados" :key="data">
-      <v-card class="mb-6 elevation-2 rounded-xl">
-        <v-card-title class="text-h6 font-weight-bold text-primary">
-          {{ formatarData(data) }}
-        </v-card-title>
-
-        <v-divider />
-
-        <v-list>
-          <v-list-item v-for="atendimento in grupo" :key="atendimento.id" class="pa-4 px-2">
-            <v-row class="pa-4 d-flex align-self-center">
-              <v-col cols="12" sm="6" md="4">
-                <div class="font-weight-medium pa-2">
-                  Horário Agendado: {{ atendimento.horario }} - {{ atendimento.horario_fim }}
-                </div>
-                <div class="font-weight-medium pa-2">
-                  Aprendente: {{ atendimento.paciente }}
-                </div>
-                <v-chip :color="atendimento.status === 'Pago' ? 'success' : 'error'" variant="outlined"
-                  class="text-capitalize pa-2" small>
-                  {{ atendimento.status }}
-                </v-chip>
-              </v-col>
-
-              <v-spacer />
-              <v-col cols="12" sm="6" class="d-flex align-center">
-                <!-- {{ atendimento }} -->
-                <v-btn icon @click="atendimento.showDetails = !atendimento.showDetails">
-                  <v-icon>{{ atendimento.showDetails ? 'mdi-eye-off' : 'mdi-eye' }}</v-icon>
-                </v-btn>
-                <v-btn color="primary" variant="text" @click="atendimento.showDetails = !atendimento.showDetails">
-                  {{ atendimento.showDetails ? 'Ocultar Detalhes' : 'Mostrar Detalhes' }}
-                </v-btn>
-                <v-btn
-                  v-if="atendimento.status === 'Pendente' && (atendimento.id_contrato == null || atendimento.id_contrato == undefined)"
-                  color="success" variant="outlined" class="ml-2" @click="abrirModalPagamentoIndividual(atendimento)">
-                  Lançar Pagamento
-                </v-btn>
-                <div v-if="atendimento.id_contrato" class="text-caption mt-2">
-                  <v-chip variant="outlined" class="text-capitalize" style="width: 100;">
-                    CONTRATO
-                  </v-chip>
-                </div>
-                <v-btn
-                  v-if="atendimento.status === 'Pago' && (atendimento.id_contrato === null || atendimento.id_contrato === undefined)"
-                  color="error" variant="outlined" class="ml-2" @click="abrirModalPagamentoIndividual(atendimento)">
-                  Editar Pagamento
-                </v-btn>
-                <!-- <v-btn v-if="atendimento.status === 'Pago' && !atendimento.id_contrato" color="error" variant="outlined"
-                  class="ml-2" @click="abrirModalPagamentoIndividual(atendimento)">
-                  Editar Pagamento
-                </v-btn> -->
-              </v-col>
-            </v-row>
-
-            <v-expand-transition>
-              <div v-if="atendimento.showDetails" class="details-section mt-4">
-                <div class="mt-4">
-                  <div v-for="menu in menus" :key="menu.field" class="mb-4">
-                    <h4 class="text-subtitle-1 font-weight-bold mb-1">{{ menu.label }}</h4>
-                    <v-textarea v-if="atendimento.isEditing" v-model="atendimento[menu.field]" v-bind="menu.props"
-                      class="mt-2" />
-                    <p v-else class="text-body-2">
-                      {{ atendimento[menu.field] || 'Sem informações' }}
-                    </p>
+        <!-- Sessões agrupadas por data -->
+        <div v-for="(sessoesDoDia, data) in sessoesPorData" :key="data">
+          <v-card class="mb-6 elevation-2 rounded-xl">
+            <v-card-title class="text-h6 font-weight-bold text-primary">
+              {{ formatarDataBrasileira(data) }}
+            </v-card-title>
+            <v-divider />
+            <v-list>
+              <v-list-item
+                v-for="sessao in sessoesDoDia"
+                :key="sessao.id"
+                class="pa-4"
+              >
+                <v-row align="center">
+                  <v-col cols="12" sm="6" md="4">
+                    <div class="font-weight-medium pa-2">
+                      Horário: {{ sessao.horarioInicio }} - {{ sessao.horarioFim }}
+                    </div>
+                    <div class="font-weight-medium pa-2">
+                      Aprendente: {{ sessao.nomeAprendente }}
+                    </div>
+                    <v-chip
+                      :color="sessao.estaPaga ? 'success' : 'warning'"
+                      variant="outlined"
+                      small
+                    >
+                      {{ sessao.estaPaga ? 'Pago' : 'Pendente' }}
+                    </v-chip>
+                    <v-chip
+                      v-if="sessao.ehContrato"
+                      variant="outlined"
+                      class="ml-2"
+                      small
+                    >
+                      Contrato
+                    </v-chip>
+                    <span v-else class="text-caption ml-2">Avulsa</span>
+                  </v-col>
+                  <v-spacer />
+                  <v-col cols="12" sm="6" class="d-flex align-center">
+                    <!-- Botão de pagamento para sessões avulsas pendentes -->
+                    <v-btn
+                      v-if="!sessao.ehContrato && !sessao.estaPaga"
+                      color="primary"
+                      small
+                      class="mr-2"
+                      @click="abrirModalPagamento(sessao)"
+                    >
+                      Registrar Pagamento
+                    </v-btn>
+                    <v-btn
+                      icon
+                      @click="sessao.mostrarDetalhes = !sessao.mostrarDetalhes"
+                    >
+                      <v-icon>{{ sessao.mostrarDetalhes ? 'mdi-eye-off' : 'mdi-eye' }}</v-icon>
+                    </v-btn>
+                    <v-btn
+                      color="primary"
+                      variant="text"
+                      @click="sessao.mostrarDetalhes = !sessao.mostrarDetalhes"
+                    >
+                      {{ sessao.mostrarDetalhes ? 'Esconder' : 'Detalhes' }}
+                    </v-btn>
+                  </v-col>
+                </v-row>
+                <v-expand-transition>
+                  <div v-if="sessao.mostrarDetalhes" class="detalhes-sessao mt-4">
+                    <div
+                      v-for="detalhe in detalhesSessao"
+                      :key="detalhe.chave"
+                      class="mb-4"
+                    >
+                      <h4 class="text-subtitle-1 font-weight-bold mb-1">{{ detalhe.titulo }}</h4>
+                      <p class="text-body-2">
+                        {{ sessao[detalhe.chave] || 'Não informado' }}
+                      </p>
+                    </div>
                   </div>
-                  <h4 class="text-subtitle-1 font-weight-bold mb-2">Anexos</h4>
-                  <v-row v-if="atendimento.anexosTemporarios && atendimento.anexosTemporarios.length" class="mt-2">
-                    <v-col v-for="(anexo, index) in atendimento.anexosTemporarios" :key="index" cols="12" sm="6" md="4">
-                      <v-card class="pa-2" elevation="1">
-                        <v-img v-if="anexo.url && anexo.url.includes('image')" :src="anexo.url" max-height="100"
-                          max-width="100" class="rounded" />
-                        <v-icon v-else-if="anexo.url" size="40">mdi-file-document</v-icon>
-                        <v-icon v-else size="40">mdi-file</v-icon>
-                        <div class="text-caption mt-2">
-                          {{ anexo.name || anexo.url.split('/').pop() || 'Arquivo' }}
-                        </div>
-                        <v-btn v-if="atendimento.isEditing" icon small
-                          @click="removerAnexoTemporario(atendimento, index)" class="mt-2">
-                          <v-icon color="red">mdi-delete</v-icon>
-                        </v-btn>
-                        <v-btn v-if="anexo.url" icon small @click="downloadAnexo(anexo.url)" class="mt-2">
-                          <v-icon>mdi-download</v-icon>
-                        </v-btn>
-                      </v-card>
-                    </v-col>
-                  </v-row>
-                  <p v-else class="text-body-2">Nenhum anexo disponível.</p>
-                  <v-file-input v-if="atendimento.isEditing" label="Adicionar anexos" accept="image/*,application/pdf"
-                    multiple v-model="atendimento.novosAnexos" class="mt-4" :error-messages="atendimento.uploadError"
-                    @change="validarNovosAnexos(atendimento)" />
-                </div>
-                <v-btn v-if="!atendimento.isEditing" color="primary" variant="outlined" class="mt-4"
-                  @click="iniciarEdicao(atendimento)">
-                  Editar
-                </v-btn>
-                <v-btn v-if="atendimento.isEditing" color="success" variant="outlined" class="mt-4"
-                  @click="salvarEdicao(atendimento)">
-                  Salvar
-                </v-btn>
-                <v-btn v-if="atendimento.isEditing" color="error" variant="outlined" class="mt-4 ml-2"
-                  @click="cancelarEdicao(atendimento)">
-                  Cancelar
-                </v-btn>
-              </div>
-            </v-expand-transition>
-          </v-list-item>
-        </v-list>
-      </v-card>
-    </div>
+                </v-expand-transition>
+              </v-list-item>
+            </v-list>
+          </v-card>
+        </div>
 
-    <!-- Loading indicator -->
-    <div v-if="isLoading" class="d-flex justify-center align-center my-4">
-      <v-progress-circular indeterminate color="primary" size="32"></v-progress-circular>
-    </div>
+        <!-- Carregando mais sessões -->
+        <div v-if="estaCarregando" class="text-center my-4">
+          <v-progress-circular indeterminate color="primary" size="32" />
+        </div>
 
-    <!-- End of list message -->
-    <div v-if="!hasMoreData && Object.keys(atendimentosAgrupados).length > 0" class="text-center my-4 text-grey">
-      Não há mais sessões para carregar
-    </div>
+        <!-- Fim da lista -->
+        <div
+          v-if="!podeCarregarMais && temSessoes"
+          class="text-center my-4 text-grey"
+        >
+          Todas as sessões foram carregadas.
+        </div>
+      </v-window-item>
+    </v-window>
 
-    <!-- Diálogo de Pagamento Individual -->
-    <v-dialog v-model="modalPagamentoIndividual" max-width="500">
+    <!-- Modal de pagamento -->
+    <v-dialog v-model="modalPagamentoAberto" max-width="600px">
       <v-card>
-        <v-card-title class="text-h6">
-          {{ atendimentoSelecionado?.status === 'Pago' ? 'Editar Pagamento' : 'Lançar Pagamento' }}
-        </v-card-title>
+        <v-card-title>Registrar Pagamento</v-card-title>
         <v-card-text>
-          <p><strong>Paciente:</strong> {{ atendimentoSelecionado?.paciente }}</p>
-          <p><strong>Data:</strong> {{ formatarData(atendimentoSelecionado?.data) }}</p>
-          <p><strong>Horário:</strong> {{ atendimentoSelecionado?.horario }} - {{ atendimentoSelecionado?.horario_fim }}
-          </p>
-          <v-text-field v-model.number="valorPago" label="Valor Pago" type="number"
-            :rules="[v => v > 0 || 'O valor deve ser maior que zero']" required />
-          <v-select v-model="formaPagamento" label="Forma de Pagamento" :items="['Dinheiro', 'Pix', 'Cartão']"
-            :rules="[v => !!v || 'Selecione uma forma de pagamento']" required />
-          <v-file-input label="Anexar comprovante" accept="image/*" v-model="comprovanteImagem" :loading="uploading"
-            @change="handleFileChange" />
-          <v-alert v-if="uploadError" type="error" class="mt-2">
-            {{ uploadError }}
-          </v-alert>
-          <v-alert v-if="uploadSuccess" type="success" class="mt-2">
-            Comprovante enviado com sucesso!
-          </v-alert>
+          <v-form ref="formPagamento" @submit.prevent="salvarPagamento">
+            <v-text-field
+              v-model="novoPagamento.valor"
+              label="Valor"
+              type="number"
+              outlined
+              dense
+              prefix="R$"
+              :rules="[v => !!v && v > 0 || 'Valor deve ser maior que zero']"
+            />
+            <v-text-field
+              v-model="novoPagamento.data_pagamento"
+              label="Data do Pagamento"
+              type="date"
+              outlined
+              dense
+              :rules="[v => !!v || 'Data é obrigatória']"
+            />
+            <v-select
+              v-model="novoPagamento.forma_pagamento"
+              :items="['Cartão', 'Boleto', 'Pix', 'Dinheiro']"
+              label="Forma de Pagamento"
+              outlined
+              dense
+              :rules="[v => !!v || 'Forma de pagamento é obrigatória']"
+            />
+            <v-text-field
+              v-model="novoPagamento.comprovante_url"
+              label="URL do Comprovante (opcional)"
+              outlined
+              dense
+            />
+          </v-form>
         </v-card-text>
         <v-card-actions>
           <v-spacer />
-          <v-btn text @click="cancelarPagamentoIndividual">Cancelar</v-btn>
-          <v-btn color="primary" @click="confirmarPagamentoIndividual"
-            :disabled="uploading || !valorPago || !formaPagamento" :loading="uploading">
-            Confirmar
+          <v-btn color="grey" text @click="fecharModalPagamento">
+            Cancelar
+          </v-btn>
+          <v-btn color="primary" @click="salvarPagamento">
+            Salvar
           </v-btn>
         </v-card-actions>
       </v-card>
     </v-dialog>
 
-    <!-- Diálogo de Pagamento em Lote (Apenas Avulsas) -->
-    <v-dialog v-model="modalPagamentoLote" max-width="800">
-      <v-card>
-        <v-card-title class="text-h6">Lançar Pagamento em Lote (Sessões Avulsas)</v-card-title>
-        <v-card-text>
-          <v-data-table
-            :headers="[{ title: 'Selecionar', key: 'select', sortable: false }, { title: 'Data', key: 'data' }, { title: 'Paciente', key: 'paciente' }]"
-            :items="atendimentosPendentes" show-select v-model="atendimentosSelecionados" item-key="id">
-            <template v-slot:item.data="{ item }">
-              {{ formatarData(item.data) }}
-            </template>
-          </v-data-table>
-          <v-text-field v-model.number="valorPago" label="Valor Total" type="number"
-            :rules="[v => v > 0 || 'O valor deve ser maior que zero']" required />
-          <v-select v-model="formaPagamento" label="Forma de Pagamento" :items="['Dinheiro', 'Pix', 'Cartão']"
-            :rules="[v => !!v || 'Selecione uma forma de pagamento']" required />
-          <v-file-input label="Anexar comprovante" accept="image/*" v-model="comprovanteImagem" :loading="uploading"
-            @change="handleFileChange" />
-          <v-alert v-if="uploadError" type="error" class="mt-2">
-            {{ uploadError }}
-          </v-alert>
-          <v-alert v-if="uploadSuccess" type="success" class="mt-2">
-            Pagamento registrado com sucesso!
-          </v-alert>
-        </v-card-text>
-        <v-card-actions>
-          <v-spacer />
-          <v-btn text @click="cancelarPagamentoLote">Cancelar</v-btn>
-          <v-btn color="primary" @click="confirmarPagamentoLote"
-            :disabled="uploading || !valorPago || !formaPagamento || !atendimentosSelecionados.length"
-            :loading="uploading">
-            Confirmar
-          </v-btn>
-        </v-card-actions>
-      </v-card>
-    </v-dialog>
-
-    <!-- Diálogo de Pagamento de Mensalidade -->
-    <v-dialog v-model="modalMensalidade" max-width="600">
-      <v-card>
-        <v-card-title class="text-h6">Pagar Mensalidade de Contrato</v-card-title>
-        <v-card-text>
-          <v-autocomplete v-model="contratoSelecionado" :items="contratos" label="Selecionar Contrato"
-            item-title="id_contrato" item-value="id_contrato" clearable @update:modelValue="loadMensalidades" />
-          <v-select v-if="contratoSelecionado" v-model="mesReferencia" label="Mês de Referência"
-            :items="mensalidadesPendentes" item-title="mes_referencia_display" item-value="mes_referencia_cycle"
-            :loading="loadingMensalidades" />
-          <v-text-field v-model.number="valorPago" label="Valor da Mensalidade" type="number"
-            :rules="[v => v > 0 || 'O valor deve ser maior que zero']" required />
-          <v-select v-model="formaPagamento" label="Forma de Pagamento" :items="['Dinheiro', 'Pix', 'Cartão']"
-            :rules="[v => !!v || 'Selecione uma forma de pagamento']" required />
-          <v-file-input label="Anexar comprovante" accept="image/*" v-model="comprovanteImagem" :loading="uploading"
-            @change="handleFileChange" />
-          <v-alert v-if="uploadError" type="error" class="mt-2">
-            {{ uploadError }}
-          </v-alert>
-          <v-alert v-if="uploadSuccess" type="success" class="mt-2">
-            Mensalidade registrada com sucesso!
-          </v-alert>
-        </v-card-text>
-        <v-card-actions>
-          <v-spacer />
-          <v-btn text @click="cancelarMensalidade">Cancelar</v-btn>
-          <v-btn color="primary" @click="confirmarMensalidade"
-            :disabled="uploading || !valorPago || !formaPagamento || !contratoSelecionado || !mesReferencia"
-            :loading="uploading">
-            Confirmar
-          </v-btn>
-        </v-card-actions>
-      </v-card>
-    </v-dialog>
+    <!-- Snackbar para feedback -->
+    <v-snackbar v-model="mostrarSnackbar" :color="corSnackbar" timeout="3000">
+      {{ mensagemSnackbar }}
+    </v-snackbar>
   </v-container>
 </template>
 
-<script lang="ts" setup>
-import { ref, computed, onMounted, watch } from 'vue';
+<script setup lang="ts">
+import { ref, computed, onMounted } from 'vue';
 import { SessaoService } from '@/services/SessaoService';
+import { ResponsavelService } from '@/services/responsavelService';
+import { PagamentoService } from '@/services/PagamentoService';
 import { AprendenteService } from '@/services/AprendenteService';
-import { UploadService } from '@/services/UploadService';
-import { PagamentoService as pagamentoService } from '@/services/PagamentoService';
-import { ContratoService } from '@/services/contratoService';
-import supabase from '@/config/supabase';
-import { AgendamentoService } from '@/services/AgendamentoService';
 
-const sessaoService = new SessaoService();
-const aprendenteService = new AprendenteService();
-const uploadService = new UploadService();
-const contratoService = new ContratoService();
-const agendamentoService = new AgendamentoService();
-const atendimentos = ref<any[]>([]);
-const pacientes = ref<any[]>([]);
-const filtroPaciente = ref<string | null>(null);
-const searchQuery = ref('');
-const isLoading = ref(false);
-const aprendenteCache = new Map();
-const modalPagamentoIndividual = ref(false);
-const modalPagamentoLote = ref(false);
-const modalMensalidade = ref(false);
-const atendimentoSelecionado = ref<any>(null);
-const valorPago = ref<number | null>(null);
-const formaPagamento = ref<string | null>(null);
-const comprovanteImagem = ref<File[] | null>(null);
-const uploading = ref(false);
-const uploadError = ref<string | null>(null);
-const uploadSuccess = ref<boolean>(false);
-const contratos = ref<any[]>([]);
-const contratoSelecionado = ref<string | null>(null);
-const mensalidadesPendentes = ref<any[]>([]);
-const mesReferencia = ref<number | null>(null);
-const atendimentosSelecionados = ref<any[]>([]);
-const loadingMensalidades = ref(false);
-
-// Pagination state
-const pageSize = 10;
-const currentPage = ref(1);
-const hasMoreData = ref(true);
-const isLoadingMore = ref(false);
-
+// Estrutura de uma sessão
 interface Sessao {
   id: string;
-  pre_sessao?: string;
-  queixas?: string;
-  evolucao?: string;
-  habilidades_trabalhadas?: string;
-  futuras_acoes?: string;
-  resumo?: string;
-  fotos?: string[];
-  id_agendamento?: number;
-  id_contrato?: string;
-  tb_agendamento?: {
-    id_agendamento: number;
-    data_agendamento: string;
-    horario_inicio: string;
-    duracao: number;
-    id_aprendente: string;
-    responsavel_id: string;
-    id_profissional: string;
-  };
+  data: string;
+  horarioInicio: string;
+  horarioFim: string;
+  nomeAprendente: string;
+  idAprendenteOuResponsavel: string;
+  ehContrato: boolean;
+  estaPaga: boolean;
+  idPagamento: string | null;
+  idMensalidade: string | null;
+  valorPagamento: number | null;
+  formaPagamento: string | null;
+  comprovanteUrl: string | null;
+  mostrarDetalhes: boolean;
+  preSessao: string;
+  queixas: string;
+  evolucao: string;
+  habilidadesTrabalhadas: string;
+  futurasAcoes: string;
+  resumo: string;
 }
 
-interface Cliente {
-  id: string;
-  nome: string;
+// Estrutura do formulário de pagamento
+interface NovoPagamento {
+  valor: number;
+  data_pagamento: string;
+  forma_pagamento: string;
+  comprovante_url: string | null;
 }
 
-async function handleFileChange(files: File[] | null) {
-  uploadError.value = null;
-  uploadSuccess.value = false;
-  if (files && files.length > 0) {
-    const file = files[0];
-    if (!file.type.startsWith('image/')) {
-      uploadError.value = 'Por favor, selecione uma imagem (JPEG, PNG, etc.).';
-      comprovanteImagem.value = null;
-      return;
-    }
-    if (file.size > 25 * 1024 * 1024) {
-      uploadError.value = 'A imagem deve ter menos de 25MB.';
-      comprovanteImagem.value = null;
-      return;
-    }
-  }
-}
+// --- Estado da interface ---
+const anoSelecionado = ref(new Date().getFullYear()); // Ano atual
+const mesSelecionado = ref(new Date().getMonth()); // Mês atual (0-11)
+const anosDisponiveis = Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - 2 + i); // Últimos 5 anos
+const nomesMeses = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
+const abaAtiva = ref('sessoes'); // Sempre na aba de sessões
+const exibirTudo = ref(false); // Mostra todas ou filtra por data
+const estaCarregando = ref(false); // Controla o carregamento
+const listaSessoes = ref<Sessao[]>([]); // Sessões carregadas
+const cacheNomesAprendentes = new Map<string, string>(); // Cache para nomes
+const sessoesPorPagina = 10; // Sessões por carga
+const paginaAtual = ref(1); // Página atual
+const podeCarregarMais = ref(true); // Indica se há mais sessões
 
-const loadSessoes = async (reset = false) => {
-  if (reset) {
-    currentPage.value = 1;
-    atendimentos.value = [];
-    hasMoreData.value = true;
-  }
-
-  if (!hasMoreData.value || isLoadingMore.value) return;
-
-  isLoadingMore.value = true;
-  try {
-    const newSessoes: Sessao[] = await sessaoService.getAllSessoes({
-      page: currentPage.value,
-      pageSize: pageSize.value,
-      clienteId: filtroPaciente.value
-    });
-
-    if (newSessoes.length < pageSize.value) {
-      hasMoreData.value = false;
-    }
-
-    if (newSessoes.length > 0) {
-      const novosAtendimentos: Atendimento[] = await Promise.all(
-        newSessoes.map(async (sessao) => {
-
-          const agendamento = sessao.tb_agendamento;
-          const startTime = agendamento?.horario_inicio;
-          const duracao = parseInt(agendamento?.duracao) || 60;
-          const startDateTime = startTime ? new Date(`1970-01-01T${startTime}`) : null;
-          const endDateTime = startDateTime ? new Date(startDateTime.getTime() + duracao * 60000) : null;
-          const horarioFim = endDateTime
-            ? `${endDateTime.getHours().toString().padStart(2, '0')}:${endDateTime.getMinutes().toString().padStart(2, '0')}`
-            : '';
-          console.log(agendamento)
-          let paciente = 'N/A';
-          let clienteId = agendamento?.id_aprendente || agendamento?.responsavel_id || '';
-          if (agendamento?.id_aprendente) {
-            if (aprendenteCache.has(agendamento.id_aprendente)) {
-              paciente = aprendenteCache.get(agendamento.id_aprendente).nome_aprendente;
-            } else {
-              const aprendente = await aprendenteService.getAprendenteById(agendamento.id_aprendente);
-              paciente = aprendente?.nome_aprendente || 'N/A';
-              aprendenteCache.set(agendamento.id_aprendente, aprendente);
-            }
-          } else if (agendamento?.responsavel_id) {
-            const responsavel = await supabase
-              .from('tb_responsavel')
-              .select('nome')
-              .eq('id_responsavel', agendamento.responsavel_id)
-              .single();
-            paciente = responsavel.data?.nome || 'N/A';
-          }
-
-          const anexos = sessao.fotos ? sessao.fotos.split(',').filter((url: string) => url) : [];
-          let status = 'Pendente';
-          let pagamentoData: any = null;
-
-          const idContrato = sessao.id_contrato;
-
-          console.log(`Processando sessão ${sessao.id}, id_contrato: ${idContrato}, tipo: ${idContrato ? 'Contrato' : 'Avulsa'}`);
-
-          if (idContrato) {
-            const mesReferencia = new Date(agendamento?.data_agendamento).toISOString().slice(0, 7) + '-01';
-            const { data: mensalidade } = await supabase
-              .from('tb_mensalidade')
-              .select('id_mensalidade, valor, forma_pagamento, comprovante_url, status_pagamento')
-              .eq('id_contrato', idContrato)
-              .eq('mes_referencia', mesReferencia)
-              .eq('status_pagamento', 'Pago')
-              .maybeSingle();
-            if (mensalidade) {
-              status = 'Pago';
-              pagamentoData = {
-                id_mensalidade: mensalidade.id_mensalidade,
-                valor: mensalidade.valor,
-                forma_pagamento: mensalidade.forma_pagamento,
-                comprovante_url: mensalidade.comprovante_url
-              };
-              console.log(`Sessão ${sessao.id} marcada como Pago por mensalidade:`, mensalidade);
-            } else {
-              console.log(`Sessão ${sessao.id} sem mensalidade paga para ${mesReferencia}`);
-            }
-          } else {
-            const pagamento = await pagamentoService.getPagamentoBySessao(sessao.id);
-            if (pagamento) {
-              status = 'Pago';
-              pagamentoData = {
-                id_pagamento: pagamento.id_pagamento,
-                valor: pagamento.valor,
-                forma_pagamento: pagamento.forma_pagamento,
-                comprovante_url: pagamento.comprovante_url
-              };
-              console.log(`Sessão ${sessao.id} marcada como Pago por pagamento avulso:`, pagamento);
-            } else {
-              console.log(`Sessão ${sessao.id} sem pagamento avulso`);
-            }
-          }
-
-          const atendimento = {
-            id: sessao.id,
-            data: agendamento?.data_agendamento || '',
-            horario: startTime || '',
-            horario_fim: horarioFim,
-            paciente,
-            clienteId,
-            id_aprendente: agendamento?.id_aprendente,
-            responsavel_id: agendamento?.responsavel_id,
-            id_agendamento: agendamento?.id_agendamento,
-            id_contrato: idContrato,
-            avatar: '',
-            status,
-            id_pagamento: pagamentoData?.id_pagamento,
-            id_mensalidade: pagamentoData?.id_mensalidade,
-            valor_pagamento: pagamentoData?.valor,
-            forma_pagamento: pagamentoData?.forma_pagamento,
-            comprovante_url: pagamentoData?.comprovante_url,
-            anotacao: null,
-            showDetails: false,
-            isEditing: false,
-            preSessao: sessao.pre_sessao || '',
-            queixas: sessao.queixas || '',
-            evolucaoAtual: sessao.evolucao || '',
-            habilidadesTrabalhadas: sessao.habilidades_trabalhadas || '',
-            futurasAcoes: sessao.futuras_acoes || '',
-            anexos,
-            anexosTemporarios: anexos.map(url => ({ url, name: url.split('/').pop() })),
-            anexosParaExcluir: [] as string[],
-            novosAnexos: [] as File[],
-            uploadError: '',
-            resumo: sessao.resumo || ''
-          };
-
-          return atendimento;
-        })
-      );
-      console.log('Atendimentos carregados:', novosAtendimentos.map(a => ({
-        id: a.id,
-        clienteId: a.clienteId,
-        id_aprendente: a.id_aprendente,
-        responsavel_id: a.responsavel_id,
-        paciente: a.paciente,
-        status: a.status,
-        id_contrato: a.id_contrato,
-        tipo_sessao: a.id_contrato ? 'Contrato' : 'Avulsa'
-      })));
-
-      if (reset) {
-        atendimentos.value = novosAtendimentos;
-      } else {
-        atendimentos.value = [...atendimentos.value, ...novosAtendimentos];
-      }
-
-      currentPage.value++;
-      hasMoreData.value = newSessoes.length === pageSize;
-    }
-  } catch (error: unknown) {
-    console.error('Erro ao carregar sessões:', error);
-    uploadError.value = 'Erro ao carregar sessões: ' + (error instanceof Error ? error.message : 'Erro desconhecido');
-  } finally {
-    isLoadingMore.value = false;
-    isLoading.value = false;
-  }
-};
-
-async function loadPacientes() {
-  try {
-    const clientes = await aprendenteService.loadAprendentesPorProfissionalENome('')
-    pacientes.value = clientes.map((cliente) => ({
-      id: cliente.id,
-      aprendente: cliente.nomeAprendente,
-      responsavel: cliente.nomeResponsavel
-    }));
-    console.log('Pacientes carregados:', pacientes.value);
-  } catch (err) {
-    console.error('Erro ao carregar pacientes:', err);
-  }
-}
-
-async function loadContratos() {
-  try {
-    const clienteId = filtroPaciente.value;
-    if (clienteId) {
-      contratos.value = await contratoService.loadContratos(clienteId);
-    } else {
-      contratos.value = [];
-    }
-  } catch (err) {
-    console.error('Erro ao carregar contratos:', err);
-  }
-}
-
-async function loadMensalidades() {
-  try {
-    loadingMensalidades.value = true;
-    mensalidadesPendentes.value = [];
-    if (contratoSelecionado.value) {
-      console.log('Loading mensalidades for contrato:', contratoSelecionado.value);
-      const [mensalidades, contrato] = await Promise.all([
-        contratoService.getMensalidadesByContrato(contratoSelecionado.value),
-        supabase
-          .from('tb_contrato')
-          .select('data_criacao, duracao')
-          .eq('id_contrato', contratoSelecionado.value)
-          .single()
-      ]);
-      console.log('Mensalidades returned:', mensalidades);
-      console.log('Duração do contrato:', contrato.data?.duracao);
-      console.log('Contrato data_criacao:', contrato.data?.data_criacao);
-
-      const dataInicio = contrato.data?.data_criacao ? new Date(contrato.data.data_criacao) : new Date();
-      const duracao = contrato.data?.duracao || 12;
-      if (!contrato.data?.data_criacao) {
-        console.warn('Contrato sem data_criacao, usando data atual');
-      }
-      if (!contrato.data?.duracao) {
-        console.warn('Contrato sem duracao, usando 12 meses');
-      }
-
-      // Process existing unpaid mensalidades
-      const existingPendentes = mensalidades
-        .filter(m => m.status_pagamento !== 'Pago')
-        .map(m => {
-          const mesDate = new Date(m.mes_referencia);
-          const cycleNumber = Math.max(
-            1,
-            (mesDate.getFullYear() - dataInicio.getFullYear()) * 12 +
-            mesDate.getMonth() - dataInicio.getMonth() + 1
-          );
-          if (cycleNumber > duracao) return null; // Exclude cycles beyond duracao
-          return {
-            ...m,
-            mes_referencia_cycle: cycleNumber,
-            mes_referencia_display: `Mensalidade ${cycleNumber} (${mesDate.toLocaleString('pt-BR', { month: 'long', year: 'numeric' })}`,
-            mes_referencia_raw: m.mes_referencia
-          };
-        })
-        .filter(m => m !== null);
-
-      // Generate all billing cycles within duracao
-      const meses = [];
-      for (let i = 0; i < duracao; i++) {
-        const date = new Date(dataInicio.getFullYear(), dataInicio.getMonth() + i, 1);
-        const mesReferenciaRaw = date.toISOString().slice(0, 10);
-        const cycleNumber = i + 1;
-        // Only include if not already paid
-        if (!mensalidades.some(m => m.mes_referencia === mesReferenciaRaw && m.status_pagamento === 'Pago')) {
-          meses.push({
-            id_mensalidade: null,
-            id_contrato: contratoSelecionado.value,
-            mes_referencia_cycle: cycleNumber,
-            mes_referencia_display: `Mensalidade ${cycleNumber} (${date.toLocaleString('pt-BR', { month: 'long', year: 'numeric' })})`,
-            mes_referencia_raw: mesReferenciaRaw,
-            status_pagamento: 'Pendente'
-          });
-        }
-      }
-
-      // Combine and deduplicate by cycle number
-      mensalidadesPendentes.value = [...existingPendentes, ...meses]
-        .sort((a, b) => a.mes_referencia_cycle - b.mes_referencia_cycle)
-        .filter((item, index, self) =>
-          index === self.findIndex(t => t.mes_referencia_cycle === item.mes_referencia_cycle)
-        );
-      console.log('Mensalidades pendentes:', mensalidadesPendentes.value);
-    }
-  } catch (err) {
-    console.error('Erro ao carregar mensalidades:', err);
-    mensalidadesPendentes.value = [];
-  } finally {
-    loadingMensalidades.value = false;
-  }
-}
-
-function iniciarEdicao(atendimento: any) {
-  atendimento.originalData = { ...atendimento };
-  atendimento.isEditing = true;
-}
-
-function cancelarEdicao(atendimento: any) {
-  Object.assign(atendimento, atendimento.originalData);
-  atendimento.isEditing = false;
-  delete atendimento.originalData;
-}
-
-function validarNovosAnexos(atendimento: any) {
-  atendimento.uploadError = '';
-  if (atendimento.novosAnexos && atendimento.novosAnexos.length > 0) {
-    for (const file of atendimento.novosAnexos) {
-      if (!file.type.match(/^image\/.+$|^application\/pdf$/)) {
-        atendimento.uploadError = 'Apenas imagens ou PDFs são permitidos';
-        atendimento.novosAnexos = [];
-        return;
-      }
-      if (file.size > 25 * 1024 * 1024) {
-        atendimento.uploadError = 'O arquivo deve ter menos de 25MB';
-        atendimento.novosAnexos = [];
-        return;
-      }
-    }
-    atendimento.anexosTemporarios.push(
-      ...atendimento.novosAnexos.map((file: File) => ({ url: '', name: file.name }))
-    );
-  }
-}
-
-function removerAnexoTemporario(atendimento: any, index: number) {
-  const anexo = atendimento.anexosTemporarios[index];
-  if (anexo.url) {
-    atendimento.anexosParaExcluir.push(anexo.url);
-  }
-  atendimento.anexosTemporarios.splice(index, 1);
-  atendimento.novosAnexos = atendimento.novosAnexos.filter(
-    (file: File) => file.name !== anexo.name
-  );
-}
-
-async function downloadAnexo(anexo: string) {
-  try {
-    const caminho = anexo.split('/storage/v1/object/public/sessoes/')[1];
-    const data = await supabase.storage
-      .from('sessoes')
-      .download(caminho);
-    const url = window.URL.createObjectURL(data.data);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = anexo.split('/').pop() || 'Arquivo';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    window.URL.revokeObjectURL(url);
-  } catch (err) {
-    console.error('Erro ao baixar anexo:', err);
-    alert('Erro ao baixar anexo: ' + (err as Error).message);
-  }
-}
-
-async function salvarEdicao(atendimento: any) {
-  try {
-    const novosUrls: string[] = [];
-    if (atendimento.novosAnexos && atendimento.novosAnexos.length > 0) {
-      for (const file of atendimento.novosAnexos) {
-        const url = await uploadService.uploadArquivo(
-          'sessoes',
-          `sessao/${atendimento.id_agendamento || 'temp'}`,
-          file
-        );
-        novosUrls.push(url);
-      }
-    }
-
-    atendimento.anexos = [
-      ...atendimento.anexosTemporarios
-        .filter((anexo: any) => anexo.url && !atendimento.anexosParaExcluir.includes(anexo.url))
-        .map((anexo: any) => anexo.url),
-      ...novosUrls
-    ];
-
-    const sessaoData = {
-      id: atendimento.id,
-      pre_sessao: atendimento.preSessao,
-      queixas: atendimento.queixas,
-      evolucao: atendimento.evolucaoAtual,
-      habilidades_trabalhadas: atendimento.habilidadesTrabalhadas,
-      futuras_acoes: atendimento.futurasAcoes,
-      resumo: atendimento.resumo,
-      fotos: atendimento.anexos.length > 0 ? atendimento.anexos.join(',') : null,
-      id_agendamento: atendimento.id_agendamento,
-      id_contrato: atendimento.id_contrato
-    };
-
-    await sessaoService.updateSessao(atendimento.id, sessaoData);
-
-    atendimento.anexosTemporarios = atendimento.anexos.map((url: string) => ({
-      url,
-      name: url.split('/').pop()
-    }));
-    atendimento.anexosParaExcluir = [];
-    atendimento.novosAnexos = [];
-    atendimento.uploadError = '';
-    atendimento.isEditing = false;
-    delete atendimento.originalData;
-
-    console.log('Sessão atualizada com sucesso:', sessaoData);
-    alert('Alterações salvas com sucesso!');
-  } catch (err) {
-    console.error('Erro ao salvar edição:', err);
-    alert('Erro ao salvar alterações: ' + (err as Error).message);
-  }
-}
-
-function abrirModalPagamentoIndividual(atendimento: any) {
-  atendimentoSelecionado.value = atendimento;
-  valorPago.value = atendimento.valor_pagamento || null;
-  formaPagamento.value = atendimento.forma_pagamento || null;
-  comprovanteImagem.value = null;
-  modalPagamentoIndividual.value = true;
-}
-
-function cancelarPagamentoIndividual() {
-  modalPagamentoIndividual.value = false;
-  atendimentoSelecionado.value = null;
-  valorPago.value = null;
-  formaPagamento.value = null;
-  comprovanteImagem.value = null;
-  uploadError.value = null;
-  uploadSuccess.value = false;
-}
-
-async function confirmarPagamentoIndividual() {
-  if (!atendimentoSelecionado.value || !valorPago.value || !formaPagamento.value) return;
-
-  try {
-    uploading.value = true;
-    const pagamentoData = {
-      id_sessao: [atendimentoSelecionado.value.id],
-      valor: valorPago.value,
-      forma_pagamento: formaPagamento.value,
-      comprovante: comprovanteImagem.value?.[0]
-    };
-
-    if (atendimentoSelecionado.value.status === 'Pago') {
-      await pagamentoService.updatePagamento(atendimentoSelecionado.value.id_pagamento, pagamentoData);
-    } else {
-      const pagamento = await pagamentoService.createPagamento(pagamentoData);
-      atendimentoSelecionado.value.id_pagamento = pagamento.id_pagamento;
-      atendimentoSelecionado.value.status = 'Pago';
-    }
-
-    atendimentoSelecionado.value.valor_pagamento = valorPago.value;
-    atendimentoSelecionado.value.forma_pagamento = formaPagamento.value;
-    atendimentoSelecionado.value.comprovante_url = comprovanteImagem.value?.[0]
-      ? await uploadService.uploadArquivo(
-        'pagamentos',
-        `comprovante/${atendimentoSelecionado.value.id}`,
-        comprovanteImagem.value[0]
-      )
-      : atendimentoSelecionado.value.comprovante_url;
-
-    uploadSuccess.value = true;
-    setTimeout(() => {
-      cancelarPagamentoIndividual();
-    }, 1000);
-  } catch (err) {
-    console.error('Erro ao salvar pagamento:', err);
-    uploadError.value = 'Erro ao salvar pagamento: ' + (err as Error).message;
-  } finally {
-    uploading.value = false;
-  }
-}
-
-function abrirModalPagamentoLote() {
-  modalPagamentoLote.value = true;
-  atendimentosSelecionados.value = [];
-  valorPago.value = null;
-  formaPagamento.value = null;
-  comprovanteImagem.value = null;
-  uploadError.value = null;
-  uploadSuccess.value = false;
-}
-
-function cancelarPagamentoLote() {
-  modalPagamentoLote.value = false;
-  atendimentosSelecionados.value = [];
-  valorPago.value = null;
-  formaPagamento.value = null;
-  comprovanteImagem.value = null;
-  uploadError.value = null;
-  uploadSuccess.value = false;
-}
-
-async function confirmarPagamentoLote() {
-  try {
-    uploading.value = true;
-    if (!atendimentosSelecionados.value.length || !valorPago.value || !formaPagamento.value) return;
-
-    const pagamentoData = {
-      id_sessao: atendimentosSelecionados.value.map(a => a.id),
-      valor: valorPago.value,
-      forma_pagamento: formaPagamento.value,
-      comprovante: comprovanteImagem.value?.[0]
-    };
-    const pagamento = await pagamentoService.createPagamento(pagamentoData);
-    atendimentosSelecionados.value.forEach(atendimento => {
-      atendimento.status = 'Pago';
-      atendimento.id_pagamento = pagamento.id_pagamento;
-      atendimento.valor_pagamento = valorPago.value / atendimentosSelecionados.value.length;
-      atendimento.forma_pagamento = formaPagamento.value;
-      atendimento.comprovante_url = pagamento.comprovante_url;
-    });
-
-    uploadSuccess.value = true;
-    setTimeout(() => {
-      cancelarPagamentoLote();
-    }, 1000);
-  } catch (err) {
-    console.error('Erro ao salvar pagamento em lote:', err);
-    uploadError.value = 'Erro ao salvar pagamento: ' + (err as Error).message;
-  } finally {
-    uploading.value = false;
-  }
-}
-
-function abrirModalMensalidade() {
-  modalMensalidade.value = true;
-  contratoSelecionado.value = null;
-  mesReferencia.value = null;
-  mensalidadesPendentes.value = [];
-  valorPago.value = null;
-  formaPagamento.value = null;
-  comprovanteImagem.value = null;
-  uploadError.value = null;
-  uploadSuccess.value = false;
-}
-
-function cancelarMensalidade() {
-  modalMensalidade.value = false;
-  contratoSelecionado.value = null;
-  mesReferencia.value = null;
-  mensalidadesPendentes.value = [];
-  valorPago.value = null;
-  formaPagamento.value = null;
-  comprovanteImagem.value = null;
-  uploadError.value = null;
-  uploadSuccess.value = false;
-}
-
-async function confirmarMensalidade() {
-  try {
-    uploading.value = true;
-    if (!contratoSelecionado.value || !mesReferencia.value || !valorPago.value || !formaPagamento.value) return;
-
-    const selectedMensalidade = mensalidadesPendentes.value.find(
-      m => m.mes_referencia_cycle === mesReferencia.value
-    );
-    if (!selectedMensalidade) throw new Error('Mês de referência inválido');
-
-    if (!selectedMensalidade.mes_referencia_raw.match(/^\d{4}-\d{2}-\d{2}$/)) {
-      throw new Error('Formato de mês de referência inválido');
-    }
-
-    const mensalidadeData = {
-      id_contrato: contratoSelecionado.value,
-      mes_referencia: selectedMensalidade.mes_referencia_raw,
-      valor: valorPago.value,
-      forma_pagamento: formaPagamento.value,
-      comprovante: comprovanteImagem.value?.[0]
-    };
-    const mensalidade = await contratoService.pagarMensalidadeContrato(mensalidadeData);
-
-    const mes = new Date(selectedMensalidade.mes_referencia_raw).toISOString().slice(0, 7);
-    atendimentos.value.forEach(atendimento => {
-      if (atendimento.id_contrato === contratoSelecionado.value && atendimento.data.startsWith(mes)) {
-        atendimento.status = 'Pago';
-        atendimento.id_mensalidade = mensalidade.id_mensalidade;
-        atendimento.valor_pagamento = valorPago.value;
-        atendimento.forma_pagamento = formaPagamento.value;
-        atendimento.comprovante_url = mensalidade.comprovante_url;
-      }
-    });
-
-    uploadSuccess.value = true;
-    setTimeout(() => {
-      cancelarMensalidade();
-    }, 1000);
-  } catch (err) {
-    console.error('Erro ao salvar mensalidade:', err);
-    uploadError.value = 'Erro ao salvar mensalidade: ' + (err as Error).message;
-  } finally {
-    uploading.value = false;
-  }
-}
-
-const atendimentosPendentes = computed(() => {
-  return atendimentos.value.filter(a => a.status === 'Pendente' && !a.id_contrato);
+// Estado do modal de pagamento
+const modalPagamentoAberto = ref(false);
+const sessaoSelecionada = ref<Sessao | null>(null);
+const novoPagamento = ref<NovoPagamento>({
+  valor: 0,
+  data_pagamento: '',
+  forma_pagamento: '',
+  comprovante_url: null,
 });
+const formPagamento = ref<{ validate: () => Promise<boolean> } | null>(null);
 
-watch(searchQuery, async (newValue) => {
-  if (!newValue) {
-    await loadPacientes();
-    return;
-  }
+// Estado do snackbar
+const mostrarSnackbar = ref(false);
+const mensagemSnackbar = ref('');
+const corSnackbar = ref('success');
 
-  isLoading.value = true;
-  try {
-    const resultados = await aprendenteService.buscarClientesPorNome(newValue);
-    pacientes.value = resultados.map((cliente) => ({
-      id: cliente.id,
-      displayName: cliente.displayName || cliente.nome || cliente.responsavel || 'N/A',
-      aprendente: cliente.nome,
-      responsavel: cliente.responsavel
-    }));
-    console.log('Resultados da busca:', pacientes.value);
-  } catch (err) {
-    console.error('Erro na busca:', err);
-  } finally {
-    isLoading.value = false;
-  }
-}, { debounce: 300 });
+// Detalhes exibidos ao expandir uma sessão
+const detalhesSessao = [
+  { chave: 'preSessao', titulo: 'Pré-sessão' },
+  { chave: 'queixas', titulo: 'Queixas' },
+  { chave: 'evolucao', titulo: 'Evolução' },
+  { chave: 'habilidadesTrabalhadas', titulo: 'Habilidades Trabalhadas' },
+  { chave: 'futurasAcoes', titulo: 'Próximos Passos' },
+  { chave: 'resumo', titulo: 'Resumo' },
+];
 
-watch(filtroPaciente, async (newValue) => {
-  console.log('filtroPaciente alterado:', newValue, typeof newValue);
-  await loadContratos();
-});
+// --- Serviços ---
+const sessaoService = new SessaoService();
+const responsavelService = new ResponsavelService();
+const pagamentoService = new PagamentoService();
+const aprendenteService = new AprendenteService();
 
-const atendimentosAgrupados = computed(() => {
-  const agrupados: Record<string, typeof atendimentos.value> = {};
+// --- Funções auxiliares ---
 
-  const filtroId = typeof filtroPaciente.value === 'object' && filtroPaciente.value
-    ? filtroPaciente.value.id
-    : filtroPaciente.value;
-
-  const lista = filtroId
-    ? atendimentos.value.filter(a => {
-      const match = String(a.clienteId) === String(filtroId) ||
-        String(a.id_aprendente) === String(filtroId) ||
-        String(a.responsavel_id) === String(filtroId);
-      console.log(`Atendimento ${a.id}: clienteId=${a.clienteId}, id_aprendente=${a.id_aprendente}, responsavel_id=${a.responsavel_id}, filtro=${filtroId}, match=${match}`);
-      return match;
-    })
-    : atendimentos.value;
-
-  lista.forEach(atendimento => {
-    if (!agrupados[atendimento.data]) {
-      agrupados[atendimento.data] = [];
-    }
-    agrupados[atendimento.data].push(atendimento);
-  });
-
-  console.log('Filtro paciente:', filtroPaciente.value);
-  console.log('Filtro ID usado:', filtroId);
-  console.log('Lista filtrada:', lista);
-  return agrupados;
-});
-
-function formatarData(dataStr: string): string {
-  if (!dataStr) return '';
-  const [ano, mes, dia] = dataStr.split('-');
+// Formata data no padrão brasileiro (DD/MM/AAAA)
+function formatarDataBrasileira(data: string): string {
+  if (!data) return '';
+  const [ano, mes, dia] = data.split('-');
   return `${dia}/${mes}/${ano}`;
 }
 
-const menus = [
-  {
-    field: 'preSessao',
-    label: 'Pré-sessão',
-    component: 'v-textarea',
-    props: { label: 'Pré-sessão' }
-  },
-  {
-    field: 'queixas',
-    label: 'Queixas',
-    component: 'v-textarea',
-    props: { label: 'Queixas' }
-  },
-  {
-    field: 'evolucaoAtual',
-    label: 'Evolução Atual',
-    component: 'v-textarea',
-    props: { label: 'Evolução Atual' }
-  },
-  {
-    field: 'habilidadesTrabalhadas',
-    label: 'Habilidades Trabalhadas',
-    component: 'v-textarea',
-    props: { label: 'Habilidades Trabalhadas' }
-  },
-  {
-    field: 'futurasAcoes',
-    label: 'Futuras Ações',
-    component: 'v-textarea',
-    props: { label: 'Futuras Ações' }
-  },
-  {
-    field: 'resumo',
-    label: 'Resumo da Sessão',
-    component: 'v-textarea',
-    props: { label: 'Resumo da Sessão' }
-  }
-];
+// Calcula o horário de término
+function obterHorarioFim(inicio: string, duracaoMinutos: number): string {
+  if (!inicio) return '';
+  const [horas, minutos] = inicio.split(':').map(Number);
+  const dataInicio = new Date(1970, 0, 1, horas, minutos);
+  const dataFim = new Date(dataInicio.getTime() + (duracaoMinutos || 60) * 60000);
+  return `${dataFim.getHours().toString().padStart(2, '0')}:${dataFim.getMinutes().toString().padStart(2, '0')}`;
+}
 
-// Intersection Observer for infinite scroll
-const observerTarget = ref<HTMLElement | null>(null);
+// Busca o nome do aprendente ou responsável
+async function buscarNomeAprendente(agendamento: any): Promise<string> {
+  const idAprendente = agendamento?.id_aprendente;
+  const idResponsavel = agendamento?.responsavel_id;
 
-onMounted(() => {
-  const observer = new IntersectionObserver(
-    (entries) => {
-      if (entries[0].isIntersecting && hasMoreData.value && !isLoadingMore.value) {
-        loadSessoes();
-      }
-    },
-    {
-      rootMargin: '100px',
-      threshold: 0.1
+  if (idAprendente) {
+    if (cacheNomesAprendentes.has(idAprendente)) {
+      return cacheNomesAprendentes.get(idAprendente)!;
     }
-  );
-
-  if (observerTarget.value) {
-    observer.observe(observerTarget.value);
+    const aprendente = await aprendenteService.getAprendenteById(idAprendente);
+    const nome = aprendente?.nome_aprendente || 'Sem nome';
+    cacheNomesAprendentes.set(idAprendente, nome);
+    return nome;
   }
 
-  // Initial load
-  loadSessoes(true);
-  loadPacientes();
+  if (idResponsavel) {
+    const responsavel = await responsavelService.buscarResponsavel(idResponsavel);
+    return responsavel?.nome || 'Sem nome';
+  }
+
+  return 'Sem nome';
+}
+
+// Verifica se a sessão está paga
+async function verificarPagamento(sessao: any): Promise<{
+  estaPaga: boolean;
+  idPagamento: string | null;
+  idMensalidade: string | null;
+  valorPagamento: number | null;
+  formaPagamento: string | null;
+  comprovanteUrl: string | null;
+}> {
+  const ehContrato = !!sessao.id_contrato;
+  let estaPaga = false;
+  let idPagamento: string | null = null;
+  let idMensalidade: string | null = null;
+  let valorPagamento: number | null = null;
+  let formaPagamento: string | null = null;
+  let comprovanteUrl: string | null = null;
+
+  if (ehContrato) {
+    const mesReferencia = new Date(sessao.tb_agendamento.data_agendamento)
+      .toISOString()
+      .slice(0, 7) + '-01';
+    const mensalidade = await sessaoService.buscarMensalidade(
+      sessao.id_contrato,
+      mesReferencia
+    );
+    if (mensalidade?.status_pagamento === 'Pago') {
+      estaPaga = true;
+      idMensalidade = mensalidade.id_mensalidade;
+      valorPagamento = mensalidade.valor;
+      formaPagamento = mensalidade.forma_pagamento;
+      comprovanteUrl = mensalidade.comprovante_url;
+    }
+  } else {
+    const pagamento = await pagamentoService.getPagamentoBySessao(sessao.id);
+    if (pagamento) {
+      estaPaga = true;
+      idPagamento = pagamento.tb_pagamento.id;
+      valorPagamento = pagamento.tb_pagamento.valor;
+      formaPagamento = pagamento.tb_pagamento.forma_pagamento;
+      comprovanteUrl = pagamento.tb_pagamento.comprovante_url;
+    }
+  }
+
+  return { estaPaga, idPagamento, idMensalidade, valorPagamento, formaPagamento, comprovanteUrl };
+}
+
+// --- Funções de pagamento ---
+
+// Abre o modal para registrar pagamento
+function abrirModalPagamento(sessao: Sessao) {
+  sessaoSelecionada.value = sessao;
+  novoPagamento.value = {
+    valor: 0,
+    data_pagamento: '',
+    forma_pagamento: '',
+    comprovante_url: null,
+  };
+  modalPagamentoAberto.value = true;
+}
+
+// Fecha o modal e limpa o formulário
+function fecharModalPagamento() {
+  modalPagamentoAberto.value = false;
+  sessaoSelecionada.value = null;
+  novoPagamento.value = {
+    valor: 0,
+    data_pagamento: '',
+    forma_pagamento: '',
+    comprovante_url: null,
+  };
+  if (formPagamento.value) {
+    formPagamento.value.reset();
+  }
+}
+
+// Salva o pagamento no banco
+async function salvarPagamento() {
+  if (!formPagamento.value || !sessaoSelecionada.value) return;
+
+  const valido = await formPagamento.value.validate();
+  if (!valido) return;
+
+  try {
+    const pagamentoData = {
+      valor: novoPagamento.value.valor,
+      data_pagamento: novoPagamento.value.data_pagamento || null,
+      forma_pagamento: novoPagamento.value.forma_pagamento,
+      comprovante_url: novoPagamento.value.comprovante_url || null,
+      id_mensalidade: null, // Sessão avulsa, sem mensalidade
+    };
+
+    await pagamentoService.createPagamento(pagamentoData, [sessaoSelecionada.value.id]);
+
+    // Atualiza o status da sessão localmente
+    const sessao = listaSessoes.value.find(s => s.id === sessaoSelecionada.value!.id);
+    if (sessao) {
+      sessao.estaPaga = true;
+      sessao.idPagamento = 'novo-id'; // ID real será retornado pelo serviço, se necessário
+      sessao.valorPagamento = pagamentoData.valor;
+      sessao.formaPagamento = pagamentoData.forma_pagamento;
+      sessao.comprovanteUrl = pagamentoData.comprovante_url;
+    }
+
+    mensagemSnackbar.value = 'Pagamento registrado com sucesso!';
+    corSnackbar.value = 'success';
+    mostrarSnackbar.value = true;
+    fecharModalPagamento();
+  } catch (erro) {
+    console.error('Erro ao registrar pagamento:', erro);
+    mensagemSnackbar.value = 'Erro ao registrar pagamento';
+    corSnackbar.value = 'error';
+    mostrarSnackbar.value = true;
+  }
+}
+
+// --- Carregamento de sessões ---
+
+async function carregarSessoes(limpar = false) {
+  if (limpar) {
+    paginaAtual.value = 1;
+    listaSessoes.value = [];
+    podeCarregarMais.value = true;
+  }
+
+  if (!podeCarregarMais.value || estaCarregando.value) return;
+
+  estaCarregando.value = true;
+  try {
+    const filtros = exibirTudo.value
+      ? {}
+      : { ano: anoSelecionado.value, mes: mesSelecionado.value + 1 };
+
+    const novasSessoes = await sessaoService.getAllSessoes({
+      pagina: paginaAtual.value,
+      limite: sessoesPorPagina,
+      ...filtros,
+    });
+
+    const sessoesFormatadas = await Promise.all(
+      novasSessoes.map(async (sessao) => {
+        const agendamento = sessao.tb_agendamento;
+        const horarioInicio = agendamento?.horario_inicio || '';
+        const horarioFim = obterHorarioFim(horarioInicio, parseInt(agendamento?.duracao));
+        const nomeAprendente = await buscarNomeAprendente(agendamento);
+        const idAprendenteOuResponsavel = agendamento?.id_aprendente || agendamento?.responsavel_id || '';
+        const pagamento = await verificarPagamento(sessao);
+
+        return {
+          id: sessao.id,
+          data: agendamento?.data_agendamento || '',
+          horarioInicio,
+          horarioFim,
+          nomeAprendente,
+          idAprendenteOuResponsavel,
+          ehContrato: !!sessao.id_contrato,
+          estaPaga: pagamento.estaPaga,
+          idPagamento: pagamento.idPagamento,
+          idMensalidade: pagamento.idMensalidade,
+          valorPagamento: pagamento.valorPagamento,
+          formaPagamento: pagamento.formaPagamento,
+          comprovanteUrl: pagamento.comprovanteUrl,
+          mostrarDetalhes: false,
+          preSessao: sessao.pre_sessao || '',
+          queixas: sessao.queixas || '',
+          evolucao: sessao.evolucao || '',
+          habilidadesTrabalhadas: sessao.habilidades_trabalhadas || '',
+          futurasAcoes: sessao.futuras_acoes || '',
+          resumo: sessao.resumo || '',
+        };
+      })
+    );
+
+    listaSessoes.value = limpar
+      ? sessoesFormatadas
+      : [...listaSessoes.value, ...sessoesFormatadas];
+
+    paginaAtual.value++;
+    podeCarregarMais.value = novasSessoes.length === sessoesPorPagina;
+  } catch (erro) {
+    console.error('Não foi possível carregar as sessões:', erro);
+    mensagemSnackbar.value = 'Erro ao carregar sessões';
+    corSnackbar.value = 'error';
+    mostrarSnackbar.value = true;
+  } finally {
+    estaCarregando.value = false;
+  }
+}
+
+// --- Propriedades computadas ---
+
+// Agrupa sessões por data
+const sessoesPorData = computed(() => {
+  const agrupadas: Record<string, Sessao[]> = {};
+  const sessoesFiltradas = exibirTudo.value
+    ? listaSessoes.value
+    : listaSessoes.value.filter((sessao) => {
+        const [ano, mes] = sessao.data.split('-').map(Number);
+        return ano === anoSelecionado.value && mes - 1 === mesSelecionado.value;
+      });
+
+  sessoesFiltradas.forEach((sessao) => {
+    if (!agrupadas[sessao.data]) {
+      agrupadas[sessao.data] = [];
+    }
+    agrupadas[sessao.data].push(sessao);
+  });
+
+  return agrupadas;
 });
 
-// Reset pagination when filter changes
-watch(filtroPaciente, () => {
-  loadSessoes(true);
+// Verifica se há sessões para exibir
+const temSessoes = computed(() => Object.keys(sessoesPorData.value).length > 0);
+
+// --- Inicialização ---
+onMounted(() => {
+  carregarSessoes(true);
 });
 </script>
 
 <style scoped>
-.details-section {
-  width: 100%;
+/* Seção expansível com detalhes da sessão */
+.detalhes-sessao {
   padding: 24px;
   background-color: white;
   border-radius: 12px;
   border: 1px solid #e0e0e0;
 }
 
+/* Separador entre itens da lista */
 .v-list-item {
   border-bottom: 1px solid #f0f0f0;
 }
 
-.sessoes {
-  background-color: #f9f9f9 !important;
-}
-
-.observer-target {
-  height: 20px;
-  width: 100%;
+/* Botões de seleção de mês */
+.v-btn-toggle .v-btn {
+  min-width: 48px;
 }
 </style>
