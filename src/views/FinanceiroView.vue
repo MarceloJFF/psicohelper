@@ -1,4 +1,3 @@
-
 <template>
   <v-container>
     <h2 class="text-h4 mb-4">Financeiro</h2>
@@ -38,13 +37,8 @@
       </v-col>
       <v-col cols="12" md="9">
         <v-btn-toggle v-model="mesSelecionado" class="d-flex flex-wrap" dense mandatory>
-          <v-btn
-            v-for="(mes, index) in meses"
-            :key="index"
-            :value="index"
-            class="ma-1"
-            :color="mesSelecionado === index ? 'primary' : undefined"
-          >
+          <v-btn v-for="(mes, index) in meses" :key="index" :value="index" class="ma-1"
+            :color="mesSelecionado === index ? 'primary' : undefined">
             {{ mes }}
           </v-btn>
         </v-btn-toggle>
@@ -60,10 +54,7 @@
     <!-- Ações -->
     <v-row class="mb-4">
       <v-col>
-        <v-btn
-          color="primary"
-          @click="abrirModal = true"
-        >
+        <v-btn color="primary" @click="abrirModal = true">
           <v-icon left>mdi-plus</v-icon>
           {{ abaSelecionada === 'despesas' ? 'Nova Despesa' : 'Novo Pagamento' }}
         </v-btn>
@@ -77,13 +68,8 @@
     <v-window v-model="abaSelecionada">
       <!-- Tabela de Despesas -->
       <v-window-item value="despesas">
-        <v-data-table
-          :headers="headersDespesas"
-          :items="despesasFiltradas"
-          class="elevation-1"
-          dense
-          :hide-default-header="false"
-        >
+        <v-data-table :headers="headersDespesas" :items="despesasFiltradas" class="elevation-1" dense
+          :hide-default-header="false">
           <template v-slot:item="{ item }">
             <tr>
               <td>{{ item.tipo }}</td>
@@ -110,13 +96,8 @@
 
       <!-- Tabela de Receitas -->
       <v-window-item value="receitas">
-        <v-data-table
-          :headers="headersReceitas"
-          :items="pagamentosFiltrados"
-          class="elevation-1"
-          dense
-          :hide-default-header="false"
-        >
+        <v-data-table :headers="headersReceitas" :items="pagamentosFiltrados" class="elevation-1" dense
+          :hide-default-header="false">
           <template v-slot:item="{ item }">
             <tr>
               <td>
@@ -149,115 +130,48 @@
     <v-dialog v-model="abrirModal" max-width="600px">
       <v-card>
         <v-card-title>
-          {{ abaSelecionada === 'despesas' ? (editando ? 'Editar' : 'Nova') + ' Despesa' : (editando ? 'Editar' : 'Novo') + ' Pagamento' }}
+          {{ abaSelecionada === 'despesas' ? (editando ? 'Editar' : 'Nova') + ' Despesa' : (editando ? 'Editar' :
+            'Novo') +
+          ' Pagamento' }}
         </v-card-title>
         <v-card-text>
           <v-form ref="form" @submit.prevent="salvarItem">
             <!-- Formulário de Despesa -->
             <template v-if="abaSelecionada === 'despesas'">
-              <v-text-field
-                v-model="novaDespesa.tipo"
-                label="Descrição"
-                outlined
-                dense
-                :rules="[v => !!v || 'Campo obrigatório']"
-              />
-              <v-text-field
-                v-model="novaDespesa.categoria"
-                label="Categoria"
-                outlined
-                dense
-              />
-              <v-text-field
-                v-model="novaDespesa.valor"
-                label="Valor"
-                type="number"
-                outlined
-                dense
-                :rules="[v => !!v || 'Campo obrigatório', v => v > 0 || 'Valor deve ser maior que zero']"
-                prefix="R$"
-              />
-              <v-text-field
-                v-model="novaDespesa.vencimento"
-                label="Vencimento"
-                type="date"
-                outlined
-                dense
-                :rules="[v => !!v || 'Campo obrigatório']"
-              />
+              <v-text-field v-model="novaDespesa.tipo" label="Descrição" outlined dense
+                :rules="[v => !!v || 'Campo obrigatório']" />
+              <v-text-field v-model="novaDespesa.categoria" label="Categoria" outlined dense />
+              <v-text-field v-model="novaDespesa.valor" label="Valor" type="number" outlined dense
+                :rules="[v => !!v || 'Campo obrigatório', v => v > 0 || 'Valor deve ser maior que zero']" prefix="R$" />
+              <v-text-field v-model="novaDespesa.vencimento" label="Vencimento" type="date" outlined dense
+                :rules="[v => !!v || 'Campo obrigatório']" />
               <v-checkbox v-model="novaDespesa.pago" label="Pago" dense />
-              <v-textarea
-                v-model="novaDespesa.observacoes"
-                label="Observações"
-                outlined
-                dense
-              />
+              <v-textarea v-model="novaDespesa.observacoes" label="Observações" outlined dense />
               <v-row>
                 <v-col cols="6">
                   <v-checkbox v-model="novaDespesa.recorrente" label="Recorrente" dense />
                 </v-col>
                 <v-col cols="6">
-                  <v-text-field
-                    v-model="novaDespesa.qtd_meses"
-                    label="Quantidade de meses"
-                    type="number"
-                    outlined
-                    dense
+                  <v-text-field v-model="novaDespesa.qtd_meses" label="Quantidade de meses" type="number" outlined dense
                     :disabled="!novaDespesa.recorrente"
-                    :rules="[v => !novaDespesa.recorrente || !!v || 'Campo obrigatório']"
-                  />
+                    :rules="[v => !novaDespesa.recorrente || !!v || 'Campo obrigatório']" />
                 </v-col>
               </v-row>
-              <v-text-field
-                v-model="novaDespesa.dia_vencimento"
-                label="Dia de Vencimento"
-                type="number"
-                outlined
-                dense
-                :rules="[v => !novaDespesa.recorrente || (v >= 1 && v <= 31) || 'Dia deve ser entre 1 e 31']"
-              />
+              <v-text-field v-model="novaDespesa.dia_vencimento" label="Dia de Vencimento" type="number" outlined dense
+                :rules="[v => !novaDespesa.recorrente || (v >= 1 && v <= 31) || 'Dia deve ser entre 1 e 31']" />
             </template>
 
             <!-- Formulário de Pagamento -->
             <template v-if="abaSelecionada === 'receitas'">
-              <v-select
-                v-model="novoPagamento.tipo"
-                :items="['Sessão Avulsa', 'Mensalidade']"
-                label="Tipo de Pagamento"
-                outlined
-                dense
-                :rules="[v => !!v || 'Campo obrigatório']"
-              />
-              <v-text-field
-                v-model="novoPagamento.valor"
-                label="Valor"
-                type="number"
-                outlined
-                dense
-                :rules="[v => !!v || 'Campo obrigatório', v => v > 0 || 'Valor deve ser maior que zero']"
-                prefix="R$"
-              />
-              <v-text-field
-                v-model="novoPagamento.data_pagamento"
-                label="Data do Pagamento"
-                type="date"
-                outlined
-                dense
-              />
-              <v-select
-                v-model="novoPagamento.forma_pagamento"
-                :items="['Cartão', 'Boleto', 'Pix', 'Dinheiro']"
-                label="Forma de Pagamento"
-                outlined
-                dense
-                :rules="[v => !!v || 'Campo obrigatório']"
-              />
-              <v-text-field
-                v-model="novoPagamento.comprovante_url"
-                label="URL do Comprovante"
-                outlined
-                dense
-              />
+              <v-select v-model="novoPagamento.tipo" :items="['Sessão Avulsa', 'Mensalidade']" label="Tipo de Pagamento"
+                outlined dense :rules="[v => !!v || 'Campo obrigatório']" />
+              <v-text-field v-model="novoPagamento.valor" label="Valor" type="number" outlined dense
+                :rules="[v => !!v || 'Campo obrigatório', v => v > 0 || 'Valor deve ser maior que zero']" prefix="R$" />
+              <v-text-field v-model="novoPagamento.data_pagamento" label="Data do Pagamento" type="date" outlined
+                dense />
+              <v-select v-model="novoPagamento.forma_pagamento" :items="['Cartão', 'Boleto', 'Pix', 'Dinheiro']"
+                label="Forma de Pagamento" outlined dense :rules="[v => !!v || 'Campo obrigatório']" />
+              <v-text-field v-model="novoPagamento.comprovante_url" label="URL do Comprovante" outlined dense />
             </template>
           </v-form>
         </v-card-text>
@@ -323,6 +237,7 @@ const snackbar = ref(false); // Controla a exibição do snackbar
 const snackbarMessage = ref(''); // Mensagem do snackbar
 const snackbarColor = ref('success'); // Cor do snackbar (success, error)
 const mostrarTudo = ref(false); // Alterna entre mostrar todas ou filtrar por mês/ano
+const pagamentoService = new PagamentoService();
 
 const novaDespesa = ref<Partial<Despesa>>({
   tipo: '',
@@ -412,10 +327,9 @@ async function carregarDespesas() {
     snackbar.value = true;
   }
 }
-
 async function carregarPagamentos() {
   try {
-    pagamentos.value = await PagamentoService.getPagamentos();
+    pagamentos.value = await pagamentoService.getPagamentos();
   } catch (error) {
     console.error('Erro ao carregar pagamentos:', error);
     snackbarMessage.value = 'Erro ao carregar pagamentos';

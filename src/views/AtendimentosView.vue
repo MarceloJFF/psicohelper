@@ -1,4 +1,3 @@
-
 <template>
   <v-container>
     <h2 class="text-h4 mb-4">Financeiro</h2>
@@ -6,36 +5,18 @@
     <!-- Filtros de ano e mês -->
     <v-row align="center" class="mb-4">
       <v-col cols="12" md="3">
-        <v-select
-          v-model="anoSelecionado"
-          :items="anosDisponiveis"
-          label="Ano"
-          dense
-          outlined
-        ></v-select>
+        <v-select v-model="anoSelecionado" :items="anosDisponiveis" label="Ano" dense outlined></v-select>
       </v-col>
       <v-col cols="12" md="9">
-        <v-btn-toggle
-          v-model="mesSelecionado"
-          class="d-flex flex-wrap"
-          dense
-        >
-          <v-btn
-            v-for="(mes, index) in nomesMeses"
-            :key="index"
-            :value="index"
-            class="ma-1"
-            :color="mesSelecionado === index ? 'primary' : undefined"
-          >
+        <v-btn-toggle v-model="mesSelecionado" class="d-flex flex-wrap" dense>
+          <v-btn v-for="(mes, index) in nomesMeses" :key="index" :value="index" class="ma-1"
+            :color="mesSelecionado === index ? 'primary' : undefined">
             {{ mes }}
           </v-btn>
         </v-btn-toggle>
       </v-col>
       <v-col cols="12">
-        <v-btn
-          color="info"
-          @click="exibirTudo = !exibirTudo"
-        >
+        <v-btn color="info" @click="exibirTudo = !exibirTudo">
           {{ exibirTudo ? 'Filtrar por Data' : 'Mostrar Tudo' }}
         </v-btn>
       </v-col>
@@ -50,10 +31,7 @@
     <v-window v-model="abaAtiva">
       <v-window-item value="sessoes">
         <!-- Mensagem se não houver sessões -->
-        <v-alert
-          v-if="!temSessoes && !estaCarregando"
-          type="info"
-        >
+        <v-alert v-if="!temSessoes && !estaCarregando" type="info">
           Nenhuma sessão encontrada.
         </v-alert>
 
@@ -65,11 +43,7 @@
             </v-card-title>
             <v-divider />
             <v-list>
-              <v-list-item
-                v-for="sessao in sessoesDoDia"
-                :key="sessao.id"
-                class="pa-4"
-              >
+              <v-list-item v-for="sessao in sessoesDoDia" :key="sessao.id" class="pa-4">
                 <v-row align="center">
                   <v-col cols="12" sm="6" md="4">
                     <div class="font-weight-medium pa-2">
@@ -78,19 +52,10 @@
                     <div class="font-weight-medium pa-2">
                       Aprendente: {{ sessao.nomeAprendente }}
                     </div>
-                    <v-chip
-                      :color="sessao.estaPaga ? 'success' : 'warning'"
-                      variant="outlined"
-                      small
-                    >
+                    <v-chip :color="sessao.estaPaga ? 'success' : 'warning'" variant="outlined" small>
                       {{ sessao.estaPaga ? 'Pago' : 'Pendente' }}
                     </v-chip>
-                    <v-chip
-                      v-if="sessao.ehContrato"
-                      variant="outlined"
-                      class="ml-2"
-                      small
-                    >
+                    <v-chip v-if="sessao.ehContrato" variant="outlined" class="ml-2" small>
                       Contrato
                     </v-chip>
                     <span v-else class="text-caption ml-2">Avulsa</span>
@@ -98,37 +63,22 @@
                   <v-spacer />
                   <v-col cols="12" sm="6" class="d-flex align-center">
                     <!-- Botão de pagamento para sessões avulsas pendentes -->
-                    <v-btn
-                      v-if="!sessao.ehContrato && !sessao.estaPaga"
-                      color="primary"
-                      small
-                      class="mr-2"
-                      @click="abrirModalPagamento(sessao)"
-                    >
-                      Registrar Pagamento
-                    </v-btn>
-                    <v-btn
-                      icon
-                      @click="sessao.mostrarDetalhes = !sessao.mostrarDetalhes"
-                    >
+
+                    <v-btn icon @click="sessao.mostrarDetalhes = !sessao.mostrarDetalhes">
                       <v-icon>{{ sessao.mostrarDetalhes ? 'mdi-eye-off' : 'mdi-eye' }}</v-icon>
                     </v-btn>
-                    <v-btn
-                      color="primary"
-                      variant="text"
-                      @click="sessao.mostrarDetalhes = !sessao.mostrarDetalhes"
-                    >
+                    <v-btn color="primary" variant="text" @click="sessao.mostrarDetalhes = !sessao.mostrarDetalhes">
                       {{ sessao.mostrarDetalhes ? 'Esconder' : 'Detalhes' }}
+                    </v-btn>
+                    <v-btn v-if="!sessao.ehContrato && !sessao.estaPaga" color="primary" small class="mr-2"
+                      @click="abrirModalPagamento(sessao)">
+                      Registrar Pagamento
                     </v-btn>
                   </v-col>
                 </v-row>
                 <v-expand-transition>
                   <div v-if="sessao.mostrarDetalhes" class="detalhes-sessao mt-4">
-                    <div
-                      v-for="detalhe in detalhesSessao"
-                      :key="detalhe.chave"
-                      class="mb-4"
-                    >
+                    <div v-for="detalhe in detalhesSessao" :key="detalhe.chave" class="mb-4">
                       <h4 class="text-subtitle-1 font-weight-bold mb-1">{{ detalhe.titulo }}</h4>
                       <p class="text-body-2">
                         {{ sessao[detalhe.chave] || 'Não informado' }}
@@ -147,10 +97,7 @@
         </div>
 
         <!-- Fim da lista -->
-        <div
-          v-if="!podeCarregarMais && temSessoes"
-          class="text-center my-4 text-grey"
-        >
+        <div v-if="!podeCarregarMais && temSessoes" class="text-center my-4 text-grey">
           Todas as sessões foram carregadas.
         </div>
       </v-window-item>
@@ -162,37 +109,14 @@
         <v-card-title>Registrar Pagamento</v-card-title>
         <v-card-text>
           <v-form ref="formPagamento" @submit.prevent="salvarPagamento">
-            <v-text-field
-              v-model="novoPagamento.valor"
-              label="Valor"
-              type="number"
-              outlined
-              dense
-              prefix="R$"
-              :rules="[v => !!v && v > 0 || 'Valor deve ser maior que zero']"
-            />
-            <v-text-field
-              v-model="novoPagamento.data_pagamento"
-              label="Data do Pagamento"
-              type="date"
-              outlined
-              dense
-              :rules="[v => !!v || 'Data é obrigatória']"
-            />
-            <v-select
-              v-model="novoPagamento.forma_pagamento"
-              :items="['Cartão', 'Boleto', 'Pix', 'Dinheiro']"
-              label="Forma de Pagamento"
-              outlined
-              dense
-              :rules="[v => !!v || 'Forma de pagamento é obrigatória']"
-            />
-            <v-text-field
-              v-model="novoPagamento.comprovante_url"
-              label="URL do Comprovante (opcional)"
-              outlined
-              dense
-            />
+            <v-text-field v-model="novoPagamento.valor" label="Valor" type="number" outlined dense prefix="R$"
+              :rules="[v => !!v && v > 0 || 'Valor deve ser maior que zero']" />
+            <v-text-field v-model="novoPagamento.data_pagamento" label="Data do Pagamento" type="date" outlined dense
+              :rules="[v => !!v || 'Data é obrigatória']" />
+            <v-select v-model="novoPagamento.forma_pagamento" :items="['Cartão', 'Boleto', 'Pix', 'Dinheiro']"
+              label="Forma de Pagamento" outlined dense :rules="[v => !!v || 'Forma de pagamento é obrigatória']" />
+            <v-text-field v-model="novoPagamento.comprovante_url" label="URL do Comprovante (opcional)" outlined
+              dense />
           </v-form>
         </v-card-text>
         <v-card-actions>
@@ -536,9 +460,9 @@ const sessoesPorData = computed(() => {
   const sessoesFiltradas = exibirTudo.value
     ? listaSessoes.value
     : listaSessoes.value.filter((sessao) => {
-        const [ano, mes] = sessao.data.split('-').map(Number);
-        return ano === anoSelecionado.value && mes - 1 === mesSelecionado.value;
-      });
+      const [ano, mes] = sessao.data.split('-').map(Number);
+      return ano === anoSelecionado.value && mes - 1 === mesSelecionado.value;
+    });
 
   sessoesFiltradas.forEach((sessao) => {
     if (!agrupadas[sessao.data]) {
