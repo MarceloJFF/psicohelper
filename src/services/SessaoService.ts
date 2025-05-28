@@ -1,27 +1,35 @@
-import supabase from '@/config/supabase';
-import { useShowErrorMessage } from '@/userCases/useShowErrorMessage';
+import supabase from '@/config/supabase'
+import { useShowErrorMessage } from '@/userCases/useShowErrorMessage'
 import { useStoreProfissional } from '@/stores/storeProfissional.ts'
 
 interface Sessao {
-  id?: string;
-  pre_sessao?: string;
-  queixas?: string;
-  evolucao?: string;
-  habilidades_trabalhadas?: string;
-  futuras_acoes?: string;
-  resumo?: string;
-  fotos?: string;
-  id_agendamento?: number;
+  id?: string
+  pre_sessao?: string
+  queixas?: string
+  evolucao?: string
+  habilidades_trabalhadas?: string
+  futuras_acoes?: string
+  resumo?: string
+  fotos?: string
+  id_agendamento?: number
 }
 
 interface GetAllSessoesOptions {
-  page?: number;
-  pageSize?: number;
-  clienteId?: string | null;
+  page?: number
+  pageSize?: number
+  clienteId?: string | null
+}
+
+interface Mensalidade {
+  id_mensalidade: string;
+  valor: number;
+  forma_pagamento: string;
+  comprovante_url: string | null;
+  status_pagamento: string;
 }
 
 export class SessaoService {
-  private showError = useShowErrorMessage().showError;
+  private showError = useShowErrorMessage().showError
 
   async createSessao(sessao: Sessao): Promise<string> {
     try {
@@ -29,12 +37,12 @@ export class SessaoService {
         .from('tb_sessao')
         .insert([sessao])
         .select('id')
-        .single();
-      if (error) throw error;
-      return data.id;
+        .single()
+      if (error) throw error
+      return data.id
     } catch (err: any) {
-      this.showError(err.message || 'Erro ao criar sessão');
-      throw err;
+      this.showError(err.message || 'Erro ao criar sessão')
+      throw err
     }
   }
 
@@ -74,24 +82,25 @@ export class SessaoService {
   //   }
   // }
   async getAllSessoes(options: GetAllSessoesOptions = {}) {
-    const storeProfissional = useStoreProfissional();
-    const { page = 1, pageSize = 10, clienteId = null } = options;
-  
+    const storeProfissional = useStoreProfissional()
+    const { page = 1, pageSize = 10, clienteId = null } = options
+
     try {
       // Primeiro, buscar os agendamentos do profissional
       const { data: agendamentos, error: errorAg } = await supabase
         .from('tb_agendamento')
         .select('*')
-        .eq('id_profissional', storeProfissional.profissionalDetails?.id);
-  
-      if (errorAg) throw errorAg;
-  
-      const agendamentoIds = agendamentos.map(a => a.id_agendamento);
-  
+        .eq('id_profissional', storeProfissional.profissionalDetails?.id)
+
+      if (errorAg) throw errorAg
+
+      const agendamentoIds = agendamentos.map((a) => a.id_agendamento)
+
       // Construir a query base
       let query = supabase
         .from('tb_sessao')
-        .select(`
+        .select(
+          `
           id,
           pre_sessao,
           queixas,
@@ -111,73 +120,73 @@ export class SessaoService {
             id_profissional,
             id_contrato
           )
-        `, { count: 'exact' })
-        .in('id_agendamento', agendamentoIds);
-  
+        `,
+          { count: 'exact' },
+        )
+        .in('id_agendamento', agendamentoIds)
+
       // Aplicar filtro por cliente se fornecido
       if (clienteId) {
-        query = query.or(`id_aprendente.eq.${clienteId},responsavel_id.eq.${clienteId}`, { foreignTable: 'tb_agendamento' });
+        query = query.or(
+          `tb_agendamento.id_aprendente.eq.${clienteId},tb_agendamento.responsavel_id.eq.${clienteId}`,
+        )
       }
-  
+
       // Aplicar ordenação por data
-      query = query.order('tb_agendamento(data_agendamento)', { ascending: false });
-  
+      query = query.order('tb_agendamento(data_agendamento)', { ascending: false })
+
       // Aplicar paginação
-      const from = (page - 1) * pageSize;
-      const to = from + pageSize - 1;
-      query = query.range(from, to);
-  
-      const { data, error, count } = await query;
-  
-      if (error) throw error;
-  
+      const from = (page - 1) * pageSize
+      const to = from + pageSize - 1
+      query = query.range(from, to)
+
+      const { data, error, count } = await query
+
+      if (error) throw error
+
       // Mapear os dados para incluir id_contrato no nível raiz
-      const mappedData = (data || []).map(session => ({
+      const mappedData = (data || []).map((session) => ({
         ...session,
-        id_contrato: session.tb_agendamento?.id_contrato || null
-      }));
-  
-      console.log('Sessões carregadas:', mappedData.map(s => ({
-        id: s.id,
-        id_contrato: s.id_contrato,
-        tipo: s.id_contrato ? 'Contrato' : 'Avulsa'
-      })));
-  
-      return mappedData;
+        id_contrato: session.tb_agendamento?.id_contrato || null,
+      }))
+
+      console.log(
+        'Sessões carregadas:',
+        mappedData.map((s) => ({
+          id: s.id,
+          id_contrato: s.id_contrato,
+          tipo: s.id_contrato ? 'Contrato' : 'Avulsa',
+        })),
+      )
+
+      return mappedData
     } catch (err: any) {
-      console.error('Erro ao buscar sessões:', err);
-      this.showError(err.message || 'Erro ao carregar sessões');
-      return [];
+      console.error('Erro ao buscar sessões:', err)
+      this.showError(err.message || 'Erro ao carregar sessões')
+      return []
     }
   }
 
   async getSessaoById(id: string): Promise<Sessao | null> {
     try {
-      const { data, error } = await supabase
-        .from('tb_sessao')
-        .select('*')
-        .eq('id', id)
-        .single();
-      if (error) throw error;
-      return data;
+      const { data, error } = await supabase.from('tb_sessao').select('*').eq('id', id).single()
+      if (error) throw error
+      return data
     } catch (err: any) {
-      this.showError(err.message || 'Erro ao buscar sessão');
-      return null;
+      this.showError(err.message || 'Erro ao buscar sessão')
+      return null
     }
   }
   async updateSessao(id: string, sessao: Partial<Sessao>): Promise<void> {
-    console.log("updateSessao:", id, sessao);
+    console.log('updateSessao:', id, sessao)
 
     try {
-      const { error } = await supabase
-        .from('tb_sessao')
-        .update(sessao)
-        .eq('id', id);
+      const { error } = await supabase.from('tb_sessao').update(sessao).eq('id', id)
 
-      if (error) throw error;
+      if (error) throw error
     } catch (err: any) {
-      this.showError(err.message || 'Erro ao atualizar sessão');
-      throw err;
+      this.showError(err.message || 'Erro ao atualizar sessão')
+      throw err
     }
   }
 
@@ -187,15 +196,26 @@ export class SessaoService {
         .from('tb_sessao')
         .select('*')
         .eq('id_agendamento', idAgendamento)
-        .single();
+        .single()
 
-      if (error) throw error;
-      return data;
+      if (error) throw error
+      return data
     } catch (err: any) {
       // if (err.code !== 'PGRST116') { // Ignore "No rows found" error
       //   this.showError(err.message || 'Erro ao buscar sessão');
       // }
-      return null;
+      return null
     }
+  }
+
+  async buscarMensalidade(idContrato: string, mesReferencia: string): Promise<Mensalidade | null> {
+    const { data, error } = await supabase
+      .from('tb_mensalidade')
+      .select('id_mensalidade, valor, forma_pagamento, comprovante_url, status_pagamento')
+      .eq('id_contrato', idContrato)
+      .eq('mes_referencia', mesReferencia)
+      .maybeSingle()
+    if (error && error.code !== 'PGRST116') throw error
+    return data
   }
 }

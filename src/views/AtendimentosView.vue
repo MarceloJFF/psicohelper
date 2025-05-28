@@ -26,7 +26,7 @@
             :disabled="!filtroPaciente">
             Pagar Sessão
           </v-btn>
-        
+
         </v-col>
       </v-row>
     </v-container>
@@ -689,7 +689,7 @@ async function confirmarPagamento() {
       .single();
 
     if (error) throw error;
-    
+
     // Atualiza o atendimento localmente
     atendimentoSelecionado.value.status = 'Pago';
     atendimentoSelecionado.value.id_pagamento = pagamento.id_pagamento;

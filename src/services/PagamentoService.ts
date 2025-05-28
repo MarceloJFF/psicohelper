@@ -1,121 +1,112 @@
 // src/services/PagamentoService.ts
-import supabase from '@/config/supabase'
-import { UploadService } from './UploadService'
+import supabase from '@/config/supabase';
+
+export interface Pagamento {
+  id: string;
+  created_at: string;
+  forma_pagamento: string;
+  comprovante_url: string | null;
+  data_pagamento: string | null;
+  valor: number;
+  id_mensalidade: string | null;
+  tb_pagamento_sessao?: { id: string; id_sessao: string }[];
+}
 
 export class PagamentoService {
-  private uploadService = new UploadService()
+  async getPagamentos(): Promise<Pagamento[]> {
+    const { data, error } = await supabase.from('tb_pagamento').select(`
+        *,
+        tb_pagamento_sessao (id, id_sessao)
+      `);
+    if (error) throw error;
+    return data || [];
+  }
 
-  async createPagamento(pagamentoData: {
-    id_sessao: string[]
-    valor: number
-    forma_pagamento: string
-    comprovante?: File
-  }) {
-    let comprovante_url = null
-    if (pagamentoData.comprovante) {
-      comprovante_url = await this.uploadService.uploadArquivo(
-        'comprovantes-pagamento',
-        `comprovante/${pagamentoData.id_sessao[0]}`,
-        pagamentoData.comprovante,
-      )
-    }
-
-    // Create a payment in tb_pagamento
-    const { data: pagamento, error: pagamentoError } = await supabase
+  async createPagamento(
+    pagamento: Omit<Pagamento, 'id' | 'created_at'>,
+    sessoes: string[] = []
+  ): Promise<Pagamento> {
+    const { data: pagamentoData, error: pagamentoError } = await supabase
       .from('tb_pagamento')
       .insert({
-        valor: pagamentoData.valor,
-        forma_pagamento: pagamentoData.forma_pagamento,
-        comprovante_url,
-        data_pagamento: new Date().toISOString(), // Ensure data_pagamento is set
+        forma_pagamento: pagamento.forma_pagamento,
+        comprovante_url: pagamento.comprovante_url,
+        data_pagamento: pagamento.data_pagamento,
+        valor: pagamento.valor,
+        id_mensalidade: pagamento.id_mensalidade,
       })
-      .select('id_pagamento, valor, forma_pagamento, comprovante_url, data_pagamento')
-      .single()
+      .select('id')
+      .single();
+    if (pagamentoError) throw pagamentoError;
 
-    if (pagamentoError) {
-      console.error('Erro ao criar tb_pagamento:', pagamentoError)
-      throw pagamentoError
+    if (sessoes.length > 0) {
+      const sessoesData = sessoes.map((id_sessao) => ({
+        id_pagamento: pagamentoData.id,
+        id_sessao,
+      }));
+      const { error: sessaoError } = await supabase.from('tb_pagamento_sessao').insert(sessoesData);
+      if (sessaoError) throw sessaoError;
     }
 
-    // Link sessions in tb_pagamento_sessao
-    const { data: pagamentoSessao, error: sessaoError } = await supabase
-      .from('tb_pagamento_sessao')
-      .insert(
-        pagamentoData.id_sessao.map((id) => ({
-          id_sessao: id,
-          id_pagamento: pagamento.id_pagamento,
-        })),
-      )
-      .select('id, id_sessao, id_pagamento')
-      .single()
-
-    if (sessaoError) {
-      console.error('Erro ao criar tb_pagamento_sessao:', sessaoError)
-      throw sessaoError
-    }
-
-    console.log('Pagamento criado:', { pagamento, pagamentoSessao })
-    return pagamento // Return tb_pagamento data to match getPagamentoBySessao
+    return pagamentoData;
   }
 
   async updatePagamento(
-    id_pagamento: string,
-    pagamento: {
-      valor: number
-      forma_pagamento: string
-      comprovante?: File
-    },
-  ) {
-    let comprovante_url = null
-    if (pagamento.comprovante) {
-      comprovante_url = await this.uploadService.uploadArquivo(
-        'pagamentos',
-        `comprovante/${id_pagamento}`,
-        pagamento.comprovante,
-      )
-    }
-
-    const { data, error } = await supabase
+    id: string,
+    pagamento: Partial<Pagamento>,
+    sessoes: string[] = []
+  ): Promise<void> {
+    const { error: pagamentoError } = await supabase
       .from('tb_pagamento')
       .update({
-        valor: pagamento.valor,
         forma_pagamento: pagamento.forma_pagamento,
-        comprovante_url: comprovante_url || undefined,
-        data_pagamento: new Date().toISOString(),
+        comprovante_url: pagamento.comprovante_url,
+        data_pagamento: pagamento.data_pagamento,
+        valor: pagamento.valor,
+        id_mensalidade: pagamento.id_mensalidade,
       })
-      .eq('id_pagamento', id_pagamento)
-      .select()
-      .single()
+      .eq('id', id);
+    if (pagamentoError) throw pagamentoError;
 
-    if (error) throw error
-    return data
+    if (sessoes.length > 0) {
+      await supabase.from('tb_pagamento_sessao').delete().eq('id_pagamento', id);
+      const sessoesData = sessoes.map((id_sessao) => ({
+        id_pagamento: id,
+        id_sessao,
+      }));
+      const { error: sessaoError } = await supabase.from('tb_pagamento_sessao').insert(sessoesData);
+      if (sessaoError) throw sessaoError;
+    }
   }
 
-  async getPagamentoBySessao(id_sessao: string) {
+  async deletePagamento(id: string): Promise<void> {
+    await supabase.from('tb_pagamento_sessao').delete().eq('id_pagamento', id);
+    const { error } = await supabase.from('tb_pagamento').delete().eq('id', id);
+    if (error) throw error;
+  }
+
+  async getPagamentoBySessao(idSessao: string): Promise<any> {
     const { data, error } = await supabase
       .from('tb_pagamento_sessao')
-      .select(
-        `
+      .select(`
         id,
         id_sessao,
         id_pagamento,
         tb_pagamento (
-          id_pagamento,
+          id,
           valor,
           forma_pagamento,
           comprovante_url,
           data_pagamento
         )
-      `,
-      )
-      .eq('id_sessao', id_sessao)
-      .maybeSingle()
+      `)
+      .eq('id_sessao', idSessao)
+      .maybeSingle();
 
     if (error && error.code !== 'PGRST116') {
-      console.error(`Erro ao buscar pagamento para sessão ${id_sessao}:`, error)
-      throw error
+      console.error(`Erro ao buscar pagamento para sessão ${idSessao}:`, error);
+      throw error;
     }
-    console.log(`Pagamento para sessão ${id_sessao}:`, data)
-    return data
+    return data;
   }
 }
