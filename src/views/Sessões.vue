@@ -77,57 +77,6 @@ import { ref } from 'vue'
 
 const manterAnotacoesAbertas = ref(false)
 
-const sessoes = ref([
-  {
-    data: '2023-08-30',
-    nome: 'Daniel Fernandes',
-    horario: '11:00',
-    pago: false,
-    concluida: false,
-    anotacao: null,
-  },
-  {
-    data: '2023-08-23',
-    nome: 'Daniel Fernandes',
-    horario: '11:00',
-    pago: true,
-    concluida: true,
-    anotacao: {
-      titulo: 'Anotação antes da sessão',
-      texto: 'Na sessão de hoje, focamos em compreender melhor a natureza da ansiedade...',
-    },
-  },
-  {
-    data: '2023-08-14',
-    nome: 'Ana Costa',
-    horario: '14:00',
-    pago: true,
-    concluida: true,
-    anotacao: {
-      titulo: 'Campo compartilhado',
-      texto: 'Introduzimos a técnica da respiração profunda como estratégia inicial...',
-    },
-  },
-  {
-    data: '2023-08-09',
-    nome: 'Daniel Fernandes',
-    horario: '11:00',
-    pago: false,
-    concluida: false,
-    anotacao: {
-      titulo: 'Motivo da ausência',
-      texto: 'Paciente informou que tinha uma consulta médica no horário.',
-    },
-  },
-  {
-    data: '2023-08-02',
-    nome: 'Carla Mendes',
-    horario: '14:00',
-    pago: true,
-    concluida: true,
-    anotacao: null,
-  },
-])
 
 function formatarData(dataStr) {
   const d = new Date(dataStr)

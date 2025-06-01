@@ -7,7 +7,7 @@
       <v-row justify="space-between">
         <v-col cols="6">
           <v-autocomplete v-model="filtroPaciente" :items="pacientes" v-model:search="searchQuery"
-            label="Filtrar por paciente" item-title="displayName" item-value="id" :loading="isLoading" clearable
+            label="Digite aqui o nome do aprendente" item-title="displayName" item-value="id" :loading="isLoading" clearable
             :filter="() => true" :menu-props="{ maxHeight: 400 }" :return-object="false">
             <template v-slot:item="{ props, item }">
               <v-list-item v-bind="props" :key="item.raw.id" :value="item.raw.id">
@@ -19,16 +19,7 @@
           </v-autocomplete>
         </v-col>
       </v-row>
-      <v-row>
-        <v-col cols="6"
-          style="display: flex; justify-content: center; align-items: flex-start; flex-direction: column; gap: 2vh;">
-          <v-btn style="width: 100%;" color="success" variant="outlined" @click="abrirModalPagamento"
-            :disabled="!filtroPaciente">
-            Pagar Sessão
-          </v-btn>
 
-        </v-col>
-      </v-row>
     </v-container>
 
     <v-divider class="my-6" />
@@ -48,58 +39,7 @@
         <v-list>
           <v-list-item v-for="atendimento in grupo" :key="atendimento.id" class="pa-4 px-2">
             <v-row class="pa-4 d-flex align-self-center">
-              <v-col cols="12" sm="6" md="4">
-                <div class="font-weight-medium pa-2">
-                  Horário Agendado: {{ atendimento.horario }} - {{ atendimento.horario_fim }}
-                </div>
-                <div class="font-weight-medium pa-2">
-                  Aprendente: {{ atendimento.paciente }}
-                </div>
-                <div class="d-flex align-center gap-2 pa-2">
-                  <v-chip :color="atendimento.status === 'Pago' ? 'success' : 'error'" variant="outlined" class="text-capitalize" small>
-                    {{ atendimento.status }}
-                  </v-chip>
-                  <v-chip :color="atendimento.id_contrato ? 'primary' : 'secondary'" variant="outlined" class="text-capitalize" small>
-                    {{ atendimento.id_contrato ? 'Contrato' : 'Avulsa' }}
-                  </v-chip>
-                </div>
-                <div v-if="atendimento.id_contrato" class="text-caption mt-2">
-                  Contrato #{{ atendimento.id_contrato }}
-                </div>
-                <div v-if="atendimento.status === 'Pago'" class="mt-2">
-                  <div class="text-caption">
-                    <strong>Valor Pago:</strong> R$ {{ atendimento.valor_pagamento?.toFixed(2) }}
-                  </div>
-                  <div class="text-caption">
-                    <strong>Forma de Pagamento:</strong> {{ atendimento.forma_pagamento }}
-                  </div>
-                  <div v-if="atendimento.comprovante_url" class="mt-1">
-                    <v-btn size="small" color="info" variant="text" @click="visualizarComprovante(atendimento.comprovante_url)">
-                      Ver Comprovante
-                    </v-btn>
-                  </div>
-                </div>
-              </v-col>
-
-              <v-spacer />
-              <v-col cols="12" sm="6" class="d-flex align-center">
-                <v-btn icon @click="atendimento.showDetails = !atendimento.showDetails">
-                  <v-icon>{{ atendimento.showDetails ? 'mdi-eye-off' : 'mdi-eye' }}</v-icon>
-                </v-btn>
-                <v-btn color="primary" variant="text" @click="atendimento.showDetails = !atendimento.showDetails">
-                  {{ atendimento.showDetails ? 'Ocultar Detalhes' : 'Mostrar Detalhes' }}
-                </v-btn>
-                <v-btn
-                  v-if="atendimento.status === 'Pendente'"
-                  color="success" variant="outlined" class="ml-2" @click="abrirModalPagamento(atendimento)">
-                  Pagar
-                </v-btn>
-                <v-btn
-                  v-if="atendimento.status === 'Pago'"
-                  color="error" variant="outlined" class="ml-2" @click="abrirModalPagamento(atendimento)">
-                  Editar Pagamento
-                </v-btn>
-              </v-col>
+              <AtendimentoDetalhes :atendimento="atendimento"></AtendimentoDetalhes>
             </v-row>
 
             <v-expand-transition>
@@ -172,40 +112,6 @@
       Não há mais sessões para carregar
     </div>
 
-    <!-- Diálogo de Pagamento -->
-    <v-dialog v-model="modalPagamento" max-width="500">
-      <v-card>
-        <v-card-title class="text-h6">
-          {{ atendimentoSelecionado?.status === 'Pago' ? 'Editar Pagamento' : 'Registrar Pagamento' }}
-        </v-card-title>
-        <v-card-text>
-          <p><strong>Paciente:</strong> {{ atendimentoSelecionado?.paciente }}</p>
-          <p><strong>Data:</strong> {{ formatarData(atendimentoSelecionado?.data) }}</p>
-          <p><strong>Horário:</strong> {{ atendimentoSelecionado?.horario }} - {{ atendimentoSelecionado?.horario_fim }}
-          </p>
-          <v-text-field v-model.number="valorPago" label="Valor Pago" type="number"
-            :rules="[v => v > 0 || 'O valor deve ser maior que zero']" required />
-          <v-select v-model="formaPagamento" label="Forma de Pagamento" :items="['Dinheiro', 'Pix', 'Cartão']"
-            :rules="[v => !!v || 'Selecione uma forma de pagamento']" required />
-          <v-file-input label="Anexar comprovante" accept="image/*" v-model="comprovanteImagem" :loading="uploading"
-            @change="handleFileChange" />
-          <v-alert v-if="uploadError" type="error" class="mt-2">
-            {{ uploadError }}
-          </v-alert>
-          <v-alert v-if="uploadSuccess" type="success" class="mt-2">
-            Comprovante enviado com sucesso!
-          </v-alert>
-        </v-card-text>
-        <v-card-actions>
-          <v-spacer />
-          <v-btn text @click="cancelarPagamento">Cancelar</v-btn>
-          <v-btn color="primary" @click="confirmarPagamento"
-            :disabled="uploading || !valorPago || !formaPagamento" :loading="uploading">
-            Confirmar
-          </v-btn>
-        </v-card-actions>
-      </v-card>
-    </v-dialog>
   </v-container>
 </template>
 
@@ -214,14 +120,13 @@ import { ref, computed, onMounted, watch } from 'vue';
 import { SessaoService } from '@/services/SessaoService';
 import { AprendenteService } from '@/services/AprendenteService';
 import { UploadService } from '@/services/UploadService';
-import { PagamentoService } from '@/services/PagamentoService';
 import { ContratoService } from '@/services/contratoService';
 import supabase from '@/config/supabase';
+import AtendimentoDetalhes from '@/components/AtendimentoDetalhes.vue'
 
 const sessaoService = new SessaoService();
 const aprendenteService = new AprendenteService();
 const uploadService = new UploadService();
-const pagamentoService = new PagamentoService();
 const contratoService = new ContratoService();
 const atendimentos = ref<any[]>([]);
 const pacientes = ref<any[]>([]);
@@ -229,19 +134,8 @@ const filtroPaciente = ref<string | null>(null);
 const searchQuery = ref('');
 const isLoading = ref(false);
 const aprendenteCache = new Map();
-const modalPagamento = ref(false);
-const atendimentoSelecionado = ref<any>(null);
-const valorPago = ref<number | null>(null);
-const formaPagamento = ref<string | null>(null);
-const comprovanteImagem = ref<File[] | null>(null);
-const uploading = ref(false);
 const uploadError = ref<string | null>(null);
-const uploadSuccess = ref<boolean>(false);
 const contratos = ref<any[]>([]);
-const mensalidadesPendentes = ref<any[]>([]);
-const mesReferencia = ref<number | null>(null);
-const atendimentosSelecionados = ref<any[]>([]);
-const loadingMensalidades = ref(false);
 
 // Pagination state
 const pageSize = 10;
@@ -271,28 +165,8 @@ interface Sessao {
   };
 }
 
-interface Cliente {
-  id: string;
-  nome: string;
-}
 
-async function handleFileChange(files: File[] | null) {
-  uploadError.value = null;
-  uploadSuccess.value = false;
-  if (files && files.length > 0) {
-    const file = files[0];
-    if (!file.type.startsWith('image/')) {
-      uploadError.value = 'Por favor, selecione uma imagem (JPEG, PNG, etc.).';
-      comprovanteImagem.value = null;
-      return;
-    }
-    if (file.size > 25 * 1024 * 1024) {
-      uploadError.value = 'A imagem deve ter menos de 25MB.';
-      comprovanteImagem.value = null;
-      return;
-    }
-  }
-}
+
 
 async function loadSessoes(reset = false) {
   if (reset) {
@@ -453,88 +327,6 @@ async function loadContratos() {
   }
 }
 
-async function loadMensalidades() {
-  try {
-    loadingMensalidades.value = true;
-    mensalidadesPendentes.value = [];
-    if (contratoSelecionado.value) {
-      console.log('Loading mensalidades for contrato:', contratoSelecionado.value);
-      const [mensalidades, contrato] = await Promise.all([
-        contratoService.getMensalidadesByContrato(contratoSelecionado.value),
-        supabase
-          .from('tb_contrato')
-          .select('data_criacao, duracao')
-          .eq('id_contrato', contratoSelecionado.value)
-          .single()
-      ]);
-      console.log('Mensalidades returned:', mensalidades);
-      console.log('Duração do contrato:', contrato.data?.duracao);
-      console.log('Contrato data_criacao:', contrato.data?.data_criacao);
-
-      const dataInicio = contrato.data?.data_criacao ? new Date(contrato.data.data_criacao) : new Date();
-      const duracao = contrato.data?.duracao || 12;
-      if (!contrato.data?.data_criacao) {
-        console.warn('Contrato sem data_criacao, usando data atual');
-      }
-      if (!contrato.data?.duracao) {
-        console.warn('Contrato sem duracao, usando 12 meses');
-      }
-
-      // Process existing unpaid mensalidades
-      const existingPendentes = mensalidades
-        .filter(m => m.status_pagamento !== 'Pago')
-        .map(m => {
-          const mesDate = new Date(m.mes_referencia);
-          const cycleNumber = Math.max(
-            1,
-            (mesDate.getFullYear() - dataInicio.getFullYear()) * 12 +
-            mesDate.getMonth() - dataInicio.getMonth() + 1
-          );
-          if (cycleNumber > duracao) return null; // Exclude cycles beyond duracao
-          return {
-            ...m,
-            mes_referencia_cycle: cycleNumber,
-            mes_referencia_display: `Mensalidade ${cycleNumber} (${mesDate.toLocaleString('pt-BR', { month: 'long', year: 'numeric' })}`,
-            mes_referencia_raw: m.mes_referencia
-          };
-        })
-        .filter(m => m !== null);
-
-      // Generate all billing cycles within duracao
-      const meses = [];
-      for (let i = 0; i < duracao; i++) {
-        const date = new Date(dataInicio.getFullYear(), dataInicio.getMonth() + i, 1);
-        const mesReferenciaRaw = date.toISOString().slice(0, 10);
-        const cycleNumber = i + 1;
-        // Only include if not already paid
-        if (!mensalidades.some(m => m.mes_referencia === mesReferenciaRaw && m.status_pagamento === 'Pago')) {
-          meses.push({
-            id_mensalidade: null,
-            id_contrato: contratoSelecionado.value,
-            mes_referencia_cycle: cycleNumber,
-            mes_referencia_display: `Mensalidade ${cycleNumber} (${date.toLocaleString('pt-BR', { month: 'long', year: 'numeric' })})`,
-            mes_referencia_raw: mesReferenciaRaw,
-            status_pagamento: 'Pendente'
-          });
-        }
-      }
-
-      // Combine and deduplicate by cycle number
-      mensalidadesPendentes.value = [...existingPendentes, ...meses]
-        .sort((a, b) => a.mes_referencia_cycle - b.mes_referencia_cycle)
-        .filter((item, index, self) =>
-          index === self.findIndex(t => t.mes_referencia_cycle === item.mes_referencia_cycle)
-        );
-      console.log('Mensalidades pendentes:', mensalidadesPendentes.value);
-    }
-  } catch (err) {
-    console.error('Erro ao carregar mensalidades:', err);
-    mensalidadesPendentes.value = [];
-  } finally {
-    loadingMensalidades.value = false;
-  }
-}
-
 function iniciarEdicao(atendimento: any) {
   atendimento.originalData = { ...atendimento };
   atendimento.isEditing = true;
@@ -652,66 +444,6 @@ async function salvarEdicao(atendimento: any) {
   }
 }
 
-function abrirModalPagamento(atendimento: any) {
-  atendimentoSelecionado.value = atendimento;
-  valorPago.value = atendimento.valor_pagamento || null;
-  formaPagamento.value = atendimento.forma_pagamento || null;
-  comprovanteImagem.value = null;
-  modalPagamento.value = true;
-}
-
-function cancelarPagamento() {
-  modalPagamento.value = false;
-  atendimentoSelecionado.value = null;
-  valorPago.value = null;
-  formaPagamento.value = null;
-  comprovanteImagem.value = null;
-  uploadError.value = null;
-  uploadSuccess.value = false;
-}
-
-async function confirmarPagamento() {
-  if (!atendimentoSelecionado.value || !valorPago.value || !formaPagamento.value) return;
-
-  uploading.value = true;
-  try {
-    const pagamentoData = {
-      id_sessao: atendimentoSelecionado.value.id,
-      valor: valorPago.value,
-      forma_pagamento: formaPagamento.value,
-      comprovante: comprovanteImagem.value?.[0]
-    };
-
-    const { data: pagamento, error } = await supabase
-      .from('tb_pagamento_sessao')
-      .insert([pagamentoData])
-      .select()
-      .single();
-
-    if (error) throw error;
-
-    // Atualiza o atendimento localmente
-    atendimentoSelecionado.value.status = 'Pago';
-    atendimentoSelecionado.value.id_pagamento = pagamento.id_pagamento;
-    atendimentoSelecionado.value.valor_pagamento = valorPago.value;
-    atendimentoSelecionado.value.forma_pagamento = formaPagamento.value;
-    atendimentoSelecionado.value.comprovante_url = pagamento.comprovante_url;
-
-    uploadSuccess.value = true;
-    setTimeout(() => {
-      cancelarPagamento();
-    }, 1000);
-  } catch (err) {
-    console.error('Erro ao salvar pagamento:', err);
-    uploadError.value = 'Erro ao salvar pagamento: ' + (err as Error).message;
-  } finally {
-    uploading.value = false;
-  }
-}
-
-const atendimentosPendentes = computed(() => {
-  return atendimentos.value.filter(a => a.status === 'Pendente' && !a.id_contrato);
-});
 
 watch(searchQuery, async (newValue) => {
   if (!newValue) {

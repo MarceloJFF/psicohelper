@@ -106,7 +106,6 @@ const storeProfissional = useStoreProfissional()
 /* Quando o mouse passa por cima */
 .menu-item:hover {
   background-color: #d3a3e4; /* Cor de destaque no hover */
-  transform: scale(1.05); /* Pequeno aumento */
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2); /* Sombra mais forte no hover */
 }
 

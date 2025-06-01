@@ -321,7 +321,7 @@
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import CalendarioDiario from '@/components/calendario-diario.vue'
+import CalendarioDiario from '@/components/CalendarioDiario.vue'
 import ResumoCliente from '@/components/ResumoResponsavel.vue'
 import ModalContrato from '@/components/ModalContrato.vue'
 import { ResponsavelService } from '@/services/responsavelService.ts'

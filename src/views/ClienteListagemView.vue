@@ -26,7 +26,7 @@
                     @update:model-value="handleSearch"
                   />
                 </v-col>
-              
+
               </v-row>
             </v-card>
 
@@ -82,10 +82,10 @@
                       density="compact"
                       :title="item.statusMatricula ? 'Inativar Matrícula' : 'Ativar Matrícula'"
                     />
-                    <v-btn 
-                      icon 
-                      @click="visualizarResponsavel(item)" 
-                      class="ml-2" 
+                    <v-btn
+                      icon
+                      @click="visualizarResponsavel(item)"
+                      class="ml-2"
                       size="small"
                       density="compact"
                       title="Visualizar Detalhes"
@@ -156,7 +156,7 @@ import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ResponsavelService } from '@/services/responsavelService'
 import Responsavel from '@/models/Responsavel'
-import CalendarioDiario from '@/components/calendario-diario.vue'
+import CalendarioDiario from '@/components/CalendarioDiario.vue'
 import ModalGenerico from '@/components/ModalGenerico.vue'
 import { AprendenteService } from '@/services/AprendenteService'
 import ViewAprendenteLogadoProfissional from '@/models/ViewAprendenteLogadoProfissional'
@@ -182,7 +182,7 @@ const handleSearch = async (value: string) => {
     return
   }
   aprendentes.value = await aprendenteService.loadAprendentesPorProfissionalENome(value);
-  
+
   // Implement search logic here
 }
 

@@ -250,7 +250,7 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import {useRouter} from 'vue-router'
-import CalendarioDiario from '@/components/calendario-diario.vue'
+import CalendarioDiario from '@/components/CalendarioDiario.vue'
 import ModalContrato from '@/components/ModalContrato.vue'
 import { ContratoService } from '@/services/contratoService.ts'
 import { ResponsavelService } from '@/services/responsavelService'
