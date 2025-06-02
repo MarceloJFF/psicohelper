@@ -3,7 +3,6 @@ import DefaultLayout from '@/views/DefaultLayout.vue'
 
 import { createRouter, createWebHistory } from 'vue-router'
 import { useStoreAuth } from '@/stores/storeAuth'
-
 // Layout padrão (carregado diretamente pois é o "shell" do app)
 
 const router = createRouter({

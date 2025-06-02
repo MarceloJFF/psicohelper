@@ -6,25 +6,17 @@
       </h1>
       <v-row justify="space-between">
         <v-col cols="6">
-          <v-autocomplete v-model="filtroPaciente" :items="pacientes" v-model:search="searchQuery"
-            label="Digite aqui o nome do aprendente" item-title="displayName" item-value="id" :loading="isLoading" clearable
-            :filter="() => true" :menu-props="{ maxHeight: 400 }" :return-object="false">
-            <template v-slot:item="{ props, item }">
-              <v-list-item v-bind="props" :key="item.raw.id" :value="item.raw.id">
-                <v-list-item-title>
-                  {{ item.raw.nomeAprendente}}
-                </v-list-item-title>
-              </v-list-item>
-            </template>
-          </v-autocomplete>
+          <AutoComplete @update:aprendenteSelecionado="onAprendenteSelecionado" />
         </v-col>
       </v-row>
-
     </v-container>
 
     <v-divider class="my-6" />
 
-    <v-alert v-if="!Object.keys(atendimentosAgrupados).length && !isLoading" type="info">
+    <v-alert
+      v-if="Object.keys(atendimentosAgrupados).length === 0"
+      type="info"
+    >
       Nenhuma sessão encontrada para o filtro selecionado.
     </v-alert>
 
@@ -37,58 +29,128 @@
         <v-divider />
 
         <v-list>
-          <v-list-item v-for="atendimento in grupo" :key="atendimento.id" class="pa-4 px-2">
+          <v-list-item
+            v-for="atendimento in grupo"
+            :key="atendimento.id"
+            class="pa-4 px-2"
+          >
             <v-row class="pa-4 d-flex align-self-center">
-              <AtendimentoDetalhes :atendimento="atendimento"></AtendimentoDetalhes>
+              <AtendimentoDetalhes :atendimento="atendimento" />
             </v-row>
 
             <v-expand-transition>
-              <div v-if="atendimento.showDetails" class="details-section mt-4">
+              <div
+                v-if="atendimento.showDetails"
+                class="details-section mt-4"
+              >
                 <div class="mt-4">
                   <div v-for="menu in menus" :key="menu.field" class="mb-4">
-                    <h4 class="text-subtitle-1 font-weight-bold mb-1">{{ menu.label }}</h4>
-                    <v-textarea v-if="atendimento.isEditing" v-model="atendimento[menu.field]" v-bind="menu.props"
-                      class="mt-2" />
+                    <h4 class="text-subtitle-1 font-weight-bold mb-1">
+                      {{ menu.label }}
+                    </h4>
+                    <v-textarea
+                      v-if="atendimento.isEditing"
+                      v-model="atendimento[menu.field]"
+                      v-bind="menu.props"
+                      class="mt-2"
+                    />
                     <p v-else class="text-body-2">
                       {{ atendimento[menu.field] || 'Sem informações' }}
                     </p>
                   </div>
-                  <h4 class="text-subtitle-1 font-weight-bold mb-2">Anexos</h4>
-                  <v-row v-if="atendimento.anexosTemporarios && atendimento.anexosTemporarios.length" class="mt-2">
-                    <v-col v-for="(anexo, index) in atendimento.anexosTemporarios" :key="index" cols="12" sm="6" md="4">
+
+                  <h4 class="text-subtitle-1 font-weight-bold mb-2">
+                    Anexos
+                  </h4>
+                  <v-row
+                    v-if="
+                      atendimento.anexosTemporarios &&
+                      atendimento.anexosTemporarios.length
+                    "
+                    class="mt-2"
+                  >
+                    <v-col
+                      v-for="(anexo, index) in atendimento.anexosTemporarios"
+                      :key="index"
+                      cols="12"
+                      sm="6"
+                      md="4"
+                    >
                       <v-card class="pa-2" elevation="1">
-                        <v-img v-if="anexo.url && anexo.url.includes('image')" :src="anexo.url" max-height="100"
-                          max-width="100" class="rounded" />
-                        <v-icon v-else-if="anexo.url" size="40">mdi-file-document</v-icon>
+                        <v-img
+                          v-if="anexo.url && anexo.url.includes('image')"
+                          :src="anexo.url"
+                          max-height="100"
+                          max-width="100"
+                          class="rounded"
+                        />
+                        <v-icon v-else-if="anexo.url" size="40">
+                          mdi-file-document
+                        </v-icon>
                         <v-icon v-else size="40">mdi-file</v-icon>
                         <div class="text-caption mt-2">
                           {{ anexo.name || anexo.url.split('/').pop() || 'Arquivo' }}
                         </div>
-                        <v-btn v-if="atendimento.isEditing" icon small
-                          @click="removerAnexoTemporario(atendimento, index)" class="mt-2">
+                        <v-btn
+                          v-if="atendimento.isEditing"
+                          icon
+                          small
+                          @click="removerAnexoTemporario(atendimento, index)"
+                          class="mt-2"
+                        >
                           <v-icon color="red">mdi-delete</v-icon>
                         </v-btn>
-                        <v-btn v-if="anexo.url" icon small @click="downloadAnexo(anexo.url)" class="mt-2">
+                        <v-btn
+                          v-if="anexo.url"
+                          icon
+                          small
+                          @click="downloadAnexo(anexo.url)"
+                          class="mt-2"
+                        >
                           <v-icon>mdi-download</v-icon>
                         </v-btn>
                       </v-card>
                     </v-col>
                   </v-row>
                   <p v-else class="text-body-2">Nenhum anexo disponível.</p>
-                  <v-file-input v-if="atendimento.isEditing" label="Adicionar anexos" accept="image/*,application/pdf"
-                    multiple v-model="atendimento.novosAnexos" class="mt-4" :error-messages="atendimento.uploadError"
-                    @change="validarNovosAnexos(atendimento)" />
+
+                  <v-file-input
+                    v-if="atendimento.isEditing"
+                    label="Adicionar anexos"
+                    accept="image/*,application/pdf"
+                    multiple
+                    v-model="atendimento.novosAnexos"
+                    class="mt-4"
+                    :error-messages="atendimento.uploadError"
+                    @change="validarNovosAnexos(atendimento)"
+                  />
                 </div>
-                <v-btn v-if="!atendimento.isEditing" color="primary" variant="outlined" class="mt-4"
-                  @click="iniciarEdicao(atendimento)">
+
+                <v-btn
+                  v-if="!atendimento.isEditing"
+                  color="primary"
+                  variant="outlined"
+                  class="mt-4"
+                  @click="iniciarEdicao(atendimento)"
+                >
                   Editar
                 </v-btn>
-                <v-btn v-if="atendimento.isEditing" color="success" variant="outlined" class="mt-4"
-                  @click="salvarEdicao(atendimento)">
+                <v-btn
+                  v-if="atendimento.isEditing"
+                  color="success"
+                  variant="outlined"
+                  class="mt-4"
+                  @click="salvarEdicao(atendimento)"
+                >
                   Salvar
                 </v-btn>
-                <v-btn v-if="atendimento.isEditing" color="error" variant="outlined" class="mt-4 ml-2"
-                  @click="cancelarEdicao(atendimento)">
+                <v-btn
+                  v-if="atendimento.isEditing"
+                  color="error"
+                  variant="outlined"
+                  class="mt-4 ml-2"
+                  @click="cancelarEdicao(atendimento)"
+                >
                   Cancelar
                 </v-btn>
               </div>
@@ -98,41 +160,33 @@
       </v-card>
     </div>
 
-    <!-- Loading indicator -->
-    <div v-if="isLoading" class="d-flex justify-center align-center my-4">
-      <v-progress-circular
-        indeterminate
-        color="primary"
-        size="32"
-      ></v-progress-circular>
-    </div>
-
-    <!-- End of list message -->
-    <div v-if="!hasMoreData && Object.keys(atendimentosAgrupados).length > 0" class="text-center my-4 text-grey">
+    <!-- Indicador de fim da lista -->
+    <div
+      v-if="!hasMoreData && Object.keys(atendimentosAgrupados).length > 0"
+      class="text-center my-4 text-grey"
+    >
       Não há mais sessões para carregar
     </div>
-
   </v-container>
 </template>
 
+
 <script lang="ts" setup>
 import { ref, computed, onMounted, watch } from 'vue';
-import { SessaoService } from '@/services/SessaoService';
-import { AprendenteService } from '@/services/AprendenteService';
 import { UploadService } from '@/services/UploadService';
 import { ContratoService } from '@/services/contratoService';
 import supabase from '@/config/supabase';
 import AtendimentoDetalhes from '@/components/AtendimentoDetalhes.vue'
+import AutoComplete from '@/components/AutoComplete.vue'
+import { SessaoService } from '@/services/SessaoService.ts'
 
 const sessaoService = new SessaoService();
-const aprendenteService = new AprendenteService();
 const uploadService = new UploadService();
 const contratoService = new ContratoService();
 const atendimentos = ref<any[]>([]);
 const pacientes = ref<any[]>([]);
 const filtroPaciente = ref<string | null>(null);
 const searchQuery = ref('');
-const isLoading = ref(false);
 const aprendenteCache = new Map();
 const uploadError = ref<string | null>(null);
 const contratos = ref<any[]>([]);
@@ -167,6 +221,10 @@ interface Sessao {
 
 
 
+function onAprendenteSelecionado(aprendente: any) {
+
+  console.log(aprendente)
+}
 
 async function loadSessoes(reset = false) {
   if (reset) {
@@ -295,23 +353,10 @@ async function loadSessoes(reset = false) {
     uploadError.value = 'Erro ao carregar sessões: ' + (error instanceof Error ? error.message : 'Erro desconhecido');
   } finally {
     isLoadingMore.value = false;
-    isLoading.value = false;
   }
 }
 
-async function loadPacientes() {
-  try {
-    const clientes = await aprendenteService.loadAprendentesPorProfissionalENome('')
-    pacientes.value = clientes.map((cliente) => ({
-      id: cliente.id,
-      aprendente: cliente.nomeAprendente,
-      responsavel: cliente.nomeResponsavel
-    }));
-    console.log('Pacientes carregados:', pacientes.value);
-  } catch (err) {
-    console.error('Erro ao carregar pacientes:', err);
-  }
-}
+
 
 async function loadContratos() {
   try {
@@ -338,57 +383,8 @@ function cancelarEdicao(atendimento: any) {
   delete atendimento.originalData;
 }
 
-function validarNovosAnexos(atendimento: any) {
-  atendimento.uploadError = '';
-  if (atendimento.novosAnexos && atendimento.novosAnexos.length > 0) {
-    for (const file of atendimento.novosAnexos) {
-      if (!file.type.match(/^image\/.+$|^application\/pdf$/)) {
-        atendimento.uploadError = 'Apenas imagens ou PDFs são permitidos';
-        atendimento.novosAnexos = [];
-        return;
-      }
-      if (file.size > 25 * 1024 * 1024) {
-        atendimento.uploadError = 'O arquivo deve ter menos de 25MB';
-        atendimento.novosAnexos = [];
-        return;
-      }
-    }
-    atendimento.anexosTemporarios.push(
-      ...atendimento.novosAnexos.map((file: File) => ({ url: '', name: file.name }))
-    );
-  }
-}
 
-function removerAnexoTemporario(atendimento: any, index: number) {
-  const anexo = atendimento.anexosTemporarios[index];
-  if (anexo.url) {
-    atendimento.anexosParaExcluir.push(anexo.url);
-  }
-  atendimento.anexosTemporarios.splice(index, 1);
-  atendimento.novosAnexos = atendimento.novosAnexos.filter(
-    (file: File) => file.name !== anexo.name
-  );
-}
 
-async function downloadAnexo(anexo: string) {
-  try {
-    const caminho = anexo.split('/storage/v1/object/public/sessoes/')[1];
-    const data = await supabase.storage
-      .from('sessoes')
-      .download(caminho);
-    const url = window.URL.createObjectURL(data.data);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = anexo.split('/').pop() || 'Arquivo';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    window.URL.revokeObjectURL(url);
-  } catch (err) {
-    console.error('Erro ao baixar anexo:', err);
-    alert('Erro ao baixar anexo: ' + (err as Error).message);
-  }
-}
 
 async function salvarEdicao(atendimento: any) {
   try {
@@ -451,7 +447,7 @@ watch(searchQuery, async (newValue) => {
     return;
   }
 
-  isLoading.value = true;
+  // isLoading.value = true;
   try {
     const resultados = await aprendenteService.buscarClientesPorNome(newValue);
     pacientes.value = resultados.map((cliente) => ({
@@ -464,13 +460,13 @@ watch(searchQuery, async (newValue) => {
   } catch (err) {
     console.error('Erro na busca:', err);
   } finally {
-    isLoading.value = false;
+    // isLoading.value = false;
   }
 }, { debounce: 300 });
 
 watch(filtroPaciente, async (newValue) => {
   console.log('filtroPaciente alterado:', newValue, typeof newValue);
-  await loadPacientes();
+  // await loadPacientes();
   console.log('filtroPaciente alterado:', newValue, typeof newValue);
   await loadContratos();
 });
@@ -498,9 +494,6 @@ const atendimentosAgrupados = computed(() => {
     agrupados[atendimento.data].push(atendimento);
   });
 
-  console.log('Filtro paciente:', filtroPaciente.value);
-  console.log('Filtro ID usado:', filtroId);
-  console.log('Lista filtrada:', lista);
   return agrupados;
 });
 
@@ -571,13 +564,12 @@ onMounted(() => {
 
   // Initial load
   loadSessoes(true);
-  loadPacientes();
 });
 
-// Reset pagination when filter changes
-watch(filtroPaciente, () => {
-  loadSessoes(true);
-});
+// // Reset pagination when filter changes
+// watch(filtroPaciente, () => {
+//   loadSessoes(true);
+// });
 </script>
 
 <style scoped>
