@@ -18,6 +18,9 @@ interface GetAllSessoesOptions {
   page?: number
   pageSize?: number
   clienteId?: string | null
+  startDate?: string
+  endDate?: string
+  tipoSessao?: 'contrato' | 'avulsa'
 }
 
 interface Mensalidade {
@@ -83,14 +86,30 @@ export class SessaoService {
   // }
   async getAllSessoes(options: GetAllSessoesOptions = {}) {
     const storeProfissional = useStoreProfissional()
-    const { page = 1, pageSize = 10, clienteId = null } = options
+    const { 
+      page = 1, 
+      pageSize = 10, 
+      clienteId = null,
+      startDate,
+      endDate,
+      tipoSessao
+    } = options
 
     try {
       // Primeiro, buscar os agendamentos do profissional
-      const { data: agendamentos, error: errorAg } = await supabase
+      let agendamentosQuery = supabase
         .from('tb_agendamento')
         .select('*')
         .eq('id_profissional', storeProfissional.profissionalDetails?.id)
+
+      // Aplicar filtro de data se fornecido
+      if (startDate && endDate) {
+        agendamentosQuery = agendamentosQuery
+          .gte('data_agendamento', startDate.split('T')[0])
+          .lte('data_agendamento', endDate.split('T')[0])
+      }
+
+      const { data: agendamentos, error: errorAg } = await agendamentosQuery
 
       if (errorAg) throw errorAg
 
@@ -130,6 +149,15 @@ export class SessaoService {
         query = query.or(
           `tb_agendamento.id_aprendente.eq.${clienteId},tb_agendamento.responsavel_id.eq.${clienteId}`,
         )
+      }
+
+      // Aplicar filtro por tipo de sessão
+      if (tipoSessao) {
+        if (tipoSessao === 'contrato') {
+          query = query.not('tb_agendamento.id_contrato', 'is', null)
+        } else if (tipoSessao === 'avulsa') {
+          query = query.is('tb_agendamento.id_contrato', null)
+        }
       }
 
       // Aplicar ordenação por data
