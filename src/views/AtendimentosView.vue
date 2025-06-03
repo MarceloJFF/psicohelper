@@ -35,7 +35,6 @@
         </v-card-title>
 
         <v-divider />
-
         <v-list>
           <Sessao
             v-for="atendimento in grupo"
@@ -71,7 +70,7 @@ import AutoComplete from '@/components/AutoComplete.vue';
 import { SessaoService } from '@/services/SessaoService.ts';
 import { AprendenteService } from '@/services/AprendenteService.ts';
 import Sessao from '@/components/Sessao.vue';
-
+import { getDateRangeForPeriod, formatarData } from '@/utils/utils';
 // Types
 interface PagamentoData {
   id_pagamento: string;
@@ -120,9 +119,7 @@ const uploadService = new UploadService();
 const atendimentos = ref<Atendimento[]>([]);
 const pacientes = ref<any[]>([]);
 const filtroPaciente = ref<string | null>(null);
-const aprendenteCache = new Map();
 const uploadError = ref<string | null>(null);
-const contratos = ref<any[]>([]);
 const aprendenteService = new AprendenteService();
 // Pagination state
 const pageSize = 10;
@@ -186,19 +183,6 @@ const currentDateRange = ref({
   end: new Date()
 });
 
-// Function to get date range for last 30 days
-function getDateRangeForPeriod(days: number) {
-  const end = new Date();
-  const start = new Date();
-  start.setDate(start.getDate() - days);
-  return { start, end };
-}
-
-function formatarData(dataStr: string): string {
-  if (!dataStr) return '';
-  const [ano, mes, dia] = dataStr.split('-');
-  return `${dia}/${mes}/${ano}`;
-}
 
 // Event handlers
 function onAprendenteSelecionado(aprendente: any) {
@@ -228,6 +212,7 @@ async function loadSessoes(reset = false) {
       tipoSessao: tipoSessao.value === 'todos' ? undefined : (tipoSessao.value as 'contrato' | 'avulsa')
     });
 
+
     if (newSessoes.length < pageSize) {
       hasMoreData.value = false;
     }
@@ -235,9 +220,9 @@ async function loadSessoes(reset = false) {
     if (newSessoes.length > 0) {
       const novosAtendimentos = await Promise.all(
         newSessoes.map(async (sessao: any) => {
-          const agendamento = sessao.tb_agendamento;
-          const startTime = agendamento.horario_inicio;
-          const duracao = String(agendamento.duracao);
+          console.log(sessao)          
+          const startTime = sessao.horario_inicio;
+          const duracao = String(sessao.duracao);
           const startDateTime = startTime ? new Date(`1970-01-01T${startTime}`) : null;
           const endDateTime = startDateTime ? new Date(startDateTime.getTime() + parseInt(duracao) * 60000) : null;
           const horarioFim = endDateTime
@@ -245,24 +230,12 @@ async function loadSessoes(reset = false) {
             : '';
 
           let paciente = 'N/A';
-          const clienteId = agendamento.id_aprendente || agendamento.responsavel_id || '';
-          if (agendamento.id_aprendente) {
-            if (aprendenteCache.has(agendamento.id_aprendente)) {
-              paciente = aprendenteCache.get(agendamento.id_aprendente).nomeAprendente;
-            } else {
-              const aprendente = await aprendenteService.getAprendenteById(agendamento.id_aprendente);
-              paciente = aprendente?.nomeAprendente || 'N/A';
-              aprendenteCache.set(agendamento.id_aprendente, aprendente);
-            }
-          } else if (agendamento.responsavel_id) {
-            const responsavel = await supabase
-              .from('tb_responsavel')
-              .select('nome')
-              .eq('id_responsavel', agendamento.responsavel_id)
-              .single();
-            paciente = responsavel.data?.nome || 'N/A';
-          }
-
+          const clienteId = sessao.id_aprendente || sessao.responsavel_id || '';
+          
+          const aprendente = sessao.id_aprendente ? await aprendenteService.getAprendenteById(sessao.id_aprendente) : null;
+         
+          paciente = aprendente?.nome_aprendente || 'N/A';
+          
           const anexos = typeof sessao.fotos === 'string' ? sessao.fotos.split(',').filter((url: string) => url) : [];
           let status = 'Pendente';
           let pagamentoData = null;
@@ -289,15 +262,15 @@ async function loadSessoes(reset = false) {
 
           const atendimento = {
             id: sessao.id,
-            data: agendamento.data_agendamento,
+            data: sessao.data_agendamento,
             horario: startTime,
             horario_fim: horarioFim,
             paciente,
             clienteId,
-            id_aprendente: agendamento.id_aprendente,
-            responsavel_id: agendamento.responsavel_id,
-            id_agendamento: agendamento.id_agendamento,
-            id_contrato: agendamento.id_contrato || null,
+            id_aprendente: sessao.id_aprendente,
+            responsavel_id: sessao.responsavel_id,
+            id_agendamento: sessao.id_agendamento,
+            id_contrato: sessao.id_contrato || null,
             avatar: '',
             status,
             id_pagamento: pagamentoData?.id_pagamento,
@@ -329,6 +302,7 @@ async function loadSessoes(reset = false) {
       } else {
         atendimentos.value = [...atendimentos.value, ...novosAtendimentos];
       }
+  
 
       currentPage.value++;
       

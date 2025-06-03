@@ -124,7 +124,6 @@
 <script lang="ts" setup>
 import { defineProps, defineEmits } from 'vue';
 import AtendimentoDetalhes from './AtendimentoDetalhes.vue';
-
 const props = defineProps<{
   atendimento: {
     id: string;
@@ -165,6 +164,9 @@ const props = defineProps<{
     props: Record<string, any>;
   }[];
 }>();
+
+console.log(props.atendimento)
+
 
 const emit = defineEmits<{
   (e: 'remover-anexo', atendimento: any, index: number): void;

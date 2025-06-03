@@ -86,114 +86,42 @@ export class SessaoService {
   // }
   async getAllSessoes(options: GetAllSessoesOptions = {}) {
     const storeProfissional = useStoreProfissional()
-    const { 
-      page = 1, 
-      pageSize = 10, 
+    const {
+      page = 1,
+      pageSize = 10,
       clienteId = null,
       startDate,
       endDate,
-      tipoSessao
+      tipoSessao,
     } = options
-
+  
     try {
-      // Primeiro, buscar os agendamentos do profissional
-      let agendamentosQuery = supabase
-        .from('tb_agendamento')
-        .select('*')
-        .eq('id_profissional', storeProfissional.profissionalDetails?.id)
-
-      // Aplicar filtro de data se fornecido
-      if (startDate && endDate) {
-        agendamentosQuery = agendamentosQuery
-          .gte('data_agendamento', startDate.split('T')[0])
-          .lte('data_agendamento', endDate.split('T')[0])
+      const profissionalId = storeProfissional.profissionalDetails?.id
+      if (!profissionalId) {
+        throw new Error('Profissional não identificado')
       }
-
-      const { data: agendamentos, error: errorAg } = await agendamentosQuery
-
-      if (errorAg) throw errorAg
-
-      const agendamentoIds = agendamentos.map((a) => a.id_agendamento)
-
-      // Construir a query base
-      let query = supabase
-        .from('tb_sessao')
-        .select(
-          `
-          id,
-          pre_sessao,
-          queixas,
-          evolucao,
-          habilidades_trabalhadas,
-          futuras_acoes,
-          resumo,
-          fotos,
-          id_agendamento,
-          tb_agendamento (
-            id_agendamento,
-            data_agendamento,
-            horario_inicio,
-            duracao,
-            id_aprendente,
-            responsavel_id,
-            id_profissional,
-            id_contrato
-          )
-        `,
-          { count: 'exact' },
-        )
-        .in('id_agendamento', agendamentoIds)
-
-      // Aplicar filtro por cliente se fornecido
-      if (clienteId) {
-        query = query.or(
-          `tb_agendamento.id_aprendente.eq.${clienteId},tb_agendamento.responsavel_id.eq.${clienteId}`,
-        )
+      const params = {
+        cliente: clienteId ?? null,
+        data_fim: endDate ? endDate.split('T')[0] : null,
+        data_inicio: startDate ? startDate.split('T')[0] : null,
+        pagina: page,
+        profissional: profissionalId,
+        tamanho_pagina: pageSize,
+        tipo: tipoSessao ?? null
       }
-
-      // Aplicar filtro por tipo de sessão
-      if (tipoSessao) {
-        if (tipoSessao === 'contrato') {
-          query = query.not('tb_agendamento.id_contrato', 'is', null)
-        } else if (tipoSessao === 'avulsa') {
-          query = query.is('tb_agendamento.id_contrato', null)
-        }
-      }
-
-      // Aplicar ordenação por data
-      query = query.order('tb_agendamento(data_agendamento)', { ascending: false })
-
-      // Aplicar paginação
-      const from = (page - 1) * pageSize
-      const to = from + pageSize - 1
-      query = query.range(from, to)
-
-      const { data, error, count } = await query
-
-      if (error) throw error
-
-      // Mapear os dados para incluir id_contrato no nível raiz
-      const mappedData = (data || []).map((session) => ({
-        ...session,
-        id_contrato: session.tb_agendamento?.id_contrato || null,
-      }))
-
-      console.log(
-        'Sessões carregadas:',
-        mappedData.map((s) => ({
-          id: s.id,
-          id_contrato: s.id_contrato,
-          tipo: s.id_contrato ? 'Contrato' : 'Avulsa',
-        })),
-      )
-
-      return mappedData
+      const { data, error } = await supabase.rpc('filtrar_sessoes', params);
+      if (error) throw error;
+      
+     if (error) throw error
+   
+      return data ?? []
     } catch (err: any) {
       console.error('Erro ao buscar sessões:', err)
       this.showError(err.message || 'Erro ao carregar sessões')
       return []
     }
   }
+  
 
   async getSessaoById(id: string): Promise<Sessao | null> {
     try {
