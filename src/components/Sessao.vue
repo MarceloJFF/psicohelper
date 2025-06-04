@@ -58,7 +58,7 @@
                   v-if="atendimento.isEditing"
                   icon
                   small
-                  @click="$emit('remover-anexo', atendimento, index)"
+                  @click="removerAnexo(atendimento, index)"
                   class="mt-2"
                 >
                   <v-icon color="red">mdi-delete</v-icon>
@@ -67,7 +67,7 @@
                   v-if="anexo.url"
                   icon
                   small
-                  @click="$emit('download-anexo', anexo.url)"
+                  @click="downloadAnexo(anexo.url)"
                   class="mt-2"
                 >
                   <v-icon>mdi-download</v-icon>
@@ -85,7 +85,7 @@
             v-model="atendimento.novosAnexos"
             class="mt-4"
             :error-messages="atendimento.uploadError"
-            @change="$emit('validar-anexos', atendimento)"
+            @change="validarAnexos(atendimento)"
           />
         </div>
 
@@ -165,12 +165,29 @@ const props = defineProps<{
   }[];
 }>();
 
+const removerAnexo = (atendimento: any, index: number) => {
+  atendimento.anexosTemporarios.splice(index, 1);
+};
 
+const downloadAnexo = (url: string) => {
+  window.open(url, '_blank');
+};
+
+const validarAnexos = (atendimento: any) => {
+  if (!atendimento.novosAnexos) return;
+  
+  const maxSize = 5 * 1024 * 1024; // 5MB
+  const invalidFiles = atendimento.novosAnexos.filter((file: File) => file.size > maxSize);
+  
+  if (invalidFiles.length > 0) {
+    atendimento.uploadError = 'Alguns arquivos excedem o tamanho máximo de 5MB';
+    atendimento.novosAnexos = atendimento.novosAnexos.filter((file: File) => file.size <= maxSize);
+  } else {
+    atendimento.uploadError = '';
+  }
+};
 
 const emit = defineEmits<{
-  (e: 'remover-anexo', atendimento: any, index: number): void;
-  (e: 'download-anexo', url: string): void;
-  (e: 'validar-anexos', atendimento: any): void;
   (e: 'iniciar-edicao', atendimento: any): void;
   (e: 'salvar-edicao', atendimento: any): void;
   (e: 'cancelar-edicao', atendimento: any): void;

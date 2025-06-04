@@ -88,8 +88,9 @@
   
   async function salvar() {
     try {
+      let pagamento;
       if (props.isEdit && props.pagamento?.id) {
-        await PagamentoService.atualizarPagamento(
+        pagamento = await PagamentoService.atualizarPagamento(
           props.pagamento.id,
           {
             valor: form.value.valor,
@@ -100,7 +101,7 @@
           arquivo.value || undefined
         )
       } else {
-        await PagamentoService.criarPagamento(
+        pagamento = await PagamentoService.criarPagamento(
           {
             id_sessao: props.sessaoId,
             valor: form.value.valor,
@@ -113,7 +114,7 @@
         )
       }
   
-      emit('salvo')
+      emit('salvo', pagamento)
       showSnackbar('Pagamento salvo com sucesso.', 'success')
       fechar()
     } catch (error: unknown) {

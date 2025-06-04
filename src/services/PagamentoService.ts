@@ -64,7 +64,7 @@ export const PagamentoService = {
 
 
   async atualizarPagamento(id: string, dados: Partial<PagamentoData>, arquivo?: File) {
-    const { error } = await supabase
+    const { data: pagamento, error } = await supabase
       .from('tb_pagamento_sessao')
       .update({
         valor_pago: dados.valor,
@@ -73,6 +73,8 @@ export const PagamentoService = {
         pago: dados.pago
       })
       .eq('id', id)
+      .select()
+      .single()
 
     if (error) throw error
 
@@ -84,7 +86,7 @@ export const PagamentoService = {
 
       if (uploadError) throw uploadError
 
-      await supabase
+      const { data: comprovante, error: comprovanteError } = await supabase
         .from('tb_comprovante_pagamento')
         .upsert([
           {
@@ -92,15 +94,78 @@ export const PagamentoService = {
             path_comprovante: path,
           },
         ])
+        .select()
+        .single()
+
+      if (comprovanteError) throw comprovanteError
+
+      return {
+        ...pagamento,
+        path_comprovante: comprovante.path_comprovante
+      }
     }
+
+    return pagamento
+  },
+
+  async excluirComprovantePagamento(idPagamento:string){
+    let {error}= await supabase
+    .from('tb_comprovante_pagamento')
+    .delete()
+    .eq('id_pagamento_sessao',idPagamento)
+    if (error) throw error
+
   },
 
   async excluirPagamento(id: string) {
-    const { error } = await supabase
-      .from('tb_pagamento_sessao')
-      .delete()
-      .eq('id', id)
+    try {
+      // 1. Buscar informações do comprovante
+      const { data: comprovante, error: fetchError } = await supabase
+        .from('tb_comprovante_pagamento')
+        .select('path_comprovante')
+        .eq('id_pagamento_sessao', id)
+        .single();
 
-    if (error) throw error
+      if (fetchError && fetchError.code !== 'PGRST116') { // PGRST116 é o código para "não encontrado"
+        throw fetchError;
+      }
+
+      // 2. Se existir comprovante, excluir do storage
+      if (comprovante?.path_comprovante) {
+        console.log('Tentando excluir arquivo do storage:', comprovante.path_comprovante);
+        
+        const { error: deleteStorageError } = await supabase.storage
+          .from('comprovantes-pagamento')
+          .remove([comprovante.path_comprovante]);
+
+        if (deleteStorageError) {
+          console.error('Erro ao excluir comprovante do storage:', deleteStorageError);
+          throw deleteStorageError;
+        }
+      }
+
+      // 3. Excluir registro do comprovante
+      const { error: deleteComprovanteError } = await supabase
+        .from('tb_comprovante_pagamento')
+        .delete()
+        .eq('id_pagamento_sessao', id);
+
+      if (deleteComprovanteError) {
+        throw deleteComprovanteError;
+      }
+
+      // 4. Excluir registro do pagamento
+      const { error: deleteError } = await supabase
+        .from('tb_pagamento_sessao')
+        .delete()
+        .eq('id', id);
+
+      if (deleteError) {
+        throw deleteError;
+      }
+    } catch (error) {
+      console.error('Erro ao excluir pagamento:', error);
+      throw error;
+    }
   },
 }

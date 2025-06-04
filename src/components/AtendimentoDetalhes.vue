@@ -26,9 +26,35 @@ function abrirModalPagamento(atendimento: any) {
   showModalPagamento.value = true
 }
 
-function excluirPagamentoConfirmado(pagamentoId: string) {
+async function atualizarEstadoPagamento(pagamento: any) {
+  if (props.atendimento) {
+    props.atendimento.status = 'Pago';
+    props.atendimento.valor_pagamento = pagamento.valor_pago;
+    props.atendimento.forma_pagamento = pagamento.forma_pagamento_tipo;
+    props.atendimento.comprovante_url = pagamento.path_comprovante;
+    props.atendimento.id_pagamento = pagamento.id;
+  }
+}
+
+async function excluirPagamentoConfirmado(pagamentoId: string) {
   if (confirm('Tem certeza que deseja excluir este pagamento?')) {
-    emit('atualizar')
+    try {
+      await PagamentoService.excluirPagamento(pagamentoId);
+      
+      // Atualizar o estado local
+      if (props.atendimento) {
+        props.atendimento.status = 'Pendente';
+        props.atendimento.valor_pagamento = undefined;
+        props.atendimento.forma_pagamento = undefined;
+        props.atendimento.comprovante_url = undefined;
+        props.atendimento.id_pagamento = undefined;
+      }
+      
+      emit('atualizar');
+    } catch (error) {
+      console.error('Erro ao excluir pagamento:', error);
+      alert('Erro ao excluir pagamento. Por favor, tente novamente.');
+    }
   }
 }
 
@@ -162,7 +188,10 @@ onMounted(async() => {
   :pagamento="pagamentoEditando"
   :sessaoId="sessaoId"
   @update:show="showModalPagamento = $event"
-  @salvo="emit('atualizar')"
+  @salvo="async (pagamento) => {
+    await atualizarEstadoPagamento(pagamento);
+    emit('atualizar');
+  }"
 />
 
 </template>
