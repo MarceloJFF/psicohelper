@@ -249,6 +249,8 @@ async function loadSessoes(reset = false) {
             .select('id_pagamento, valor, forma_pagamento, comprovante_url')
             .eq('id_sessao', sessao.id)
             .maybeSingle();
+            console.log("PAGAMENTO SESSAO")
+            console.log(pagamentoSessao)
 
           if (pagamentoSessao) {
             status = 'Pago';

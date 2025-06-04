@@ -1,7 +1,35 @@
 <script setup lang="ts">
-defineProps({
+import { ref, defineProps, defineEmits } from 'vue'
+import ModalPagamento from '@/components/ModalPagamento.vue' // ajuste o caminho se necessário
+
+const props = defineProps({
   atendimento: Object
 })
+
+const emit = defineEmits(['atualizar'])
+
+const showModalPagamento = ref(false)
+const pagamentoEditando = ref(null)
+const sessaoId = ref(null)
+
+function abrirModalPagamento(atendimento: any) {
+  pagamentoEditando.value = atendimento.status === 'Pago'
+    ? {
+        id: atendimento.id_pagamento,
+        valor: atendimento.valor_pagamento,
+        forma_pagamento_tipo: atendimento.forma_pagamento,
+        observacao: ''
+      }
+    : null
+  sessaoId.value = atendimento.id
+  showModalPagamento.value = true
+}
+
+function excluirPagamentoConfirmado(pagamentoId: string) {
+  if (confirm('Tem certeza que deseja excluir este pagamento?')) {
+    emit('atualizar')
+  }
+}
 
 function visualizarComprovante(url: string) {
   window.open(url, '_blank')
@@ -17,10 +45,12 @@ function visualizarComprovante(url: string) {
           <strong>Horário Agendado:</strong><br />
           <span>{{ atendimento.horario }} - {{ atendimento.horario_fim }}</span>
         </div>
+
         <div class="mb-2">
-          <strong >Aprendente:</strong><br />
-          <span class="font-weight-bold	text-h6">{{ atendimento.paciente }}</span>
+          <strong>Aprendente:</strong><br />
+          <span class="font-weight-bold text-h6">{{ atendimento.paciente }}</span>
         </div>
+
         <div class="d-flex flex-wrap align-center gap-2 mb-2">
           <v-chip
             :color="atendimento.status === 'Pago' ? 'success' : 'error'"
@@ -30,6 +60,7 @@ function visualizarComprovante(url: string) {
           >
             {{ atendimento.status }}
           </v-chip>
+
           <v-chip
             :color="atendimento.id_contrato ? 'primary' : 'secondary'"
             variant="elevated"
@@ -39,9 +70,11 @@ function visualizarComprovante(url: string) {
             {{ atendimento.id_contrato ? 'Contrato' : 'Avulsa' }}
           </v-chip>
         </div>
+
         <div v-if="atendimento.id_contrato" class="text-caption mb-2">
           <strong>Contrato - {{ atendimento.id_contrato }}</strong>
         </div>
+
         <div v-if="atendimento.status === 'Pago'" class="mt-2">
           <div class="text-caption mb-1">
             <strong>Valor Pago:</strong> R$ {{ atendimento.valor_pagamento?.toFixed(2) }}
@@ -62,7 +95,7 @@ function visualizarComprovante(url: string) {
         </div>
       </v-sheet>
     </v-col>
-
+    {{ atendimento }}
     <!-- Coluna com ações -->
     <v-col cols="12" sm="6" class="d-flex align-center flex-wrap gap-2">
       <v-btn icon @click="atendimento.showDetails = !atendimento.showDetails">
@@ -88,14 +121,34 @@ function visualizarComprovante(url: string) {
 
       <v-btn
         v-if="atendimento.status === 'Pago'"
-        color="error"
+        color="warning"
         variant="outlined"
         @click="abrirModalPagamento(atendimento)"
       >
         Editar Pagamento
       </v-btn>
+
+      <v-btn
+        v-if="atendimento.status === 'Pago'"
+        color="error"
+        variant="outlined"
+        @click="excluirPagamentoConfirmado(atendimento.id_pagamento)"
+      >
+        Excluir Pagamento
+      </v-btn>
     </v-col>
   </v-row>
+
+  <!-- Modal de Pagamento -->
+  <ModalPagamento
+  :show="showModalPagamento"
+  :isEdit="!!pagamentoEditando"
+  :pagamento="pagamentoEditando"
+  :sessaoId="sessaoId"
+  @update:show="showModalPagamento = $event"
+  @salvo="emit('atualizar')"
+/>
+
 </template>
 
 <style scoped>

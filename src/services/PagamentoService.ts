@@ -1,112 +1,93 @@
-// src/services/PagamentoService.ts
-import supabase from '@/config/supabase';
+import supabase from '@/config/supabase'
 
-export interface Pagamento {
-  id: string;
-  created_at: string;
-  forma_pagamento: string;
-  comprovante_url: string | null;
-  data_pagamento: string | null;
+interface PagamentoData {
+  id_sessao: string;
   valor: number;
-  id_mensalidade: string | null;
-  tb_pagamento_sessao?: { id: string; id_sessao: string }[];
+  forma_pagamento_tipo: string;
+  observacao?: string;
+  pago: boolean;
+  created_at?: string;
 }
 
-export class PagamentoService {
-  async getPagamentos(): Promise<Pagamento[]> {
-    const { data, error } = await supabase.from('tb_pagamento').select(`
-        *,
-        tb_pagamento_sessao (id, id_sessao)
-      `);
-    if (error) throw error;
-    return data || [];
-  }
-
-  async createPagamento(
-    pagamento: Omit<Pagamento, 'id' | 'created_at'>,
-    sessoes: string[] = []
-  ): Promise<Pagamento> {
-    const { data: pagamentoData, error: pagamentoError } = await supabase
-      .from('tb_pagamento')
-      .insert({
-        forma_pagamento: pagamento.forma_pagamento,
-        comprovante_url: pagamento.comprovante_url,
-        data_pagamento: pagamento.data_pagamento,
-        valor: pagamento.valor,
-        id_mensalidade: pagamento.id_mensalidade,
-      })
-      .select('id')
-      .single();
-    if (pagamentoError) throw pagamentoError;
-
-    if (sessoes.length > 0) {
-      const sessoesData = sessoes.map((id_sessao) => ({
-        id_pagamento: pagamentoData.id,
-        id_sessao,
-      }));
-      const { error: sessaoError } = await supabase.from('tb_pagamento_sessao').insert(sessoesData);
-      if (sessaoError) throw sessaoError;
-    }
-
-    return pagamentoData;
-  }
-
-  async updatePagamento(
-    id: string,
-    pagamento: Partial<Pagamento>,
-    sessoes: string[] = []
-  ): Promise<void> {
-    const { error: pagamentoError } = await supabase
-      .from('tb_pagamento')
-      .update({
-        forma_pagamento: pagamento.forma_pagamento,
-        comprovante_url: pagamento.comprovante_url,
-        data_pagamento: pagamento.data_pagamento,
-        valor: pagamento.valor,
-        id_mensalidade: pagamento.id_mensalidade,
-      })
-      .eq('id', id);
-    if (pagamentoError) throw pagamentoError;
-
-    if (sessoes.length > 0) {
-      await supabase.from('tb_pagamento_sessao').delete().eq('id_pagamento', id);
-      const sessoesData = sessoes.map((id_sessao) => ({
-        id_pagamento: id,
-        id_sessao,
-      }));
-      const { error: sessaoError } = await supabase.from('tb_pagamento_sessao').insert(sessoesData);
-      if (sessaoError) throw sessaoError;
-    }
-  }
-
-  async deletePagamento(id: string): Promise<void> {
-    await supabase.from('tb_pagamento_sessao').delete().eq('id_pagamento', id);
-    const { error } = await supabase.from('tb_pagamento').delete().eq('id', id);
-    if (error) throw error;
-  }
-
-  async getPagamentoBySessao(idSessao: string): Promise<any> {
-    const { data, error } = await supabase
+export const PagamentoService = {
+  async criarPagamento(dados: PagamentoData, arquivo: File | null) {
+    const { data: pagamento, error } = await supabase
+    console.log("DADOS")
+    console.log(dados)
       .from('tb_pagamento_sessao')
-      .select(`
-        id,
-        id_sessao,
-        id_pagamento,
-        tb_pagamento (
-          id,
-          valor,
-          forma_pagamento,
-          comprovante_url,
-          data_pagamento
-        )
-      `)
-      .eq('id_sessao', idSessao)
-      .maybeSingle();
+      .insert({
+        id_sessao: dados.id_sessao,
+        valor_pago: dados.valor,
+        forma_pagamento_tipo: dados.forma_pagamento_tipo,
+        observacao: dados.observacao,
+        pago: dados.pago
+      })
+      .select()
+      .single()
 
-    if (error && error.code !== 'PGRST116') {
-      console.error(`Erro ao buscar pagamento para sessão ${idSessao}:`, error);
-      throw error;
+    if (error) throw error
+
+    if (arquivo) {
+      const path = `comprovantes-pagamento/${pagamento.id}/${arquivo.name}`
+      const { error: uploadError } = await supabase.storage
+        .from('comprovantes-pagamento')
+        .upload(path, arquivo, {
+          upsert: true,
+        })
+
+      if (uploadError) throw uploadError
+
+      await supabase
+        .from('tb_comprovante_pagamento')
+        .insert([
+          {
+            id_pagamento_sessao: pagamento.id,
+            path_comprovante: path,
+          },
+        ])
     }
-    return data;
-  }
+
+    return pagamento
+  },
+
+  async atualizarPagamento(id: string, dados: Partial<PagamentoData>, arquivo?: File) {
+    const { error } = await supabase
+      .from('tb_pagamento_sessao')
+      .update({
+        valor_pago: dados.valor,
+        forma_pagamento_tipo: dados.forma_pagamento_tipo,
+        observacao: dados.observacao,
+        pago: dados.pago
+      })
+      .eq('id', id)
+
+    if (error) throw error
+
+    if (arquivo) {
+      const path = `comprovantes-pagamento/${id}/${arquivo.name}`
+      const { error: uploadError } = await supabase.storage
+        .from('comprovantes-pagamento')
+        .upload(path, arquivo, { upsert: true })
+
+      if (uploadError) throw uploadError
+
+      await supabase
+        .from('tb_comprovante_pagamento')
+        .upsert([
+          {
+            id_pagamento_sessao: id,
+            path_comprovante: path,
+          },
+        ])
+    }
+  },
+
+  async excluirPagamento(id: string) {
+    const { error } = await supabase
+      .from('tb_pagamento_sessao')
+      .delete()
+      .eq('id', id)
+
+    if (error) throw error
+  },
 }
