@@ -135,6 +135,7 @@ export class SessaoService {
       return null
     }
   }
+  
   async updateSessao(id: string, sessao: Partial<Sessao>): Promise<void> {
     console.log('updateSessao:', id, sessao)
 

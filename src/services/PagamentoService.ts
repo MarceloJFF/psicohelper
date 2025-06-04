@@ -11,9 +11,8 @@ interface PagamentoData {
 
 export const PagamentoService = {
   async criarPagamento(dados: PagamentoData, arquivo: File | null) {
+   
     const { data: pagamento, error } = await supabase
-    console.log("DADOS")
-    console.log(dados)
       .from('tb_pagamento_sessao')
       .insert({
         id_sessao: dados.id_sessao,
@@ -49,6 +48,20 @@ export const PagamentoService = {
 
     return pagamento
   },
+
+  async getPagamentoSessaoById(idSessao:string){
+    const { data, error } = await supabase
+    .rpc('buscar_pagamento_por_sessao', { sessao_id: idSessao })
+
+  if (error) {
+    console.error('Erro ao buscar pagamento:', error)
+    throw error
+  }
+  
+  if(data.length>0) return data[0]
+  return null;
+  },
+
 
   async atualizarPagamento(id: string, dados: Partial<PagamentoData>, arquivo?: File) {
     const { error } = await supabase

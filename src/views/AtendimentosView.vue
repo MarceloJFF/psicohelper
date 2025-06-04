@@ -74,13 +74,7 @@ import { SessaoService } from '@/services/SessaoService.ts';
 import { AprendenteService } from '@/services/AprendenteService.ts';
 import Sessao from '@/components/Sessao.vue';
 import { getDateRangeForPeriod, formatarData } from '@/utils/utils';
-// Types
-interface PagamentoData {
-  id_pagamento: string;
-  valor: number;
-  forma_pagamento: string;
-  comprovante_url: string;
-}
+import { PagamentoService } from '@/services/PagamentoService';
 
 interface Atendimento {
   id: string;
@@ -115,7 +109,13 @@ interface Atendimento {
   resumo: string;
   originalData?: Atendimento;
 }
+interface PagamentoData{
+  id_pagamento?:string,
+  valor?:number,
+  forma_pagamento?:string,
+  comprovante_url?:string
 
+}
 // Services
 const sessaoService = new SessaoService();
 const uploadService = new UploadService();
@@ -223,7 +223,6 @@ async function loadSessoes(reset = false) {
     if (newSessoes.length > 0) {
       const novosAtendimentos = await Promise.all(
         newSessoes.map(async (sessao: any) => {
-          console.log(sessao)
           const startTime = sessao.horario_inicio;
           const duracao = String(sessao.duracao);
           const startDateTime = startTime ? new Date(`1970-01-01T${startTime}`) : null;
@@ -240,28 +239,23 @@ async function loadSessoes(reset = false) {
           paciente = aprendente?.nome_aprendente || 'N/A';
 
           const anexos = typeof sessao.fotos === 'string' ? sessao.fotos.split(',').filter((url: string) => url) : [];
+
           let status = 'Pendente';
-          let pagamentoData = null;
-
+      
+          let pagamentoDataReturned = await PagamentoService.getPagamentoSessaoById(sessao.id);
+      
           // Verifica se existe pagamento para esta sessão
-          const { data: pagamentoSessao } = await supabase
-            .from('tb_pagamento_sessao')
-            .select('id_pagamento, valor, forma_pagamento, comprovante_url')
-            .eq('id_sessao', sessao.id)
-            .maybeSingle();
-            console.log("PAGAMENTO SESSAO")
-            console.log(pagamentoSessao)
-
-          if (pagamentoSessao) {
+          let pagamentoData:PagamentoData;
+          if (pagamentoDataReturned != null)  {
             status = 'Pago';
             pagamentoData = {
-              id_pagamento: pagamentoSessao.id_pagamento,
-              valor: pagamentoSessao.valor,
-              forma_pagamento: pagamentoSessao.forma_pagamento,
-              comprovante_url: pagamentoSessao.comprovante_url
-            };
-            console.log(`Sessão ${sessao.id} marcada como Pago:`, pagamentoSessao);
-          } else {
+              id_pagamento: pagamentoDataReturned?.id,
+              valor: pagamentoDataReturned?.valor_pago,
+              forma_pagamento: pagamentoDataReturned?.forma_pagamento_tipo,
+              comprovante_url: pagamentoDataReturned?.path_comprovante
+            }
+              console.log(`Sessão ${sessao.id} marcada como Pago:`, pagamentoData);
+            } else {
             console.log(`Sessão ${sessao.id} sem pagamento registrado`);
           }
 

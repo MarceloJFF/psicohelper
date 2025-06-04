@@ -1,13 +1,14 @@
 <script setup lang="ts">
-import { ref, defineProps, defineEmits } from 'vue'
+import { ref, defineProps, defineEmits, onMounted } from 'vue'
 import ModalPagamento from '@/components/ModalPagamento.vue' // ajuste o caminho se necessário
+import { PagamentoService } from '@/services/PagamentoService'
+
 
 const props = defineProps({
   atendimento: Object
 })
 
 const emit = defineEmits(['atualizar'])
-
 const showModalPagamento = ref(false)
 const pagamentoEditando = ref(null)
 const sessaoId = ref(null)
@@ -31,9 +32,25 @@ function excluirPagamentoConfirmado(pagamentoId: string) {
   }
 }
 
+
 function visualizarComprovante(url: string) {
   window.open(url, '_blank')
-}
+} 
+
+let pagamentoSessao;
+onMounted(async() => {
+  pagamentoSessao = await PagamentoService.getPagamentoSessaoById(props.atendimento.id)
+  if(pagamentoSessao != null){
+    props.atendimento.valor_pagamento = pagamentoSessao.valor_pago;
+    props.atendimento.status = pagamentoSessao.pago? "Pago":"Pendente"
+    props.atendimento.forma_pagamento = pagamentoSessao.forma_pagamento_tipo;
+    props.atendimento.anotacao= pagamentoSessao.observacao;
+    props.atendimento.comprovante_url = pagamentoSessao.path_comprovante
+  }else{
+    props.atendimento.status = "Pendente"
+  }
+
+})
 </script>
 
 <template>
@@ -95,7 +112,6 @@ function visualizarComprovante(url: string) {
         </div>
       </v-sheet>
     </v-col>
-    {{ atendimento }}
     <!-- Coluna com ações -->
     <v-col cols="12" sm="6" class="d-flex align-center flex-wrap gap-2">
       <v-btn icon @click="atendimento.showDetails = !atendimento.showDetails">

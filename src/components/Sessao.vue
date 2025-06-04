@@ -165,7 +165,6 @@ const props = defineProps<{
   }[];
 }>();
 
-console.log(props.atendimento)
 
 
 const emit = defineEmits<{
