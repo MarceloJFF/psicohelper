@@ -144,11 +144,9 @@ const searchQuery = ref('')
 const aprendenteService = new AprendenteService()
 const agendamentoService = new AgendamentoService()
 const sessaoService = new SessaoService()
-const sessoes = ref([])
 const sessaoModal: any = ref()
 const aprendenteCache = new Map()
 const filteredClientes = ref<ViewAprendenteLogadoProfissional[]>([])
-const sessaoAtendimentoModal: any = ref()
 
 // Interfaces for FullCalendar API and Events
 interface CalendarApi {
@@ -412,7 +410,7 @@ async function saveEvent() {
     if (actualTipoAtendimento === 'Contrato' && cliente.id) {
       const contratoService = new ContratoService();
       const contratos = await contratoService.loadContratoPorAprendente(cliente.id);
-      
+
       if (contratos.length === 0) {
         showMessage('Nenhum contrato ativo encontrado para a aprendente.');
         return;

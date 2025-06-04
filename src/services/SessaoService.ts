@@ -35,6 +35,8 @@ export class SessaoService {
   private showError = useShowErrorMessage().showError
 
   async createSessao(sessao: Sessao): Promise<string> {
+    console.log("SESSAO")
+    console.log(sessao)
     try {
       const { data, error } = await supabase
         .from('tb_sessao')
@@ -94,7 +96,7 @@ export class SessaoService {
       endDate,
       tipoSessao,
     } = options
-  
+
     try {
       const profissionalId = storeProfissional.profissionalDetails?.id
       if (!profissionalId) {
@@ -111,9 +113,9 @@ export class SessaoService {
       }
       const { data, error } = await supabase.rpc('filtrar_sessoes', params);
       if (error) throw error;
-      
+
      if (error) throw error
-   
+
       return data ?? []
     } catch (err: any) {
       console.error('Erro ao buscar sessões:', err)
@@ -121,7 +123,7 @@ export class SessaoService {
       return []
     }
   }
-  
+
 
   async getSessaoById(id: string): Promise<Sessao | null> {
     try {

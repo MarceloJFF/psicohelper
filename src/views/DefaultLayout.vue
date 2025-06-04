@@ -27,7 +27,6 @@ const storeProfissional = useStoreProfissional()
     <v-navigation-drawer v-model="drawer" app color="#9a20c1" permanent>
       <v-img
         :max-width="320"
-        aspect-ratio="16/9"
         cover
         :src="logo"
         rounded-full
@@ -98,7 +97,7 @@ const storeProfissional = useStoreProfissional()
 /* Efeito geral nos itens do menu */
 .menu-item {
   transition: background-color 0.3s ease, transform 0.3s ease, box-shadow 0.3s ease;
-  margin-bottom: 12px; /* Espaçamento entre os itens */
+  margin-bottom: 10px; /* Espaçamento entre os itens */
   border-radius: 8px;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); /* Sombra leve */
 }
@@ -113,7 +112,7 @@ const storeProfissional = useStoreProfissional()
 .router-link-exact-active .menu-item {
   background-color: #ba68c8; /* Cor de fundo do ativo */
   color: white;
-  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.3); /* Sombra mais intensa no ativo */
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3); /* Sombra mais intensa no ativo */
 }
 
 </style>

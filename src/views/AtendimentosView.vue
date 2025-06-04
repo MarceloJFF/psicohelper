@@ -59,6 +59,9 @@
     >
       Não há mais sessões para carregar
     </div>
+
+    <!-- Add observer target -->
+    <div ref="observerTarget" class="observer-target"></div>
   </v-container>
 </template>
 
@@ -212,7 +215,7 @@ async function loadSessoes(reset = false) {
       tipoSessao: tipoSessao.value === 'todos' ? undefined : (tipoSessao.value as 'contrato' | 'avulsa')
     });
 
-
+    console.log(newSessoes)
     if (newSessoes.length < pageSize) {
       hasMoreData.value = false;
     }
@@ -220,7 +223,7 @@ async function loadSessoes(reset = false) {
     if (newSessoes.length > 0) {
       const novosAtendimentos = await Promise.all(
         newSessoes.map(async (sessao: any) => {
-          console.log(sessao)          
+          console.log(sessao)
           const startTime = sessao.horario_inicio;
           const duracao = String(sessao.duracao);
           const startDateTime = startTime ? new Date(`1970-01-01T${startTime}`) : null;
@@ -231,11 +234,11 @@ async function loadSessoes(reset = false) {
 
           let paciente = 'N/A';
           const clienteId = sessao.id_aprendente || sessao.responsavel_id || '';
-          
+
           const aprendente = sessao.id_aprendente ? await aprendenteService.getAprendenteById(sessao.id_aprendente) : null;
-         
+
           paciente = aprendente?.nome_aprendente || 'N/A';
-          
+
           const anexos = typeof sessao.fotos === 'string' ? sessao.fotos.split(',').filter((url: string) => url) : [];
           let status = 'Pendente';
           let pagamentoData = null;
@@ -302,18 +305,23 @@ async function loadSessoes(reset = false) {
       } else {
         atendimentos.value = [...atendimentos.value, ...novosAtendimentos];
       }
-  
+
 
       currentPage.value++;
-      
-      // Update date range for next load
+
+      // Update date range for next load - move backwards in time
       if (!reset) {
-        currentDateRange.value.start = new Date(currentDateRange.value.start);
-        currentDateRange.value.start.setDate(currentDateRange.value.start.getDate() - 30);
-        currentDateRange.value.end = new Date(currentDateRange.value.end);
-        currentDateRange.value.end.setDate(currentDateRange.value.end.getDate() - 30);
+        const newEndDate = new Date(currentDateRange.value.start);
+        newEndDate.setDate(newEndDate.getDate() - 1);
+        const newStartDate = new Date(newEndDate);
+        newStartDate.setDate(newStartDate.getDate() - 30);
+        
+        currentDateRange.value = {
+          start: newStartDate,
+          end: newEndDate
+        };
       }
-      
+
       hasMoreData.value = newSessoes.length === pageSize;
     }
   } catch (error: unknown) {
@@ -343,7 +351,7 @@ async function salvarEdicao(atendimento: Atendimento) {
     const novosUrls = await uploadNovosAnexos(atendimento);
     await atualizarAnexos(atendimento, novosUrls);
     await atualizarDadosSessao(atendimento);
-    
+
     limparEstadoEdicao(atendimento);
     console.log('Sessão atualizada com sucesso');
     alert('Alterações salvas com sucesso!');
