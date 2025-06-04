@@ -2,6 +2,7 @@
 import { ref, defineProps, defineEmits, onMounted } from 'vue'
 import ModalPagamento from '@/components/ModalPagamento.vue' // ajuste o caminho se necessário
 import { PagamentoService } from '@/services/PagamentoService'
+import supabase from '@/config/supabase'
 
 
 const props = defineProps({
@@ -59,8 +60,24 @@ async function excluirPagamentoConfirmado(pagamentoId: string) {
 }
 
 
-function visualizarComprovante(url: string) {
-  window.open(url, '_blank')
+async function visualizarComprovante(path: string) {
+  try {
+    // Extrair o nome do arquivo do path
+    const fileName = path.split('/').pop();
+    // Obter a URL pública do arquivo
+    const { data } = supabase.storage
+      .from('comprovantes-pagamento')
+      .getPublicUrl(path);
+    
+    if (data?.publicUrl) {
+      window.open(data.publicUrl, '_blank');
+    } else {
+      alert('Erro ao obter URL do comprovante');
+    }
+  } catch (error) {
+    console.error('Erro ao visualizar comprovante:', error);
+    alert('Erro ao visualizar comprovante');
+  }
 } 
 
 let pagamentoSessao;
