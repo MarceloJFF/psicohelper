@@ -1,17 +1,31 @@
 import supabase from '@/config/supabase'
 
-interface PagamentoData {
+export interface Pagamento {
+  id: string;
   id_sessao: string;
   valor: number;
+  forma_pagamento: string;
   forma_pagamento_tipo: string;
+  data_pagamento?: string;
   observacao?: string;
   pago: boolean;
   created_at?: string;
+  data_sessao?: string;
+  comprovante_url?: string;
 }
 
 export const PagamentoService = {
-  async criarPagamento(dados: PagamentoData, arquivo: File | null) {
-   
+  async getPagamentos(): Promise<Pagamento[]> {
+    const { data, error } = await supabase
+      .from('tb_pagamento_sessao')
+      .select('*')
+      .order('created_at', { ascending: false });
+
+    if (error) throw error;
+    return data || [];
+  },
+
+  async criarPagamento(dados: Pagamento, arquivo: File | null) {
     const { data: pagamento, error } = await supabase
       .from('tb_pagamento_sessao')
       .insert({
@@ -51,19 +65,41 @@ export const PagamentoService = {
 
   async getPagamentoSessaoById(idSessao:string){
     const { data, error } = await supabase
-    .rpc('buscar_pagamento_por_sessao', { sessao_id: idSessao })
+      .rpc('buscar_pagamento_por_sessao', { sessao_id: idSessao })
 
-  if (error) {
-    console.error('Erro ao buscar pagamento:', error)
-    throw error
-  }
-  
-  if(data.length>0) return data[0]
-  return null;
+    if (error) {
+      console.error('Erro ao buscar pagamento:', error)
+      throw error
+    }
+    
+    if(data.length>0) return data[0]
+    return null;
   },
 
+  async getPagamentosPorMesAno(mes: number, ano: number): Promise<Pagamento[]> {
+    const { data: session } = await supabase.auth.getSession();
+    const userId = session.session?.user.id;
 
-  async atualizarPagamento(id: string, dados: Partial<PagamentoData>, arquivo?: File) {
+    if (!userId) {
+      throw new Error('Usuário não autenticado');
+    }
+
+    const { data, error } = await supabase
+      .rpc('buscar_pagamentos_por_mes_ano', {
+        p_mes: mes,
+        p_ano: ano,
+        p_usuario_id: userId
+      });
+
+    if (error) {
+      console.error('Erro ao buscar pagamentos:', error);
+      throw error;
+    }
+    console.log("PAGAMENTOS POR MÊS E ANO", data);
+    return data || [];
+  },
+
+  async atualizarPagamento(id: string, dados: Partial<Pagamento>, arquivo?: File) {
     const { data: pagamento, error } = await supabase
       .from('tb_pagamento_sessao')
       .update({
@@ -108,13 +144,12 @@ export const PagamentoService = {
     return pagamento
   },
 
-  async excluirComprovantePagamento(idPagamento:string){
-    let {error}= await supabase
-    .from('tb_comprovante_pagamento')
-    .delete()
-    .eq('id_pagamento_sessao',idPagamento)
+  async excluirComprovantePagamento(idPagamento: string) {
+    const { error } = await supabase
+      .from('tb_comprovante_pagamento')
+      .delete()
+      .eq('id_pagamento_sessao', idPagamento)
     if (error) throw error
-
   },
 
   async excluirPagamento(id: string) {
@@ -126,20 +161,17 @@ export const PagamentoService = {
         .eq('id_pagamento_sessao', id)
         .single();
 
-      if (fetchError && fetchError.code !== 'PGRST116') { // PGRST116 é o código para "não encontrado"
+      if (fetchError && fetchError.code !== 'PGRST116') {
         throw fetchError;
       }
 
       // 2. Se existir comprovante, excluir do storage
       if (comprovante?.path_comprovante) {
-        console.log('Tentando excluir arquivo do storage:', comprovante.path_comprovante);
-        
         const { error: deleteStorageError } = await supabase.storage
           .from('comprovantes-pagamento')
           .remove([comprovante.path_comprovante]);
 
         if (deleteStorageError) {
-          console.error('Erro ao excluir comprovante do storage:', deleteStorageError);
           throw deleteStorageError;
         }
       }
@@ -167,5 +199,5 @@ export const PagamentoService = {
       console.error('Erro ao excluir pagamento:', error);
       throw error;
     }
-  },
+  }
 }

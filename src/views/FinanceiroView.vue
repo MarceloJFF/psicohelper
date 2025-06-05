@@ -58,9 +58,6 @@
           <v-icon left>mdi-plus</v-icon>
           {{ abaSelecionada === 'despesas' ? 'Nova Despesa' : 'Novo Pagamento' }}
         </v-btn>
-        <v-btn color="info" @click="mostrarTudo = !mostrarTudo" class="ml-2">
-          {{ mostrarTudo ? 'Aplicar Filtros' : 'Mostrar Tudo' }}
-        </v-btn>
       </v-col>
     </v-row>
 
@@ -100,16 +97,13 @@
           :hide-default-header="false">
           <template v-slot:item="{ item }">
             <tr>
+              <td>Sessão Avulsa</td>
+              <td>R$ {{ formatarValor(item.valor_pago) }}</td>
+              <td>{{ item.data_sessao ? formatarData(item.data_sessao) : 'N/A' }}</td>
+              <td>{{ item.forma_pagamento_tipo || 'N/A' }}</td>
               <td>
-                <v-chip v-if="item.id_mensalidade" color="primary" small>Contrato</v-chip>
-                <span v-else>Sessão Avulsa</span>
-              </td>
-              <td>R$ {{ formatarValor(item.valor) }}</td>
-              <td>{{ item.data_pagamento ? formatarData(item.data_pagamento) : 'N/A' }}</td>
-              <td>{{ item.forma_pagamento || 'N/A' }}</td>
-              <td>
-                <v-chip :color="item.data_pagamento ? 'success' : 'warning'" small>
-                  {{ item.data_pagamento ? 'Pago' : 'Pendente' }}
+                <v-chip :color="item.pago ? 'success' : 'warning'" small>
+                  {{ item.pago ? 'Pago' : 'Pendente' }}
                 </v-chip>
               </td>
               <td>
@@ -214,31 +208,40 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue';
+import { ref, computed, onMounted, watch } from 'vue';
 import { DespesaService, type Despesa } from '@/services/DespesaService';
 import { PagamentoService, type Pagamento } from '@/services/PagamentoService';
 
+// Types
+interface NovoPagamento {
+  tipo: string;
+  valor: number;
+  data_pagamento: string;
+  forma_pagamento: string;
+  comprovante_url: string;
+  id?: string;
+}
+
 // Estado reativo
 const form = ref<{ validate: () => Promise<boolean> } | null>(null);
-const anoSelecionado = ref(new Date().getFullYear()); // Ano atual para filtro
-const mesSelecionado = ref(new Date().getMonth()); // Mês atual para filtro
-const anos = Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - 2 + i); // Últimos 5 anos
+const anoSelecionado = ref(new Date().getFullYear());
+const mesSelecionado = ref(new Date().getMonth());
+const anos = Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - 2 + i);
 const meses = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
 
-const abaSelecionada = ref('receitas'); // Aba ativa: 'despesas' ou 'receitas'
-const abrirModal = ref(false); // Controla o modal de criação/edição
-const dialogConfirmacao = ref(false); // Controla o diálogo de exclusão
-const editando = ref(false); // Indica se está editando
-const itemSelecionadoParaExclusao = ref<Despesa | Pagamento | null>(null); // Item a ser excluído
-const tipoExclusao = ref<'despesa' | 'pagamento'>('despesa'); // Tipo do item a excluir
-const despesas = ref<Despesa[]>([]); // Lista de despesas
-const pagamentos = ref<Pagamento[]>([]); // Lista de pagamentos
-const snackbar = ref(false); // Controla a exibição do snackbar
-const snackbarMessage = ref(''); // Mensagem do snackbar
-const snackbarColor = ref('success'); // Cor do snackbar (success, error)
-const mostrarTudo = ref(false); // Alterna entre mostrar todas ou filtrar por mês/ano
-const pagamentoService = new PagamentoService();
+const abaSelecionada = ref('receitas');
+const abrirModal = ref(false);
+const dialogConfirmacao = ref(false);
+const editando = ref(false);
+const itemSelecionadoParaExclusao = ref<Despesa | Pagamento | null>(null);
+const tipoExclusao = ref<'despesa' | 'pagamento'>('despesa');
+const despesas = ref<Despesa[]>([]);
+const pagamentos = ref<Pagamento[]>([]);
+const snackbar = ref(false);
+const snackbarMessage = ref('');
+const snackbarColor = ref('success');
 
+// Formulários
 const novaDespesa = ref<Partial<Despesa>>({
   tipo: '',
   categoria: '',
@@ -251,91 +254,76 @@ const novaDespesa = ref<Partial<Despesa>>({
   dia_vencimento: 1,
 });
 
-const novoPagamento = ref<Partial<Pagamento> & { tipo?: string }>({
+const novoPagamento = ref<NovoPagamento>({
   tipo: '',
   valor: 0,
   data_pagamento: '',
   forma_pagamento: '',
   comprovante_url: '',
-  id_mensalidade: null,
 });
 
-const headersDespesas = ref([
+// Headers das tabelas
+const headersDespesas = [
   { title: 'Descrição', key: 'tipo', sortable: true },
   { title: 'Categoria', key: 'categoria', sortable: true },
   { title: 'Valor', key: 'valor', sortable: true },
   { title: 'Vencimento', key: 'vencimento', sortable: true },
   { title: 'Status', key: 'pago', sortable: true },
   { title: 'Ações', key: 'acoes', sortable: false },
-]);
+];
 
-const headersReceitas = ref([
+const headersReceitas = [
   { title: 'Tipo', key: 'tipo', sortable: true },
   { title: 'Valor', key: 'valor', sortable: true },
-  { title: 'Data Pagamento', key: 'data_pagamento', sortable: true },
-  { title: 'Forma Pagamento', key: 'forma_pagamento', sortable: true },
+  { title: 'Data Sessão', key: 'data_sessao', sortable: true },
+  { title: 'Forma Pagamento', key: 'forma_pagamento_tipo', sortable: true },
   { title: 'Status', key: 'status', sortable: true },
   { title: 'Ações', key: 'acoes', sortable: false },
-]);
+];
 
-onMounted(async () => {
-  await Promise.all([carregarDespesas(), carregarPagamentos()]);
-});
-
+// Computed properties
 const despesasFiltradas = computed(() => {
-  if (mostrarTudo.value) return despesas.value;
   return despesas.value.filter((despesa) => {
     const [year, month] = despesa.vencimento.split('-').map(Number);
     const data = new Date(year, month - 1, 1);
-    return !isNaN(data.getTime()) && data.getFullYear() === anoSelecionado.value && data.getMonth() === mesSelecionado.value;
+    return !isNaN(data.getTime()) && 
+           data.getFullYear() === anoSelecionado.value && 
+           data.getMonth() === mesSelecionado.value;
   });
 });
 
 const pagamentosFiltrados = computed(() => {
-  if (mostrarTudo.value) return pagamentos.value;
-  return pagamentos.value.filter((pagamento) => {
-    if (!pagamento.data_pagamento) return false;
-    const [year, month] = pagamento.data_pagamento.split('-').map(Number);
+  return pagamentos.value.filter((pagamento: Pagamento) => {
+    if (!pagamento.data_sessao) return false;
+    const [year, month] = pagamento.data_sessao.split('-').map(Number);
     const data = new Date(year, month - 1, 1);
-    return !isNaN(data.getTime()) && data.getFullYear() === anoSelecionado.value && data.getMonth() === mesSelecionado.value;
+    return !isNaN(data.getTime()) && 
+           data.getFullYear() === anoSelecionado.value && 
+           data.getMonth() === mesSelecionado.value;
   });
 });
 
 const totalDespesas = computed(() => {
-  return despesasFiltradas.value.reduce((acc, curr) => acc + (curr.valor || 0), 0);
+  return despesasFiltradas.value.reduce((acc: number, curr: Despesa) => acc + (curr.valor || 0), 0);
 });
 
 const totalReceitas = computed(() => {
-  return pagamentosFiltrados.value.reduce((acc, curr) => acc + (curr.valor || 0), 0);
+  return pagamentosFiltrados.value.reduce((acc: number, curr: Pagamento) => acc + (curr.valor_pago || 0), 0);
 });
 
-function formatarValor(valor: number) {
+// Add watchers after the computed properties
+watch([mesSelecionado, anoSelecionado], () => {
+  carregarPagamentos();
+});
+
+// Funções auxiliares
+function formatarValor(valor: number | undefined | null) {
+  if (valor === undefined || valor === null) return '0,00';
   return valor.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
 function formatarData(data: string) {
   return new Date(data).toLocaleDateString('pt-BR');
-}
-
-async function carregarDespesas() {
-  try {
-    despesas.value = await DespesaService.getDespesas();
-  } catch (error) {
-    console.error('Erro ao carregar despesas:', error);
-    snackbarMessage.value = 'Erro ao carregar despesas';
-    snackbarColor.value = 'error';
-    snackbar.value = true;
-  }
-}
-async function carregarPagamentos() {
-  try {
-    pagamentos.value = await pagamentoService.getPagamentos();
-  } catch (error) {
-    console.error('Erro ao carregar pagamentos:', error);
-    snackbarMessage.value = 'Erro ao carregar pagamentos';
-    snackbarColor.value = 'error';
-    snackbar.value = true;
-  }
 }
 
 function limparFormulario() {
@@ -358,12 +346,38 @@ function limparFormulario() {
       data_pagamento: '',
       forma_pagamento: '',
       comprovante_url: '',
-      id_mensalidade: null,
     };
   }
   editando.value = false;
 }
 
+// Funções de carregamento
+async function carregarDespesas() {
+  try {
+    despesas.value = await DespesaService.getDespesas();
+  } catch (error) {
+    console.error('Erro ao carregar despesas:', error);
+    snackbarMessage.value = 'Erro ao carregar despesas';
+    snackbarColor.value = 'error';
+    snackbar.value = true;
+  }
+}
+
+async function carregarPagamentos() {
+  try {
+    pagamentos.value = await PagamentoService.getPagamentosPorMesAno(
+      mesSelecionado.value + 1, // +1 because months are 0-based in JavaScript
+      anoSelecionado.value
+    );
+  } catch (error) {
+    console.error('Erro ao carregar pagamentos:', error);
+    snackbarMessage.value = 'Erro ao carregar pagamentos';
+    snackbarColor.value = 'error';
+    snackbar.value = true;
+  }
+}
+
+// Funções de manipulação
 async function salvarItem() {
   if (!form.value) return;
   const valid = await form.value.validate();
@@ -371,43 +385,9 @@ async function salvarItem() {
 
   try {
     if (abaSelecionada.value === 'despesas') {
-      const despesaData = {
-        tipo: novaDespesa.value.tipo,
-        categoria: novaDespesa.value.categoria,
-        valor: novaDespesa.value.valor,
-        vencimento: novaDespesa.value.vencimento,
-        pago: novaDespesa.value.pago,
-        observacoes: novaDespesa.value.observacoes,
-        recorrente: novaDespesa.value.recorrente,
-        qtd_meses: novaDespesa.value.recorrente ? novaDespesa.value.qtd_meses : 1,
-        dia_vencimento: novaDespesa.value.recorrente ? novaDespesa.value.dia_vencimento : null,
-      };
-
-      if (editando.value && novaDespesa.value.id_despesa) {
-        await DespesaService.updateDespesa(novaDespesa.value.id_despesa, despesaData);
-        snackbarMessage.value = 'Despesa atualizada com sucesso!';
-      } else {
-        await DespesaService.createDespesa(despesaData);
-        snackbarMessage.value = 'Despesa salva com sucesso!';
-      }
-      await carregarDespesas();
+      await salvarDespesa();
     } else {
-      const pagamentoData = {
-        valor: novoPagamento.value.valor,
-        data_pagamento: novoPagamento.value.data_pagamento || null,
-        forma_pagamento: novoPagamento.value.forma_pagamento,
-        comprovante_url: novoPagamento.value.comprovante_url || null,
-        id_mensalidade: novoPagamento.value.tipo === 'Mensalidade' ? 'placeholder-uuid' : null, // Substituir por UUID real
-      };
-
-      if (editando.value && novoPagamento.value.id) {
-        await PagamentoService.updatePagamento(novoPagamento.value.id, pagamentoData);
-        snackbarMessage.value = 'Pagamento atualizado com sucesso!';
-      } else {
-        await PagamentoService.createPagamento(pagamentoData);
-        snackbarMessage.value = 'Pagamento salvo com sucesso!';
-      }
-      await carregarPagamentos();
+      await salvarPagamento();
     }
 
     snackbarColor.value = 'success';
@@ -421,6 +401,52 @@ async function salvarItem() {
   }
 }
 
+async function salvarDespesa() {
+  const despesaData = {
+    tipo: novaDespesa.value.tipo || '',
+    categoria: novaDespesa.value.categoria || '',
+    valor: novaDespesa.value.valor || 0,
+    vencimento: novaDespesa.value.vencimento || '',
+    pago: novaDespesa.value.pago || false,
+    observacoes: novaDespesa.value.observacoes || '',
+    recorrente: novaDespesa.value.recorrente || false,
+    qtd_meses: novaDespesa.value.recorrente ? (novaDespesa.value.qtd_meses || 1) : 1,
+    dia_vencimento: novaDespesa.value.recorrente ? (novaDespesa.value.dia_vencimento || 1) : 1,
+  };
+
+  if (editando.value && novaDespesa.value.id_despesa) {
+    await DespesaService.updateDespesa(novaDespesa.value.id_despesa, despesaData);
+    snackbarMessage.value = 'Despesa atualizada com sucesso!';
+  } else {
+    await DespesaService.createDespesa(despesaData);
+    snackbarMessage.value = 'Despesa salva com sucesso!';
+  }
+  await carregarDespesas();
+}
+
+async function salvarPagamento() {
+  const pagamentoData: Pagamento = {
+    id: novoPagamento.value.id || '',
+    id_sessao: 'sessao-avulsa',
+    valor_pago: novoPagamento.value.valor,
+    forma_pagamento: novoPagamento.value.forma_pagamento,
+    forma_pagamento_tipo: novoPagamento.value.forma_pagamento,
+    pago: !!novoPagamento.value.data_pagamento,
+    observacao: novoPagamento.value.tipo,
+    data_pagamento: novoPagamento.value.data_pagamento,
+    comprovante_url: novoPagamento.value.comprovante_url
+  };
+
+  if (editando.value && novoPagamento.value.id) {
+    await PagamentoService.atualizarPagamento(novoPagamento.value.id, pagamentoData);
+    snackbarMessage.value = 'Pagamento atualizado com sucesso!';
+  } else {
+    await PagamentoService.criarPagamento(pagamentoData, null);
+    snackbarMessage.value = 'Pagamento salvo com sucesso!';
+  }
+  await carregarPagamentos();
+}
+
 function editarDespesa(despesa: Despesa) {
   novaDespesa.value = { ...despesa };
   editando.value = true;
@@ -429,8 +455,12 @@ function editarDespesa(despesa: Despesa) {
 
 function editarPagamento(pagamento: Pagamento) {
   novoPagamento.value = {
-    ...pagamento,
-    tipo: pagamento.id_mensalidade ? 'Mensalidade' : 'Sessão Avulsa',
+    tipo: 'Sessão Avulsa',
+    valor: pagamento.valor_pago || 0,
+    data_pagamento: pagamento.data_sessao || '',
+    forma_pagamento: pagamento.forma_pagamento_tipo || '',
+    comprovante_url: pagamento.comprovante_url || '',
+    id: pagamento.id
   };
   editando.value = true;
   abrirModal.value = true;
@@ -451,7 +481,7 @@ async function excluirItem() {
       await carregarDespesas();
       snackbarMessage.value = 'Despesa excluída com sucesso!';
     } else {
-      await PagamentoService.deletePagamento((itemSelecionadoParaExclusao.value as Pagamento).id);
+      await PagamentoService.excluirPagamento((itemSelecionadoParaExclusao.value as Pagamento).id);
       await carregarPagamentos();
       snackbarMessage.value = 'Pagamento excluído com sucesso!';
     }
@@ -467,6 +497,11 @@ async function excluirItem() {
     snackbar.value = true;
   }
 }
+
+// Lifecycle hooks
+onMounted(async () => {
+  await Promise.all([carregarDespesas(), carregarPagamentos()]);
+});
 </script>
 
 <style scoped>
