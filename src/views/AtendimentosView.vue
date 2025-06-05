@@ -68,7 +68,6 @@
 <script lang="ts" setup>
 import { ref, computed, onMounted, watch } from 'vue';
 import { UploadService } from '@/services/UploadService';
-import supabase from '@/config/supabase';
 import AutoComplete from '@/components/AutoComplete.vue';
 import { SessaoService } from '@/services/SessaoService.ts';
 import { AprendenteService } from '@/services/AprendenteService.ts';
@@ -241,9 +240,9 @@ async function loadSessoes(reset = false) {
           const anexos = typeof sessao.fotos === 'string' ? sessao.fotos.split(',').filter((url: string) => url) : [];
 
           let status = 'Pendente';
-      
+
           let pagamentoDataReturned = await PagamentoService.getPagamentoSessaoById(sessao.id);
-      
+
           // Verifica se existe pagamento para esta sessão
           let pagamentoData:PagamentoData;
           if (pagamentoDataReturned != null)  {
@@ -311,7 +310,7 @@ async function loadSessoes(reset = false) {
         newEndDate.setDate(newEndDate.getDate() - 1);
         const newStartDate = new Date(newEndDate);
         newStartDate.setDate(newStartDate.getDate() - 30);
-        
+
         currentDateRange.value = {
           start: newStartDate,
           end: newEndDate

@@ -208,31 +208,7 @@ export class AprendenteService {
       return null;
     }
   }
-  // async buscarClientesPorNome(termo: string) {
-  //   try {
-  //     const { data, error } = await supabase
-  //       .from('vw_aprendente_responsavel')
-  //       .select('*')
-  //       .or(
-  //         `and(atendimento_proprio.eq.true,nome_responsavel.ilike.%${termo}%),nome_aprendente.ilike.%${termo}%`
-  //       )
 
-  //     if (error) throw error
-
-  //     return data.map((item: any) => ({
-  //       // id: item.id_aprendente ? item.id_aprendente : item.id_responsavel,
-  //       id_responsavel: item.id_responsavel,
-  //       id_aprendente: item.id_aprendente,
-  //       nome: item.nome_aprendente ? item.nome_aprendente : item.nome_responsavel,
-  //       responsavel: item.nome_responsavel,
-  //       displayName: `Aprendente: ${item.nome_aprendente ? item.nome_aprendente :item.nome_responsavel } Responsavel: ${item.nome_responsavel}`
-  //     }))
-  //     // console.log(data)
-  //   } catch (err: any) {
-  //     this.showError(err.message || 'Erro ao buscar clientes')
-  //     return []
-  //   }
-  // }
   async buscarClientesPorNome(termo: string) {
     try {
       const { data, error } = await supabase

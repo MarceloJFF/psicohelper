@@ -141,18 +141,7 @@
                 :rules="[v => !!v || 'Campo obrigatório']" />
               <v-checkbox v-model="novaDespesa.pago" label="Pago" dense />
               <v-textarea v-model="novaDespesa.observacoes" label="Observações" outlined dense />
-              <v-row>
-                <v-col cols="6">
-                  <v-checkbox v-model="novaDespesa.recorrente" label="Recorrente" dense />
-                </v-col>
-                <v-col cols="6">
-                  <v-text-field v-model="novaDespesa.qtd_meses" label="Quantidade de meses" type="number" outlined dense
-                    :disabled="!novaDespesa.recorrente"
-                    :rules="[v => !novaDespesa.recorrente || !!v || 'Campo obrigatório']" />
-                </v-col>
-              </v-row>
-              <v-text-field v-model="novaDespesa.dia_vencimento" label="Dia de Vencimento" type="number" outlined dense
-                :rules="[v => !novaDespesa.recorrente || (v >= 1 && v <= 31) || 'Dia deve ser entre 1 e 31']" />
+
             </template>
 
             <!-- Formulário de Pagamento -->
@@ -249,8 +238,6 @@ const novaDespesa = ref<Partial<Despesa>>({
   vencimento: '',
   pago: false,
   observacoes: '',
-  recorrente: false,
-  qtd_meses: 1,
   dia_vencimento: 1,
 });
 
@@ -286,8 +273,8 @@ const despesasFiltradas = computed(() => {
   return despesas.value.filter((despesa) => {
     const [year, month] = despesa.vencimento.split('-').map(Number);
     const data = new Date(year, month - 1, 1);
-    return !isNaN(data.getTime()) && 
-           data.getFullYear() === anoSelecionado.value && 
+    return !isNaN(data.getTime()) &&
+           data.getFullYear() === anoSelecionado.value &&
            data.getMonth() === mesSelecionado.value;
   });
 });
@@ -297,8 +284,8 @@ const pagamentosFiltrados = computed(() => {
     if (!pagamento.data_sessao) return false;
     const [year, month] = pagamento.data_sessao.split('-').map(Number);
     const data = new Date(year, month - 1, 1);
-    return !isNaN(data.getTime()) && 
-           data.getFullYear() === anoSelecionado.value && 
+    return !isNaN(data.getTime()) &&
+           data.getFullYear() === anoSelecionado.value &&
            data.getMonth() === mesSelecionado.value;
   });
 });
@@ -335,8 +322,6 @@ function limparFormulario() {
       vencimento: '',
       pago: false,
       observacoes: '',
-      recorrente: false,
-      qtd_meses: 1,
       dia_vencimento: 1,
     };
   } else {
@@ -409,9 +394,6 @@ async function salvarDespesa() {
     vencimento: novaDespesa.value.vencimento || '',
     pago: novaDespesa.value.pago || false,
     observacoes: novaDespesa.value.observacoes || '',
-    recorrente: novaDespesa.value.recorrente || false,
-    qtd_meses: novaDespesa.value.recorrente ? (novaDespesa.value.qtd_meses || 1) : 1,
-    dia_vencimento: novaDespesa.value.recorrente ? (novaDespesa.value.dia_vencimento || 1) : 1,
   };
 
   if (editando.value && novaDespesa.value.id_despesa) {
