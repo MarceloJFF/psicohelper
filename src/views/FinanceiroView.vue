@@ -1,6 +1,6 @@
 <template>
   <v-container>
-    <h2 class="text-h4 mb-4">Financeiro</h2>
+    <h2 class="text-h4 mb-4  text-center text-h2 text-purple">Financeiro</h2>
 
     <!-- Indicadores -->
     <v-row class="mb-4 mt-4" justify="center">

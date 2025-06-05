@@ -50,14 +50,17 @@
                 >
                   <!-- Telefone com ícone do WhatsApp -->
                   <template v-slot:item.telefone="{ item }">
-                    <span class="text-caption">{{ formatarTelefone(item.telefone) }}</span>
-                    <a
-                      :href="`https://wa.me/55${item.telefone}`"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                    >
-                      <v-icon size="small" color="green" class="ml-2">mdi-whatsapp</v-icon>
-                    </a>
+                    <div class="d-flex justify-space-around	justify-sm-space-between	align-content-center">
+                      <span class="text-caption">{{ formatarTelefone(item.telefone) }}</span>
+                      <a
+                        :href="`https://wa.me/55${item.telefone}`"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        <v-icon size="small" color="green" class="ml-2">mdi-whatsapp</v-icon>
+                      </a>
+                    </div>
+
                   </template>
 
                   <!-- Status Matrícula -->
@@ -73,6 +76,8 @@
 
                   <!-- Ações -->
                   <template v-slot:item.actions="{ item }" class="d-flex justify-end text-end pa-12">
+                    <div class="d-flex justify-space-around	justify-sm-space-between	">
+
                     <v-btn
                       :icon="item.statusMatricula ? 'mdi-cancel' : 'mdi-check-circle-outline'"
                       @click="alternarStatusMatricula(item)"
@@ -92,6 +97,7 @@
                     >
                       <v-icon color="primary" size="small">mdi-eye</v-icon>
                     </v-btn>
+                    </div>
                   </template>
                 </v-data-table>
 
@@ -195,7 +201,6 @@ const headers = [
 
 
 const visualizarResponsavel = (aprendente: ViewAprendenteLogadoProfissional) => {
-  console.log(aprendente)
   router.push({
     name: 'cliente-detalhes',
     params: {
@@ -203,6 +208,7 @@ const visualizarResponsavel = (aprendente: ViewAprendenteLogadoProfissional) => 
       idAprendente: aprendente.id,
     }
   })
+
 }
 
 function formatarTelefone(telefone: string): string {
@@ -238,7 +244,7 @@ const confirmarInativacaoComMotivo = async () => {
 <style scoped>
 /* Transições suaves de página */
 .router-view {
-  transition: opacity 0.5s ease-in-out;
+  transition: opacity 0.9s ease-in-out;
   opacity: 0;
 }
 
