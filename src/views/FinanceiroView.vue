@@ -100,7 +100,7 @@
               <td>{{ item.id_contrato? 'Contrato' : 'Avulso'  }}</td>
 
               <td>R$ {{ formatarValor(item.valor_pago) }}</td>
-              <td>{{ item.data_sessao  }}</td>
+              <td>{{ item.data_sessao }}</td>
               <td>{{ item.forma_pagamento_tipo || 'N/A' }}</td>
               <td>
                 <v-chip :color="item.pago ? 'success' : 'warning'" small>
