@@ -111,21 +111,7 @@
         <v-progress-circular indeterminate size="64" color="primary" />
       </v-overlay>
 
-      <!-- Modal de cliente -->
-      <ModalGenerico v-model="showModal" :title="modoEdicao ? 'Editar Responsavel' : 'Cadastrar Novo Responsavel'">
-        <template #content>
-          <v-form>
-            <v-text-field v-model="responsavelAtual.nome" label="Nome" />
-            <v-text-field v-model="responsavelAtual.telefone" label="Telefone" />
-            <v-text-field v-model="responsavelAtual.email" label="Email" />
-            <v-text-field v-model="responsavelAtual.tipoAtendimento" label="Tipo de Atendimento" />
-          </v-form>
-        </template>
-        <template #actions>
-          <v-btn color="green" @click="salvarResponsavel">Salvar</v-btn>
-          <v-btn color="grey" @click="showModal = false">Cancelar</v-btn>
-        </template>
-      </ModalGenerico>
+
 
       <!-- Dialogo de confirmação de inativação -->
       <v-dialog v-model="dialogConfirmacao" max-width="400">
@@ -154,20 +140,14 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import Responsavel from '@/models/Responsavel'
 import CalendarioDiario from '@/components/CalendarioDiario.vue'
-import ModalGenerico from '@/components/ModalGenerico.vue'
 import { AprendenteService } from '@/services/AprendenteService'
 import ViewAprendenteLogadoProfissional from '@/models/ViewAprendenteLogadoProfissional'
 
 const aprendenteService = new AprendenteService()
-const showModal = ref(false)
-const modoEdicao = ref(false)
-const indexEdicao = ref<number | null>(null)
 const router = useRouter()
 const search = ref('')
 const loading = ref(true)
-const responsavelAtual = ref<Responsavel>(new Responsavel())
 const dialogConfirmacao = ref(false)
 const motivoInativacao = ref('')
 const aprendenteParaInativar = ref<ViewAprendenteLogadoProfissional | null>(null)
@@ -208,22 +188,11 @@ const headers = [
   { title: 'Ações', key: 'actions', sortable: false, align: 'center' as const, cellClass: 'text-right' },
 ]
 
-const responsaveis = ref([])
 
 
 
 
 
-const salvarResponsavel = () => {
-  if (modoEdicao.value && indexEdicao.value !== null) {
-    responsaveis.value[indexEdicao.value] = { ...responsavelAtual.value }
-  } else {
-    responsaveis.value.push({ ...responsavelAtual.value })
-  }
-  showModal.value = false
-  modoEdicao.value = false
-  indexEdicao.value = null
-}
 
 const visualizarResponsavel = (aprendente: ViewAprendenteLogadoProfissional) => {
   console.log(aprendente)

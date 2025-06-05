@@ -5,7 +5,7 @@ export default class ViewAprendenteLogadoProfissional {
   idResponsavel: string = ''
   nomeResponsavel: string = ''
   telefone: string = ''
-  statusMatricula: string = ''
+  statusMatricula: boolean = false
 
   constructor() {
     this.id = ''
@@ -14,6 +14,6 @@ export default class ViewAprendenteLogadoProfissional {
     this.idResponsavel = ''
     this.nomeResponsavel = ''
     this.telefone = ''
-    this.statusMatricula = ''
+    this.statusMatricula = false
   }
 }
