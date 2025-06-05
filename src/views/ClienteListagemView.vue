@@ -154,7 +154,6 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { ResponsavelService } from '@/services/responsavelService'
 import Responsavel from '@/models/Responsavel'
 import CalendarioDiario from '@/components/CalendarioDiario.vue'
 import ModalGenerico from '@/components/ModalGenerico.vue'
@@ -162,16 +161,13 @@ import { AprendenteService } from '@/services/AprendenteService'
 import ViewAprendenteLogadoProfissional from '@/models/ViewAprendenteLogadoProfissional'
 
 const aprendenteService = new AprendenteService()
-const responsavelService = new ResponsavelService()
 const showModal = ref(false)
 const modoEdicao = ref(false)
 const indexEdicao = ref<number | null>(null)
 const router = useRouter()
 const search = ref('')
 const loading = ref(true)
-
 const responsavelAtual = ref<Responsavel>(new Responsavel())
-const responsavelParaInativar = ref<Responsavel | null>(null)
 const dialogConfirmacao = ref(false)
 const motivoInativacao = ref('')
 const aprendenteParaInativar = ref<ViewAprendenteLogadoProfissional | null>(null)
@@ -203,10 +199,6 @@ const loadAprendentes = async () => {
   }
 }
 
-function inativarAprendente(item: ViewAprendenteLogadoProfissional) {
-  console.log('Remover:', item)
-  // Implement remove logic
-}
 
 const headers = [
   { title: 'Aprendente', key: 'nomeAprendente', align: 'center' as const, cellClass: 'text-right' },
@@ -218,16 +210,9 @@ const headers = [
 
 const responsaveis = ref([])
 
-const abrirModalNovo = () => {
-  router.push('/clientes/add')
-}
 
-const abrirModalEdicao = (item: Responsavel, index: number) => {
-  responsavelAtual.value = { ...item }
-  indexEdicao.value = index
-  modoEdicao.value = true
-  showModal.value = true
-}
+
+
 
 const salvarResponsavel = () => {
   if (modoEdicao.value && indexEdicao.value !== null) {
@@ -255,22 +240,6 @@ function formatarTelefone(telefone: string): string {
   return telefone.replace(/^(\d{2})(\d{4,5})(\d{4})$/, '($1) $2-$3')
 }
 
-const confirmarInativacao = (responsavel: Responsavel) => {
-  responsavelParaInativar.value = responsavel
-  dialogConfirmacao.value = true
-}
-
-const inativarCliente = async () => {
-  if (responsavelParaInativar.value) {
-    try {
-      // Implement inactivation logic here
-      dialogConfirmacao.value = false
-      await loadAprendentes()
-    } catch (error) {
-      console.error('Erro ao inativar cliente:', error)
-    }
-  }
-}
 
 const alternarStatusMatricula = async (aprendente: ViewAprendenteLogadoProfissional) => {
   aprendenteParaInativar.value = aprendente
