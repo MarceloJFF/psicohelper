@@ -85,11 +85,11 @@
           <v-btn color="success" @click="saveEvent">
             Salvar
           </v-btn>
-          <v-btn color="primary" @click="openAtendimentoModal">
+          <v-btn color="primary" @click="openAtendimentoModal" v-if="eventData.id">
             {{ agendamentoPossuiSessao ? 'Editar Sessão' : 'Nova Sessão' }}
           </v-btn>
           <v-btn text @click="showModal = false">
-            Cancelar
+            Voltar
           </v-btn>
         </v-card-actions>
       </v-card>
@@ -541,6 +541,9 @@ async function saveEvent() {
     const errorMessage = err instanceof Error ? err.message : 'Erro ao salvar evento';
     showMessage(errorMessage);
   }
+  await loadEventos()
+  //window.location.reload();
+
 }
 
 async function deleteEvent() {
