@@ -27,7 +27,7 @@ export class ContratoService {
     }
   }
 
-  async loadContratoPorAprendente(idAprendente: string): Promise<Contrato[] | null> {
+  async loadContratoPorAprendente(idAprendente: string): Promise<any[] | null> {
     try {
       const { data, error } = await supabase
         .from('tb_contrato')
@@ -37,7 +37,7 @@ export class ContratoService {
         .select()
 
       if (error) throw error
-      return data as Contrato[]
+      return data
     } catch (err: any) {
       this.showError(err.message || 'Erro ao buscar contrato por aprendente')
       return null
@@ -217,5 +217,5 @@ export class ContratoService {
     if (error) throw error
     return data
   }
-  
+
 }

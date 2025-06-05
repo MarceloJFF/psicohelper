@@ -241,7 +241,7 @@ async function loadSessoes(reset = false) {
 
           let status = 'Pendente';
 
-          let pagamentoDataReturned = await PagamentoService.getPagamentoSessaoById(sessao.id);
+          const pagamentoDataReturned = await PagamentoService.getPagamentoSessaoById(sessao.id);
 
           // Verifica se existe pagamento para esta sessão
           let pagamentoData:PagamentoData;

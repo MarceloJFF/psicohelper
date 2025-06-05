@@ -54,7 +54,7 @@
 
               <v-col cols="12">
                 <v-autocomplete v-model="eventData.cliente" :items="filteredClientes" v-model:search="searchQuery"
-                  @update:search="searchQuery = $event" label="Cliente" item-title="nomeAprendente" item-value="id"
+                  @update:search="searchQuery = $event" label="Aprendente" item-title="nomeAprendente" item-value="id"
                   return-object clearable :loading="isLoading" :filter="() => true" :menu-props="{ maxHeight: 400 }">
                   <template v-slot:item="{ props, item }">
                     <v-list-item v-bind="props">
@@ -376,6 +376,7 @@ function isDateFeriado(date: Date): boolean {
 }
 
 function openEventModal() {
+
   resetEventData()
   agendamentoPossuiSessao.value = false
   showModal.value = true
@@ -755,16 +756,12 @@ watch(searchQuery, async (val) => {
   font-size: 1rem;
 }
 
-:deep(.fc-daygrid-day) {}
-
-:deep(.fc-daygrid-day-frame) {}
 
 :deep(.fc-daygrid-day-frame:hover) {
   cursor: pointer !important;
   background-color: #B39DDB !important;
 }
 
-:deep(.fc-daygrid-day-events) {}
 
 :deep(.fc-toolbar-title) {
   font-size: clamp(1.2rem, 2vw, 2rem);

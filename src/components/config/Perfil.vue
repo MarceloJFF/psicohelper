@@ -2,13 +2,11 @@
 import { ref, onMounted } from 'vue'
 import { useStoreProfissional } from '@/stores/storeProfissional'
 import { useStoreAuth } from '@/stores/storeAuth'
-import { useShowErrorMessage } from '@/userCases/useShowErrorMessage'
 import { StorageAvatarService } from '@/services/storage/StorageAvatarService'
 import Profissional from '@/models/Profissional'
 
 const storeProfissional = useStoreProfissional()
 const storeAuth = useStoreAuth()
-const { showError } = useShowErrorMessage()
 const storageAvatarService = new StorageAvatarService();
 
 const formRef = ref<{ validate: () => boolean } | null>(null)
@@ -32,7 +30,7 @@ const novaSenha = ref('')
 const confirmarSenha = ref('')
 const modalSenha = ref(false)
 const foto = ref(null)
-const fotoUrl = ref("/assets/logo.jpeg")  
+const fotoUrl = ref("/assets/logo.jpeg")
 const exibirEndereco = ref(false)
 const exibirDadosUsuario = ref(false)
 const snackbar = ref(false)
@@ -93,7 +91,7 @@ async function atualizarFoto(file: File | File[] | null) {
     storeProfissional.updateAvatar(filepath)
     // 2. Obtenha a URL pública
     const publicUrl = await storageAvatarService.getAvatarUrl(profissionalId);
-    
+
     // 4. Atualiza a visualização do avatar a partir do campo AvatarStorage
     fotoUrl.value = publicUrl ? publicUrl + '?t=' + Date.now() : '/assets/logo.jpeg';
     snackbarMessage.value = 'Foto atualizada com sucesso!';
@@ -175,7 +173,7 @@ async function salvarSenha() {
         </v-btn>
       </v-col>
       <v-col class="text-center">
-        <h2 class="text-h3 mb-4 font-weight-bold text-deep-purple-lighten-2"> 
+        <h2 class="text-h3 mb-4 font-weight-bold text-deep-purple-lighten-2">
           <v-icon size="large" color="primary">mdi-cog</v-icon>
           Configurações do Perfil
         </h2>
@@ -233,7 +231,7 @@ async function salvarSenha() {
         <v-col cols="12" sm="6">
           <v-text-field label="Telefone" v-model="perfil.telefone" type="tel" />
         </v-col>
-     
+
         <v-col cols="12" sm="6">
           <v-text-field label="Profissão" v-model="perfil.profissao" />
         </v-col>

@@ -1,10 +1,10 @@
 <script setup lang="ts">
-import { RouterView, RouterLink } from 'vue-router'
-import { ref } from 'vue'
+import { RouterView } from 'vue-router'
+import { onMounted, ref } from 'vue'
 import logo from '@/assets/logo.jpeg';
 import { useStoreAuth } from '@/stores/storeAuth.ts'
 import {useStoreProfissional} from'@/stores/storeProfissional.ts'
-
+import { StorageAvatarService } from '@/services/storage/StorageAvatarService.ts'
 const drawer = ref(true)
 const items = [
   { title: 'Home', icon: 'mdi-home', to: '/' },
@@ -20,6 +20,14 @@ const items = [
 ]
 const storeAuth = useStoreAuth()
 const storeProfissional = useStoreProfissional()
+const storeAvatarService = new StorageAvatarService();
+const imgPath =ref('');
+onMounted(async() => {
+  imgPath.value =await storeAvatarService.getAvatarUrl(storeProfissional?.profissionalDetails?.id || '');
+})
+
+
+
 </script>
 
 <template>
@@ -69,15 +77,19 @@ const storeProfissional = useStoreProfissional()
         <template #activator="{ props }">
           <v-btn v-bind="props" class="d-flex align-center" style="color:purple;" variant="text">
             <v-avatar size="32">
-              <v-img />
+              <v-img
+                :src="imgPath"
+                :alt="storeProfissional.profissionalDetails.nome"
+                class="rounded-full"
+              />
             </v-avatar>
+
             <span class="ml-2 font-weight-medium"  style="color:purple;">{{storeProfissional.profissionalDetails.nome
               }}</span>
 
           </v-btn>
         </template>
         <v-list color="#9C27B0">
-          <v-list-item title="Perfil" />
           <v-list-item @click="storeAuth.logoutUser()" title="Sair" />
         </v-list>
       </v-menu>

@@ -15,17 +15,16 @@
           <span class="text-h6 font-weight-bold me-3">
             {{ aprendente?.nome_aprendente || aprendente?.nome }}
           </span>
-          <v-chip class="me-2" color="green-lighten-3" text-color="green-darken-2" size="small">
-            sem débitos
-          </v-chip>
+
           <v-chip
             v-if="responsavel"
-            color="green-lighten-2"
-            text-color="green-darken-4"
+            :color="responsavel.status_matricula ? 'green-lighten-2' : 'red-lighten-2'"
+            :text-color="responsavel.status_matricula ? 'green-darken-4' : 'red-darken-4'"
             size="small"
           >
-            {{ responsavel.status ? 'Ativo' : 'Inativo' }}
+            {{ responsavel.status_matricula ? 'Ativo' : 'Inativo' }}
           </v-chip>
+
         </div>
 
         <div v-if="responsavel" class="d-flex flex-wrap align-center mb-2">
@@ -45,13 +44,10 @@
       </v-col>
 
       <v-col cols="12" md="4" class="text-md-end text-start mt-4 mt-md-0">
-        <v-btn color="deep-purple-accent-4" class="mb-2" prepend-icon="mdi-download">
-          Exportar prontuário
-        </v-btn>
+
         <div>
-          <span class="text-success me-2"><strong>ATENDIDAS:</strong> 0</span>
-          <span class="text-warning me-2"><strong>FALTAS:</strong> 0</span>
-          <span class="text-error"><strong>CANCELADAS:</strong> 0</span>
+          <span class="text-success me-2"><strong> SESSÕES ATENDIDAS:</strong> 0</span>
+
         </div>
       </v-col>
     </v-row>
@@ -86,9 +82,8 @@ watch(() => props.idResponsavel, fetchResponsavel)
 
 async function fetchAprendente() {
   if (!props.idAprendente) return
-  aprendente.value = props.isAprendente
-    ? await aprendenteService.getAprendenteById(props.idAprendente)
-    : await responsavelService.getResponsavelById(props.idAprendente)
+  aprendente.value = await aprendenteService.getAprendenteById(props.idAprendente)
+
 }
 
 async function fetchResponsavel() {
