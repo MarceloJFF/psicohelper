@@ -153,7 +153,6 @@
                 dense />
               <v-select v-model="novoPagamento.forma_pagamento" :items="['Cartão', 'Boleto', 'Pix', 'Dinheiro']"
                 label="Forma de Pagamento" outlined dense :rules="[v => !!v || 'Campo obrigatório']" />
-              <v-text-field v-model="novoPagamento.comprovante_url" label="URL do Comprovante" outlined dense />
             </template>
           </v-form>
         </v-card-text>
@@ -206,7 +205,6 @@ interface NovoPagamento {
   valor: number;
   data_pagamento: string;
   forma_pagamento: string;
-  comprovante_url: string;
   id?: string;
 }
 
@@ -245,7 +243,6 @@ const novoPagamento = ref<NovoPagamento>({
   valor: 0,
   data_pagamento: '',
   forma_pagamento: '',
-  comprovante_url: '',
 });
 
 // Headers das tabelas
@@ -329,7 +326,6 @@ function limparFormulario() {
       valor: 0,
       data_pagamento: '',
       forma_pagamento: '',
-      comprovante_url: '',
     };
   }
   editando.value = false;
@@ -415,8 +411,7 @@ async function salvarPagamento() {
     forma_pagamento_tipo: novoPagamento.value.forma_pagamento,
     pago: !!novoPagamento.value.data_pagamento,
     observacao: novoPagamento.value.tipo,
-    data_pagamento: novoPagamento.value.data_pagamento,
-    comprovante_url: novoPagamento.value.comprovante_url
+    data_pagamento: novoPagamento.value.data_pagamento
   };
 
   if (editando.value && novoPagamento.value.id) {
@@ -441,7 +436,6 @@ function editarPagamento(pagamento: Pagamento) {
     valor: pagamento.valor_pago || 0,
     data_pagamento: pagamento.data_sessao || '',
     forma_pagamento: pagamento.forma_pagamento_tipo || '',
-    comprovante_url: pagamento.comprovante_url || '',
     id: pagamento.id
   };
   editando.value = true;
