@@ -54,9 +54,9 @@
     <!-- Ações -->
     <v-row class="mb-4">
       <v-col>
-        <v-btn color="primary" @click="abrirModal = true">
+        <v-btn v-if="abaSelecionada === 'despesas'" color="primary" @click="abrirModal = true">
           <v-icon left>mdi-plus</v-icon>
-          {{ abaSelecionada === 'despesas' ? 'Nova Despesa' : 'Novo Pagamento' }}
+          Nova Despesa
         </v-btn>
       </v-col>
     </v-row>
@@ -97,9 +97,10 @@
           :hide-default-header="false">
           <template v-slot:item="{ item }">
             <tr>
-              <td>Sessão Avulsa</td>
+              <td>{{ item.id_contrato? 'Contrato' : 'Avulso'  }}</td>
+
               <td>R$ {{ formatarValor(item.valor_pago) }}</td>
-              <td>{{ item.data_sessao ? formatarData(item.data_sessao) : 'N/A' }}</td>
+              <td>{{ item.data_sessao  }}</td>
               <td>{{ item.forma_pagamento_tipo || 'N/A' }}</td>
               <td>
                 <v-chip :color="item.pago ? 'success' : 'warning'" small>
@@ -146,8 +147,6 @@
 
             <!-- Formulário de Pagamento -->
             <template v-if="abaSelecionada === 'receitas'">
-              <v-select v-model="novoPagamento.tipo" :items="['Sessão Avulsa', 'Mensalidade']" label="Tipo de Pagamento"
-                outlined dense :rules="[v => !!v || 'Campo obrigatório']" />
               <v-text-field v-model="novoPagamento.valor" label="Valor" type="number" outlined dense
                 :rules="[v => !!v || 'Campo obrigatório', v => v > 0 || 'Valor deve ser maior que zero']" prefix="R$" />
               <v-text-field v-model="novoPagamento.data_pagamento" label="Data do Pagamento" type="date" outlined
@@ -354,6 +353,7 @@ async function carregarPagamentos() {
       mesSelecionado.value + 1, // +1 because months are 0-based in JavaScript
       anoSelecionado.value
     );
+    console.log(pagamentos)
   } catch (error) {
     console.error('Erro ao carregar pagamentos:', error);
     snackbarMessage.value = 'Erro ao carregar pagamentos';
@@ -409,7 +409,7 @@ async function salvarDespesa() {
 async function salvarPagamento() {
   const pagamentoData: Pagamento = {
     id: novoPagamento.value.id || '',
-    id_sessao: 'sessao-avulsa',
+    id_sessao: '',
     valor_pago: novoPagamento.value.valor,
     forma_pagamento: novoPagamento.value.forma_pagamento,
     forma_pagamento_tipo: novoPagamento.value.forma_pagamento,

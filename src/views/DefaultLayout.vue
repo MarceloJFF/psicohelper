@@ -69,7 +69,7 @@ onMounted(async() => {
         <v-icon color="#9C27B0">mdi-bell</v-icon>
       </v-btn>
 
-      <v-btn icon>
+      <v-btn icon to="/configuracoes">
         <v-icon color="#9C27B0">mdi-cog</v-icon>
       </v-btn>
 

@@ -91,6 +91,9 @@ export const PagamentoService = {
         p_usuario_id: userId
       });
 
+      console.log("get pagamento por mes e ano")
+      console.log(data)
+
     if (error) {
       console.error('Erro ao buscar pagamentos:', error);
       throw error;
