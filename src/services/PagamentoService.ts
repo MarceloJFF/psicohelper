@@ -8,6 +8,7 @@ export interface Pagamento {
   forma_pagamento_tipo: string;
   data_pagamento?: string;
   observacao?: string;
+  nome_aprendente?:string;
   pago: boolean;
   created_at?: string;
   data_sessao?: string;
@@ -71,7 +72,7 @@ export const PagamentoService = {
       console.error('Erro ao buscar pagamento:', error)
       throw error
     }
-    
+
     if(data.length>0) return data[0]
     return null;
   },

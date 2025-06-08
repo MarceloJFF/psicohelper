@@ -90,9 +90,12 @@
               size="large"
               class="mb-4 auth-button"
               rounded="lg"
+              :loading="isLoading"
+              :disabled="isLoading"
             >
               {{ isLogin ? 'Entrar' : 'Registrar' }}
             </v-btn>
+
 
             <div class="text-center my-4">
               <v-btn
@@ -162,7 +165,10 @@ const snackbar = ref({
   color: 'error'
 })
 
+
 const isLogin = ref(true)
+const isLoading = ref(false)
+
 const rules = {
   required: v => !!v || 'Campo obrigatório',
   email: v => /.+@.+\..+/.test(v) || 'Email inválido',
@@ -184,6 +190,7 @@ const showError = (message: string) => {
 const toggleMode = () => {
   isLogin.value = !isLogin.value
 }
+
 const handleAuth = async () => {
   const isValid = await form.value?.validate()
   if (!isValid) {
@@ -192,6 +199,7 @@ const handleAuth = async () => {
   }
 
   const storeAuth = useStoreAuth()
+  isLoading.value = true
 
   try {
     if (isLogin.value) {
@@ -204,18 +212,17 @@ const handleAuth = async () => {
         email: credentials.value.email,
         password: credentials.value.password
       })
-
     } else {
       if (
-        !credentials.value.email || !credentials.value.password || 
-        !profissional.value.nome || !profissional.value.profissao || 
+        !credentials.value.email || !credentials.value.password ||
+        !profissional.value.nome || !profissional.value.profissao ||
         !profissional.value.telefone
       ) {
         showError('Por favor, preencha todos os campos')
         return
       }
 
-      const {error} = await storeAuth.registerUser(
+      const { error } = await storeAuth.registerUser(
         {
           email: credentials.value.email,
           password: credentials.value.password
@@ -223,29 +230,27 @@ const handleAuth = async () => {
         profissional.value
       )
 
-      if(error){
+      if (error) {
         showError(error.message)
         return
-      }else{
-         // Mostrar mensagem de sucesso
+      } else {
         snackbar.value = {
           show: true,
           text: 'Cadastro realizado com sucesso! Faça login para continuar.',
           color: 'success'
         }
-
       }
-     
-    // Trocar para modo de login automaticamente
-//      isLogin.value = true
     }
 
-    clearState()
 
   } catch (err) {
     showError(err.message || 'Erro inesperado')
+  } finally {
+    isLoading.value = false
+    clearState()
   }
 }
+
 
 
 function clearState() {

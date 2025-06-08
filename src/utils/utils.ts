@@ -6,9 +6,9 @@ export function getDateRangeForPeriod(days: number) {
     start.setDate(start.getDate() - days);
     return { start, end };
   }
-  
+
 export function formatarData(dataStr: string): string {
-    if (!dataStr) return '';
-    const [ano, mes, dia] = dataStr.split('-');
-    return `${dia}/${mes}/${ano}`;
+  const [data] = dataStr.split('T'); // Pega só a parte da data
+  const [ano, mes, dia] = data.split('-');
+  return `${dia}/${mes}/${ano}`;
 }
