@@ -29,9 +29,27 @@ export const useStoreCalendario = defineStore('calendario', () => {
     }
   }
 
+  const loadAgendamentosPorMes = async (mes: number, ano: number): Promise<void> => {
+    loading.value = true
+    try {
+      agendamentos.value = (await agendamentoService.getAgendamentosPorMes(mes, ano)) ?? []
+      const responsaveis = await responsavelService.loadResponsaveis()
+      agendamentos.value.forEach((agendamento: any) => {
+        agendamento.responsavel_id = responsaveis.find(
+          (responsavel) => responsavel.id === agendamento.responsavel_id,
+        )
+      })
+    } catch (err) {
+      console.log(err)
+    } finally {
+      loading.value = false
+    }
+  }
+
   return {
     loading,
     agendamentos: agendamentos,
     loadAgendamentos,
+    loadAgendamentosPorMes
   }
 })

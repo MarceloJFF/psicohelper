@@ -271,7 +271,14 @@ const loadEventos = async () => {
       interactive: false
     }));
 
-    await storeCalendario.loadAgendamentos();
+    // Obter a data atual do calendário
+    const currentDate = calendarApi?.getDate() || new Date();
+    const mes = currentDate.getMonth() + 1;
+    const ano = currentDate.getFullYear();
+
+    // Carregar agendamentos do mês atual
+    await storeCalendario.loadAgendamentosPorMes(mes, ano);
+    
     const agendamentosEvents = await Promise.all(
       storeCalendario.agendamentos.map(async (agendamento) => {
         const start = new Date(agendamento.data_agendamento + 'T' + agendamento.horario_inicio);
@@ -292,9 +299,8 @@ const loadEventos = async () => {
           return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`;
         };
 
-        console.log('[COISOOO]:', agendamento.id_agendamento);
         return {
-          id: agendamento.id_agendamento,
+          id: `agendamento-${agendamento.id_agendamento}`,
           title: agendamento.titulo,
           start: formatDateTime(start),
           end: formatDateTime(end),
@@ -581,6 +587,10 @@ const calendarOptions = ref<CalendarOptions>({
     startTime: '00:00',
     endTime: '24:00',
     dows: [0, 1, 2, 3, 4, 5, 6]
+  },
+  datesSet: async (info: { start: Date, end: Date, startStr: string, endStr: string, timeZone: string, view: any }) => {
+    console.log('Mudança de mês detectada:', info.start);
+    await loadEventos();
   },
   selectAllow: (selectInfo: { startStr: string }) => {
     const isFeriado = isDateFeriado(new Date(selectInfo.startStr));
