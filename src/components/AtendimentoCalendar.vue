@@ -274,8 +274,6 @@ const loadEventos = async () => {
     await storeCalendario.loadAgendamentos();
     const agendamentosEvents = await Promise.all(
       storeCalendario.agendamentos.map(async (agendamento) => {
-
-
         const start = new Date(agendamento.data_agendamento + 'T' + agendamento.horario_inicio);
         const end = new Date(start.getTime() + agendamento.duracao * 60000);
 
