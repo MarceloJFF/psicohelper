@@ -152,7 +152,7 @@ const storeProfissional = useStoreProfissional()
 const lembreteService = new LembreteService()
 
 // Inicializar com a data de hoje
-const hoje = new Date().toISOString().split('T')[0]
+const hoje = new Date()
 const selectedDate = ref(hoje)
 const dialogNovoLembrete = ref(false)
 const lembretes = ref<Lembrete[]>([])
@@ -195,7 +195,7 @@ const toggleFeito = async (lembrete: Lembrete) => {
   try {
     lembrete.feito = !lembrete.feito
     lembrete.data_conclusao = lembrete.feito ? new Date().toISOString() : undefined
-    
+
     await lembreteService.atualizarLembrete(lembrete)
     await carregarLembretes()
   } catch (error) {
@@ -227,16 +227,19 @@ const salvarLembrete = async () => {
     await carregarLembretes()
   }
 }
-
-const formatarData = (data: string) => {
-  return new Date(data).toLocaleDateString('pt-BR', {
-    day: '2-digit',
-    month: '2-digit',
+const formatarData = (data: string): string => {
+  const d = new Date(data);
+  return new Intl.DateTimeFormat('pt-BR', {
+    timeZone: 'America/Fortaleza',
     year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
     hour: '2-digit',
     minute: '2-digit'
-  })
+  }).format(d);
 }
+
+
 
 const isUrgente = (data: string) => {
   const hoje = new Date()
