@@ -97,10 +97,13 @@
           :hide-default-header="false">
           <template v-slot:item="{ item }">
             <tr>
+              <td>{{item.nome_aprendente? item.nome_aprendente:'Aprendente Sem nome'}}</td>
               <td>{{ item.id_contrato? 'Contrato' : 'Avulso'  }}</td>
 
               <td>R$ {{ formatarValor(item.valor_pago) }}</td>
-              <td>{{ item.data_sessao }}</td>
+
+              <td>{{  formatarData(item.data_sessao)}} </td>
+
               <td>{{ item.forma_pagamento_tipo || 'N/A' }}</td>
               <td>
                 <v-chip :color="item.pago ? 'success' : 'warning'" small>
@@ -198,6 +201,7 @@
 import { ref, computed, onMounted, watch } from 'vue';
 import { DespesaService, type Despesa } from '@/services/DespesaService';
 import { PagamentoService, type Pagamento } from '@/services/PagamentoService';
+import {formatarData} from '@/utils/utils.ts'
 
 // Types
 interface NovoPagamento {
@@ -256,6 +260,7 @@ const headersDespesas = [
 ];
 
 const headersReceitas = [
+  {title:'Aprendente',key:'aprendente',sortable:true},
   { title: 'Tipo', key: 'tipo', sortable: true },
   { title: 'Valor', key: 'valor', sortable: true },
   { title: 'Data Sessão', key: 'data_sessao', sortable: true },
@@ -305,9 +310,6 @@ function formatarValor(valor: number | undefined | null) {
   return valor.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
-function formatarData(data: string) {
-  return new Date(data).toLocaleDateString('pt-BR');
-}
 
 function limparFormulario() {
   if (abaSelecionada.value === 'despesas') {

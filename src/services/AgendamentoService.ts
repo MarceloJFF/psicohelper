@@ -117,4 +117,37 @@ export class AgendamentoService {
       return null;
     }
   }
+
+  async getAgendamentosPorMes(mes: number, ano: number): Promise<Agendamento[] | null> {
+    const storeProfissional = useStoreProfissional();
+    try {
+      // Criar data inicial e final do mês
+      const dataInicial = `${ano}-${mes.toString().padStart(2, '0')}-01`;
+      // Corrigir o cálculo do último dia do mês
+      const ultimoDia = new Date(ano, mes, 0).getDate();
+      const dataFinal = `${ano}-${mes.toString().padStart(2, '0')}-${ultimoDia}`;
+
+      console.log('Buscando agendamentos entre:', dataInicial, 'e', dataFinal);
+
+      const { data: agendamentos, error: errorAgendamento } = await supabase
+        .from('tb_agendamento')
+        .select('*')
+        .eq('id_profissional', storeProfissional.profissionalDetails?.id)
+        .gte('data_agendamento', dataInicial)
+        .lte('data_agendamento', dataFinal)
+        .order('data_agendamento', { ascending: true });
+
+      if (errorAgendamento) {
+        console.error('Erro ao buscar agendamentos:', errorAgendamento);
+        throw new Error('Erro ao carregar os agendamentos do mês');
+      }
+
+      console.log('Agendamentos encontrados:', agendamentos?.length);
+      return agendamentos as Agendamento[];
+    } catch (err: any) {
+      console.error('Erro ao buscar agendamentos por mês:', err);
+      this.showError(err.message || 'Erro ao carregar os agendamentos do mês');
+      return null;
+    }
+  }
 }

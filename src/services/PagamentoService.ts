@@ -8,6 +8,7 @@ export interface Pagamento {
   forma_pagamento_tipo: string;
   data_pagamento?: string;
   observacao?: string;
+  nome_aprendente?:string;
   pago: boolean;
   created_at?: string;
   data_sessao?: string;
