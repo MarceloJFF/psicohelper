@@ -1,70 +1,136 @@
 <template>
-  <v-card v-if="aprendente || responsavel" elevation="1" class="pa-4 rounded-lg mb-8">
+  <v-card elevation="3" class="pa-6 rounded-lg mb-8">
     <v-row align="center">
-      <v-col cols="12" md="2" class="text-center">
-        <v-avatar size="90" color="grey-lighten-3">
-          <span class="text-h4 font-weight-medium">M</span>
+      <!-- Avatar -->
+      <v-col cols="12" md="2" class="text-center position-relative">
+        <v-avatar size="90" color="grey-lighten-3" class="mx-auto">
+          <span class="text-h4 font-weight-medium">
+            {{ aprendente?.nome_aprendente?.[0] || aprendente?.nome?.[0] || '?' }}
+          </span>
         </v-avatar>
-        <v-btn icon class="mt-2" size="small" color="primary" variant="tonal">
-          <v-icon>mdi-pencil</v-icon>
-        </v-btn>
       </v-col>
 
+      <!-- Informações do Aprendente -->
       <v-col cols="12" md="6">
-        <div class="d-flex align-center mb-2">
-          <span class="text-h6 font-weight-bold me-3">
+        <!-- Nome + Status -->
+        <div class="d-flex align-center mb-3">
+          <v-text class="text-h6 font-weight-bold me-3">
             {{ aprendente?.nome_aprendente || aprendente?.nome }}
-          </span>
-
+          </v-text>
           <v-chip
             v-if="responsavel"
-            :color="responsavel.status_matricula ? 'green-lighten-2' : 'red-lighten-2'"
-            :text-color="responsavel.status_matricula ? 'green-darken-4' : 'red-darken-4'"
+            :color="responsavel.status_matricula ? 'success lighten-4' : 'error lighten-4'"
+            :text-color="responsavel.status_matricula ? 'success darken-4' : 'error darken-4'"
             size="small"
           >
             {{ responsavel.status_matricula ? 'Ativo' : 'Inativo' }}
           </v-chip>
-
         </div>
 
-        <div v-if="responsavel" class="d-flex flex-wrap align-center mb-2">
-          <v-icon size="20" class="me-1">mdi-phone</v-icon>
-          <span class="me-4">{{ responsavel.telefone }}</span>
-          <v-icon size="20" class="me-1">mdi-email</v-icon>
-          <span class="me-4">{{ responsavel.email }}</span>
-          <v-icon size="20" class="me-1">mdi-calendar</v-icon>
-          <span>Nascimento: {{ aprendente?.nascimento }}</span>
+        <!-- Nascimento -->
+        <div class="d-flex align-center mb-2">
+          <v-icon size="20" class="me-2 text-secondary">mdi-cake-variant</v-icon>
+          <v-text class="text-body-2 text-secondary">
+            Nasceu em {{ aprendente?.nascimento }} ({{ ageInYears }} anos)
+          </v-text>
         </div>
 
-        <div class="text-caption">
-          <strong>CIDADE:</strong> {{ responsavel?.cidade || 'Não informado' }} |
-          <strong>PRÓXIMA SESSÃO:</strong> -- |
-          <strong>SESSÕES:</strong> 1
+        <!-- Gênero -->
+        <div class="d-flex align-center mb-2" v-if="aprendente?.genero">
+          <v-icon size="20" class="me-2 text-secondary">mdi-gender-male-female</v-icon>
+          <v-text class="text-body-2 text-secondary">Gênero: {{ aprendente.genero }}</v-text>
+        </div>
+
+        <!-- Contato -->
+        <div class="d-flex align-center mb-2" v-if="aprendente?.telefone || aprendente?.email">
+          <template v-if="aprendente.telefone">
+            <v-icon size="20" class="me-2 text-secondary">mdi-phone</v-icon>
+            <v-text class="text-body-2 text-secondary me-4">{{ aprendente.telefone }}</v-text>
+          </template>
+
+          <template v-if="aprendente.email">
+            <v-icon size="20" class="me-2 text-secondary">mdi-email</v-icon>
+            <v-text class="text-body-2 text-secondary">{{ aprendente.email }}</v-text>
+          </template>
+        </div>
+
+        <v-divider class="my-3" />
+
+        <!-- Sessões -->
+        <div class="d-flex align-center mb-2">
+          <v-icon size="20" class="me-2 text-secondary">mdi-calendar-clock</v-icon>
+          <v-text class="text-body-2">
+            <strong>Próxima sessão:</strong> {{ proximoAtendimentoAprendente || 'Carregando...' }}
+          </v-text>
+        </div>
+
+        <div class="d-flex align-center">
+          <v-icon size="20" class="me-2 text-success">mdi-check-circle-outline</v-icon>
+          <v-text class="text-body-2">
+            <strong>Total sessões atendidas: {{contarSessoesDoAprendente}} </strong>  <!-- substituir pela variável real -->
+          </v-text>
         </div>
       </v-col>
 
-      <v-col cols="12" md="4" class="text-md-end text-start mt-4 mt-md-0">
+      <!-- Bloco do Responsável -->
+      <v-col cols="12" md="4">
+        <v-card flat class="pa-4">
+          <div v-if="responsavel">
+            <div class="d-flex align-center mb-2">
+              <v-icon size="20" class="me-2 text-primary">mdi-account-tie</v-icon>
+              <v-text class="text-body-1 font-weight-medium">Responsável: {{ responsavel.nome }}</v-text>
+            </div>
+            <v-divider class="my-2" />
 
-        <div>
-          <span class="text-success me-2"><strong> SESSÕES ATENDIDAS:</strong> 0</span>
+            <div class="d-flex align-center mb-2">
+              <v-icon size="20" class="me-2 text-secondary">mdi-phone</v-icon>
+              <v-text class="text-body-2 text-secondary">{{ responsavel.telefone }}</v-text>
+            </div>
 
-        </div>
+            <div class="d-flex align-center mb-2">
+              <v-icon size="20" class="me-2 text-secondary">mdi-email</v-icon>
+              <v-text class="text-body-2 text-secondary">{{ responsavel.email }}</v-text>
+            </div>
+
+            <div class="d-flex align-center">
+              <v-icon size="20" class="me-2 text-secondary">mdi-map-marker</v-icon>
+              <v-text class="text-body-2 text-secondary">
+                {{ responsavel.cidade }}, {{ responsavel.estado }}
+              </v-text>
+            </div>
+          </div>
+        </v-card>
       </v-col>
     </v-row>
   </v-card>
 </template>
+
 <script setup lang="ts">
-import { ref, onMounted, watch } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { AprendenteService } from '@/services/AprendenteService'
 import { ResponsavelService } from '@/services/responsavelService'
 import Aprendente from '@/models/Aprendente'
 import Responsavel from '@/models/Responsavel'
+import { buscarAgendamentoProximoDoAprendente, contarSessoesDoAprendente } from '@/utils/utils.ts'
+
 
 const props = defineProps<{
   idAprendente: string
   isAprendente: boolean
   idResponsavel: string
 }>()
+
+
+const ageInYears = computed(() => {
+  if (!aprendente.value?.nascimento) return 0
+
+  const birthDate = new Date(aprendente.value.nascimento)
+  const currentDate = new Date()
+
+  const diffTime = Math.abs(currentDate - birthDate)
+  const diffYears = diffTime / (1000 * 60 * 60 * 24 * 365.25)
+  return Math.floor(diffYears)
+})
 
 const aprendente = ref<Aprendente | null>(null)
 const responsavel = ref<Responsavel | null>(null)
@@ -80,10 +146,26 @@ onMounted(async () => {
 watch(() => props.idAprendente, fetchAprendente)
 watch(() => props.idResponsavel, fetchResponsavel)
 
+
+const proximoAtendimentoAprendente = ref<string | null>(null)
+const sessoesAprendentesCount = ref<number>(0);
+
+watch(aprendente, async (novoAprendente) => {
+  if (!novoAprendente) {
+    proximoAtendimentoAprendente.value = null
+    return
+  }
+  const resultado = await buscarAgendamentoProximoDoAprendente(aprendente.value.id)
+
+  sessoesAprendentesCount.value= await contarSessoesDoAprendente(aprendente.value.id)
+  proximoAtendimentoAprendente.value = resultado?.data_agendamento ?? 'Sem agendamentos próximos'
+}, { immediate: true })
+
+
+
 async function fetchAprendente() {
   if (!props.idAprendente) return
   aprendente.value = await aprendenteService.getAprendenteById(props.idAprendente)
-
 }
 
 async function fetchResponsavel() {

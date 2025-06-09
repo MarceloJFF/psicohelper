@@ -33,7 +33,6 @@ export class ContratoService {
         .from('tb_contrato')
         .select('*')
         .eq('id_aprendente', idAprendente)
-        .eq('cancelado','FALSE')
         .select()
 
       if (error) throw error
@@ -43,6 +42,8 @@ export class ContratoService {
       return null
     }
   }
+
+
 
   async adicionarAprendenteAoContrato(idContrato: string, idAprendente: string): Promise<void> {
     try {

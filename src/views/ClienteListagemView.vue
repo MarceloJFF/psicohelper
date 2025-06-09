@@ -41,6 +41,7 @@
               </template>
               <template v-else>
                 <v-data-table
+                  v-model:sort-by="sortBy"
                   :headers="headers"
                   :items="aprendentes"
                   :loading="loading"
@@ -108,6 +109,7 @@
 
           <v-col cols="4" md="3" class="d-flex flex-column">
             <calendario-diario class="flex-grow-1" />
+            <todo></todo>
           </v-col>
         </v-row>
       </v-container>
@@ -149,6 +151,7 @@ import { useRouter } from 'vue-router'
 import CalendarioDiario from '@/components/CalendarioDiario.vue'
 import { AprendenteService } from '@/services/AprendenteService'
 import ViewAprendenteLogadoProfissional from '@/models/ViewAprendenteLogadoProfissional'
+import Todo from '@/components/todo.vue'
 
 const aprendenteService = new AprendenteService()
 const router = useRouter()
@@ -185,6 +188,7 @@ const loadAprendentes = async () => {
   }
 }
 
+const sortBy = ref([{ key: 'statusMatricula', order: 'desc' }])
 
 const headers = [
   { title: 'Aprendente', key: 'nomeAprendente', align: 'center' as const, cellClass: 'text-right' },

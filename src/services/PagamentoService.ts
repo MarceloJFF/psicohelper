@@ -71,7 +71,7 @@ export const PagamentoService = {
       console.error('Erro ao buscar pagamento:', error)
       throw error
     }
-    
+
     if(data.length>0) return data[0]
     return null;
   },
@@ -103,6 +103,7 @@ export const PagamentoService = {
   },
 
   async atualizarPagamento(id: string, dados: Partial<Pagamento>, arquivo?: File) {
+
     const { data: pagamento, error } = await supabase
       .from('tb_pagamento_sessao')
       .update({
@@ -117,7 +118,7 @@ export const PagamentoService = {
 
     if (error) throw error
 
-    if (arquivo) {
+    if (arquivo && arquivo.size > 0) {
       const path = `comprovantes-pagamento/${id}/${arquivo.name}`
       const { error: uploadError } = await supabase.storage
         .from('comprovantes-pagamento')

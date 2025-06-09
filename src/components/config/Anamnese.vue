@@ -14,14 +14,20 @@
           class="mb-6"
           outlined
         />
-        <v-textarea
+<!--        <v-textarea-->
+<!--          v-model="perguntasText"-->
+<!--          label="Perguntas (uma por linha)"-->
+<!--          auto-grow-->
+<!--          outlined-->
+<!--          rows="5"-->
+<!--          class="mb-6"-->
+<!--        />-->
+        <editor-text
           v-model="perguntasText"
           label="Perguntas (uma por linha)"
-          auto-grow
-          outlined
-          rows="5"
           class="mb-6"
-        />
+          @blur="handleBlur">
+        </editor-text>
         <div class="d-flex justify-space-between mt-6">
           <v-btn color="success" type="submit" class="px-6">
             Salvar Anamnese
@@ -57,6 +63,7 @@
 import { ref, onMounted } from 'vue'
 import { ModeloAnamneseService } from '@/services/ModeloAnamneseService'
 import { useStoreConfig } from '@/stores/storeConfig'
+import EditorText from '@/components/EditorText.vue'
 
 const storeConfig = useStoreConfig()
 const nomeModelo = ref('Anamnese Padrão')

@@ -92,13 +92,20 @@
                       <div class="mb-2" v-if="perguntasModelo">
                         <strong>Perguntas do Modelo:</strong>
                       </div>
-                      <v-textarea
+                      <editor-text
                         v-model="perguntasModelo"
-                        label="Altere aqui o formulário de anamnese de acordo com as respostas do cliente"
-                        outlined
-                        rows="10"
-                        auto-grow
-                      />
+                        label="Perguntas (uma por linha)"
+                        class="mb-6"
+                        @blur="handleBlur">
+                      </editor-text>
+
+<!--                      <v-textarea-->
+<!--                        v-model="perguntasModelo"-->
+<!--                        label="Altere aqui o formulário de anamnese de acordo com as respostas do cliente"-->
+<!--                        outlined-->
+<!--                        rows="10"-->
+<!--                        auto-grow-->
+<!--                      />-->
                     </v-col>
                   </v-row>
                   <v-btn color="primary" class="ma-4" @click="salvarAnamnese">
@@ -334,6 +341,7 @@ import supabase from '@/config/supabase'
 import Documento from '@/models/Documento'
 import { ModeloAnamneseService } from '@/services/ModeloAnamneseService'
 import { AnamneseService } from '@/services/AnamneseService'
+import EditorText from '@/components/EditorText.vue'
 
 
 const route = useRoute()
@@ -354,7 +362,7 @@ const motivoCancelamento = ref('')
 const formCancelamentoValido = ref(false)
 const modoCancelamento = ref<'cancelar' | 'inativar'>('cancelar')
 const abaSelecionada = ref('Cadastro')
-const abas = ['Cadastro', 'Anamnese', 'Contratos', 'Sessões', 'Documentos anexos']
+const abas = ['Cadastro', 'Anamnese', 'Contratos', 'Documentos anexos']
 const snackbar = ref(false)
 const snackbarMessage = ref('')
 const snackbarColor = ref('success')

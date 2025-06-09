@@ -1,6 +1,5 @@
 import supabase from '@/config/supabase';
 import { useShowErrorMessage } from '@/userCases/useShowErrorMessage';
-import { useStoreProfissional } from '@/stores/storeProfissional';
 
 export interface Lembrete {
   id?: string;
@@ -106,7 +105,7 @@ export class LembreteService {
     try {
       const dataInicio = new Date(data);
       dataInicio.setHours(0, 0, 0, 0);
-      
+
       const dataFim = new Date(data);
       dataFim.setHours(23, 59, 59, 999);
 
@@ -125,4 +124,4 @@ export class LembreteService {
       return null;
     }
   }
-} 
+}

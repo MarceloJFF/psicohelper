@@ -1,104 +1,195 @@
 <template>
   <div class="editor-wrapper">
-    <label class="v-label">{{ label }}</label>
+    <div v-if="editor" class="editor-toolbar">
+      <!-- Botões existentes -->
+      <v-btn
+        size="small"
+        icon
+        @click="editor.chain().focus().toggleBold().run()"
+        :color="editor.isActive('bold') ? 'primary' : 'grey lighten-1'"
+      >
+        <v-icon>mdi-format-bold</v-icon>
+      </v-btn>
+      <v-btn
+        size="small"
+        icon
+        @click="editor.chain().focus().toggleItalic().run()"
+        :color="editor.isActive('italic') ? 'primary' : 'grey lighten-1'"
+      >
+        <v-icon>mdi-format-italic</v-icon>
+      </v-btn>
+      <v-btn
+        size="small"
+        icon
+        @click="editor.chain().focus().toggleBulletList().run()"
+        :color="editor.isActive('bulletList') ? 'primary' : 'grey lighten-1'"
+      >
+        <v-icon>mdi-format-list-bulleted</v-icon>
+      </v-btn>
 
-    <!-- Toolbar -->
-    <div class="toolbar border pa-2">
-      <button @click="toggleBold" :class="{ active: isActive('bold') }"><strong>B</strong></button>
-      <button @click="toggleItalic" :class="{ active: isActive('italic') }"><em>I</em></button>
-      <button @click="toggleBulletList" :class="{ active: isActive('bulletList') }">• Lista</button>
-      <button @click="toggleOrderedList" :class="{ active: isActive('orderedList') }">1. Lista</button>
+      <!-- Divisor visual -->
+      <v-divider vertical class="mx-2"></v-divider>
+
+      <!-- Novos botões de alinhamento -->
+      <v-btn
+        size="small"
+        icon
+        @click="editor.chain().focus().setTextAlign('left').run()"
+        :color="editor.isActive({ textAlign: 'left' }) ? 'primary' : 'grey lighten-1'"
+      >
+        <v-icon>mdi-format-align-left</v-icon>
+      </v-btn>
+      <v-btn
+        size="small"
+        icon
+        @click="editor.chain().focus().setTextAlign('center').run()"
+        :color="editor.isActive({ textAlign: 'center' }) ? 'primary' : 'grey lighten-1'"
+      >
+        <v-icon>mdi-format-align-center</v-icon>
+      </v-btn>
+      <v-btn
+        size="small"
+        icon
+        @click="editor.chain().focus().setTextAlign('right').run()"
+        :color="editor.isActive({ textAlign: 'right' }) ? 'primary' : 'grey lighten-1'"
+      >
+        <v-icon>mdi-format-align-right</v-icon>
+      </v-btn>
+      <v-btn
+        size="small"
+        icon
+        @click="editor.chain().focus().setTextAlign('justify').run()"
+        :color="editor.isActive({ textAlign: 'justify' }) ? 'primary' : 'grey lighten-1'"
+      >
+        <v-icon>mdi-format-align-justify</v-icon>
+      </v-btn>
     </div>
 
-    <!-- Editor content -->
-    <EditorContent :editor="editor" class="tiptap-styled pa-12" />
+    <editor-content
+      :editor="editor"
+      class="editor-content"
+      :style="{ minHeight: `${rows * 24}px` }"
+    />
   </div>
 </template>
 
-<script setup lang="ts">
-import { ref, onBeforeUnmount, watch } from 'vue'
-import { Editor, EditorContent } from '@tiptap/vue-3'
+<script setup>
+import { useEditor, EditorContent } from '@tiptap/vue-3'
 import StarterKit from '@tiptap/starter-kit'
+import TextAlign from '@tiptap/extension-text-align'
+import { onBeforeUnmount, watch } from 'vue'
 
 const props = defineProps({
-  modelValue: String,
-  label: String
+  modelValue: { type: String, default: '' },
+  rows: { type: Number, default: 5 },
+  label: { type: String, default: '' },
 })
-const emit = defineEmits(['update:modelValue'])
+const emit = defineEmits(['update:modelValue', 'blur'])
 
-const initialContent = `
-<p>Na sessão de hoje, focamos em compreender melhor a natureza da ansiedade que você tem enfrentado, João, e começamos a explorar estratégias práticas para gerenciá-la de maneira eficaz. Começamos a sessão discutindo seus sintomas de ansiedade e como eles têm afetado sua vida cotidiana. Você compartilhou que tem sentido uma preocupação constante em relação a várias áreas da sua vida, o que tem causado tensão física e mental. Mencionou também dificuldades em relaxar e em concentrar-se em tarefas importantes devido à constante sensação de apreensão.</p>
-`
-
-const editor = ref(
-  new Editor({
-    extensions: [StarterKit],
-    content: props.modelValue || initialContent,
-  })
-)
-
-watch(() => editor.value?.getHTML(), (val) => {
-  emit('update:modelValue', val)
+const editor = useEditor({
+  content: props.modelValue,
+  extensions: [
+    StarterKit.configure({
+      bulletList: {
+        keepMarks: true,
+        keepAttributes: true,
+      },
+    }),
+    TextAlign.configure({
+      types: ['heading', 'paragraph'],
+      alignments: ['left', 'center', 'right', 'justify'],
+      defaultAlignment: 'left',
+    }),
+  ],
+  editorProps: {
+    attributes: {
+      class: 'v-textarea-style',
+      'aria-label': props.label,
+    },
+  },
+  onUpdate: () => emit('update:modelValue', editor.value.getHTML()),
+  onBlur: () => emit('blur'),
 })
 
-watch(() => props.modelValue, (val) => {
-  if (val !== editor.value?.getHTML()) {
-    editor.value?.commands.setContent(val || initialContent)
+watch(() => props.modelValue, (value) => {
+  if (editor.value?.getHTML() !== value) {
+    editor.value?.commands.setContent(value, false)
   }
 })
 
 onBeforeUnmount(() => {
   editor.value?.destroy()
 })
-
-// Toolbar actions
-const toggleBold = () => editor.value?.chain().focus().toggleBold().run()
-const toggleItalic = () => editor.value?.chain().focus().toggleItalic().run()
-const toggleBulletList = () => editor.value?.chain().focus().toggleBulletList().run()
-const toggleOrderedList = () => editor.value?.chain().focus().toggleOrderedList().run()
-const isActive = (format: string) => editor.value?.isActive(format)
 </script>
 
 <style scoped>
 .editor-wrapper {
-  margin-top: 16px;
+  border: 1px solid rgba(0, 0, 0, 0.2);
+  border-radius: 8px;
+  overflow: hidden;
+  transition: border 0.3s;
 }
 
-.v-label {
-  font-size: 14px;
-  color: rgba(0, 0, 0, 0.6);
-  display: block;
-  margin-bottom: 8px;
+.editor-wrapper:focus-within {
+  border-color: var(--v-primary-base);
+  border-width: 2px;
 }
 
-.toolbar {
+.editor-toolbar {
   display: flex;
-  gap: 8px;
-  margin-bottom: 8px;
+  gap: 4px;
+  padding: 8px;
+  background-color: #f0f4ff;
+  border-bottom: 1px solid #d3d3d3;
+  flex-wrap: wrap;
 }
 
-.toolbar button {
-  background: #f4f4f4;
-  border: 1px solid #ccc;
-  border-radius: 4px;
-  padding: 4px 8px;
-  cursor: pointer;
-  font-size: 14px;
+.editor-content {
+  padding: 12pt;
+  min-height: 120px;
+  font-size: 16px;
 }
 
-.toolbar button.active {
-  background-color: #d1eaff;
-  border-color: #3399ff;
-}
-
-.tiptap-styled {
-  border: 1px solid #ccc;
-  border-radius: 6px;
-  min-height: 200px;
-  padding: 12px;
-  font-family: Arial, sans-serif;
-  font-size: 14px;
+/* Estilos para o conteúdo alinhado */
+.editor-content :deep(p) {
+  margin: 0 0 10px;
   line-height: 1.6;
-  color: #333;
+}
+
+.editor-content :deep(ul) {
+  padding-left: 24px;
+  margin: 0 0 10px;
+}
+
+.editor-content :deep(li) {
+  margin-bottom: 6px;
+}
+
+.editor-content :deep(.ProseMirror) {
+  outline: none !important;
+  transition: box-shadow 0.2s ease;
+  border-radius: 4px;
+  padding: 8px;
+}
+
+.editor-content :deep(.ProseMirror:focus) {
+  box-shadow: 0 0 0 2px rgba(33, 150, 243, 0.3);
+}
+
+/* Estilos específicos para alinhamento */
+.editor-content :deep(p[style*="text-align: left"]) {
+  text-align: left;
+}
+
+.editor-content :deep(p[style*="text-align: center"]) {
+  text-align: center;
+}
+
+.editor-content :deep(p[style*="text-align: right"]) {
+  text-align: right;
+}
+
+.editor-content :deep(p[style*="text-align: justify"]) {
+  text-align: justify;
 }
 </style>

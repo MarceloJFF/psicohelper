@@ -75,7 +75,7 @@
 
                   <template v-slot:append>
                     <v-btn icon="mdi-pencil" variant="text" size="small" @click="editarAprendente(aprendente)" class="mr-2" />
-                    <v-btn icon="mdi-delete" variant="text" size="small" color="error" @click="confirmarExclusaoAprendente(aprendente)" />
+<!--                    <v-btn icon="mdi-delete" variant="text" size="small" color="error" @click="confirmarExclusaoAprendente(aprendente)" />-->
                   </template>
                 </v-list-item>
               </v-list>
@@ -420,7 +420,7 @@ function editarResponsavel(responsavel: Responsavel) {
   modoEdicao.value = true
   responsavelAtual.value = { ...responsavel }
   modalResponsavel.value = true
-  
+
 }
 
 function editarAprendente(aprendente: Aprendente) {
@@ -457,7 +457,7 @@ async function salvarAprendente() {
   console.log(aprendenteAtual.value)
   try {
     aprendenteAtual.value.statusMatricula = true
-    
+
     if (modoEdicao.value) {
       await aprendenteService.updateAprendenteComCorAgendamento(aprendenteAtual.value as Aprendente)
       mostrarMensagem('Aprendente atualizado com sucesso')
