@@ -108,8 +108,8 @@
           </v-col>
 
           <v-col cols="4" md="3" class="d-flex flex-column">
+            <todo class="mb-6"></todo>
             <calendario-diario class="flex-grow-1" />
-            <todo></todo>
           </v-col>
         </v-row>
       </v-container>

@@ -67,7 +67,7 @@
         <div class="d-flex align-center">
           <v-icon size="20" class="me-2 text-success">mdi-check-circle-outline</v-icon>
           <v-text class="text-body-2">
-            <strong>Total sessões atendidas: {{contarSessoesDoAprendente}} </strong>  <!-- substituir pela variável real -->
+            <strong>Total sessões atendidas: {{sessoesAprendentesCount}} </strong>  <!-- substituir pela variável real -->
           </v-text>
         </div>
       </v-col>

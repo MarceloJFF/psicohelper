@@ -1,5 +1,8 @@
 <template>
-  <v-container class="pa-8 border rounded h-100 w-75  bg-white">
+  <v-row class=" pa-6" >
+    <v-col cols="8" md="9">
+  <v-container class=" rounded h-100 w-75  bg-white">
+
     <!-- Breadcrumbs -->
     <v-breadcrumbs v-if="caminhoAtual.length" class="mb-4">
       <v-breadcrumbs-item
@@ -13,7 +16,7 @@
     </v-breadcrumbs>
 
     <!-- Cabeçalho e Botões -->
-    <v-row class="mb-4" justify="space-between">
+    <v-row class="mb-4 pa-2" justify="space-between">
       <h2 class="text-h5 font-weight-bold text-deep-purple-lighten-2">
         {{ caminhoAtual.length ? caminhoAtual[caminhoAtual.length - 1].nome : 'Meus Relatórios' }}
       </h2>
@@ -190,6 +193,12 @@
       </v-card>
     </v-dialog>
   </v-container>
+    </v-col>
+      <v-col cols="4" md="3" class="d-flex flex-column">
+        <todo class="mb-6"></todo>
+        <calendario-diario class="flex-grow-1" />
+      </v-col>
+    </v-row>
 </template>
 <script setup lang="ts">
 import { ref, watch } from 'vue'
@@ -198,6 +207,8 @@ import { DocumentoService } from '@/services/DocumentoService'
 import { useStoreProfissional } from '@/stores/storeProfissional'
 import { AprendenteService } from '@/services/AprendenteService'
 import supabase from '@/config/supabase'
+import Todo from '@/components/todo.vue'
+import CalendarioDiario from '@/components/CalendarioDiario.vue'
 const pastaService = new PastaService()
 const documentoService = new DocumentoService()
 const storeProfissional = useStoreProfissional()
@@ -285,7 +296,7 @@ function navegarPara(index) {
 }
 
 async function anexarArquivo() {
-  if (!novoArquivo.value || !novoArquivoNome.value || !aprendenteSelecionado.value) {
+  if (!novoArquivo.value || !novoArquivoNome.value) {
     errorMessage.value = 'Por favor, preencha todos os campos'
     return
   }

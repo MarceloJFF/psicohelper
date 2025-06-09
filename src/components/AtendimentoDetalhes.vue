@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, defineProps, defineEmits, onMounted } from 'vue'
+import { ref, defineProps, defineEmits, onMounted, computed } from 'vue'
 import ModalPagamento from '@/components/ModalPagamento.vue' // ajuste o caminho se necessário
 import { PagamentoService } from '@/services/PagamentoService'
 import supabase from '@/config/supabase'
@@ -41,7 +41,7 @@ async function excluirPagamentoConfirmado(pagamentoId: string) {
   if (confirm('Tem certeza que deseja excluir este pagamento?')) {
     try {
       await PagamentoService.excluirPagamento(pagamentoId);
-      
+
       // Atualizar o estado local
       if (props.atendimento) {
         props.atendimento.status = 'Pendente';
@@ -50,7 +50,7 @@ async function excluirPagamentoConfirmado(pagamentoId: string) {
         props.atendimento.comprovante_url = undefined;
         props.atendimento.id_pagamento = undefined;
       }
-      
+
       emit('atualizar');
     } catch (error) {
       console.error('Erro ao excluir pagamento:', error);
@@ -68,7 +68,7 @@ async function visualizarComprovante(path: string) {
     const { data } = supabase.storage
       .from('comprovantes-pagamento')
       .getPublicUrl(path);
-    
+
     if (data?.publicUrl) {
       window.open(data.publicUrl, '_blank');
     } else {
@@ -78,7 +78,7 @@ async function visualizarComprovante(path: string) {
     console.error('Erro ao visualizar comprovante:', error);
     alert('Erro ao visualizar comprovante');
   }
-} 
+}
 
 let pagamentoSessao;
 onMounted(async() => {
@@ -94,6 +94,9 @@ onMounted(async() => {
   }
 
 })
+
+
+
 </script>
 
 <template>
@@ -103,6 +106,7 @@ onMounted(async() => {
       <v-sheet class="pa-4" color="blue-grey-lighten-5" rounded="lg">
         <div class="mb-2">
           <strong>Horário Agendado:</strong><br />
+
           <span>{{ atendimento.horario }} - {{ atendimento.horario_fim }}</span>
         </div>
 
