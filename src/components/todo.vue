@@ -119,7 +119,7 @@ interface Lembrete {
 const lembretes = ref<Lembrete[]>([])
 const novoLembrete = ref<Omit<Lembrete, 'id' | 'feito' | 'cancelado'>>({
   descricao: '',
-  data_expiracao: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+  data_expiracao: new Date(),
   idProfissional: storeProfissional.profissionalDetails.id
 })
 const timePickerMenu = ref(false)
@@ -145,10 +145,19 @@ const isNovoLembreteValid = computed(() => {
   return novoLembrete.value.descricao.trim() && novoLembrete.value.data_expiracao
 })
 
-// Métodos
-const formatTime = (isoString: string) => {
-  return new Date(isoString).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+
+const formatTime = (data: string): string => {
+  const d = new Date(data);
+  return new Intl.DateTimeFormat('pt-BR', {
+    timeZone: 'UTC',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit'
+  }).format(d);
 }
+
 
 const getTimeColor = (isoString: string) => {
   const now = new Date()
@@ -202,7 +211,7 @@ const addLembrete = async () => {
 
 const updateLembrete = async (lembrete: Lembrete) => {
   try {
-    lembrete.data_conclusao = lembrete.feito ? new Date().toISOString() : null
+    lembrete.data_conclusao = lembrete.feito ? new Date() : null
     await lembreteService.atualizarLembrete(lembrete)
   } catch (error) {
     // Reverte a mudança se houver erro

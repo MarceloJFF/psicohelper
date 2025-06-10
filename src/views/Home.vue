@@ -221,6 +221,7 @@ const adicionarLembrete = () => {
 }
 
 const salvarLembrete = async () => {
+  console.log(novoLembrete.value)
   if (novoLembrete.value.descricao && novoLembrete.value.data_expiracao ) {
     await lembreteService.criarLembrete(novoLembrete.value)
     dialogNovoLembrete.value = false
@@ -230,7 +231,7 @@ const salvarLembrete = async () => {
 const formatarData = (data: string): string => {
   const d = new Date(data);
   return new Intl.DateTimeFormat('pt-BR', {
-    timeZone: 'America/Fortaleza',
+    timeZone: 'UTC',
     year: 'numeric',
     month: '2-digit',
     day: '2-digit',
