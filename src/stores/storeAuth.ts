@@ -31,6 +31,7 @@ export const useStoreAuth = defineStore('auth', () => {
             console.log("Sessao iniciada")
             userDetails.id = session.user.id
             userDetails.email = session.user.email
+            console.log(session)
             storesProfissional.loadProfissional()
             storeConfig.loadConfiguracao(session.user.id)
             //router.push('/')

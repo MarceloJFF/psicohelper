@@ -3,6 +3,7 @@ import DefaultLayout from '@/views/DefaultLayout.vue'
 
 import { createRouter, createWebHistory } from 'vue-router'
 import { useStoreAuth } from '@/stores/storeAuth'
+import AdminProfessionals from '@/views/AdminProfessionals.vue'
 // Layout padrão (carregado diretamente pois é o "shell" do app)
 
 const router = createRouter({
@@ -17,6 +18,12 @@ const router = createRouter({
       path: '/',
       component: DefaultLayout,
       children: [
+        {
+          path: '/admin/professionals',
+          name: 'AdminProfessionals',
+          component: AdminProfessionals,
+          meta: { requiresAuth: true, requiresAdmin: true }
+        },
         {
           path: '',
           name: 'home',
