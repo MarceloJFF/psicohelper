@@ -5,7 +5,7 @@
         <v-card class="auth-card" elevation="0">
           <div class="logo-container">
             <v-img
-              src="src/assets/logo.jpeg"
+              :src="logo"
               alt="Logo"
               contain
               max-width="250"
@@ -147,6 +147,7 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { useStoreAuth } from '@/stores/storeAuth.ts'
+import logo from '@/assets/logo.jpeg'
 
 const credentials = ref({
   email: '',
