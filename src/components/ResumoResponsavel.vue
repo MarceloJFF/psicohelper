@@ -31,7 +31,7 @@
         <div class="d-flex align-center mb-2">
           <v-icon size="20" class="me-2 text-secondary">mdi-cake-variant</v-icon>
           <v-text class="text-body-2 text-secondary">
-            Nasceu em {{ aprendente?.nascimento }} ({{ ageInYears }} anos)
+            Nasceu em {{ aniversario}} ({{ ageInYears }} anos)
           </v-text>
         </div>
 
@@ -60,7 +60,7 @@
         <div class="d-flex align-center mb-2">
           <v-icon size="20" class="me-2 text-secondary">mdi-calendar-clock</v-icon>
           <v-text class="text-body-2">
-            <strong>Próxima sessão:</strong> {{ proximoAtendimentoAprendente || 'Carregando...' }}
+            <strong>Próxima sessão:</strong> {{ proximoAtendimentoAprendenteComputed }}
           </v-text>
         </div>
 
@@ -111,8 +111,7 @@ import { AprendenteService } from '@/services/AprendenteService'
 import { ResponsavelService } from '@/services/responsavelService'
 import Aprendente from '@/models/Aprendente'
 import Responsavel from '@/models/Responsavel'
-import { buscarAgendamentoProximoDoAprendente, contarSessoesDoAprendente } from '@/utils/utils.ts'
-
+import { buscarAgendamentoProximoDoAprendente, contarSessoesDoAprendente, formatarData } from '@/utils/utils.ts'
 
 const props = defineProps<{
   idAprendente: string
@@ -150,13 +149,23 @@ watch(() => props.idResponsavel, fetchResponsavel)
 const proximoAtendimentoAprendente = ref<string | null>(null)
 const sessoesAprendentesCount = ref<number>(0);
 
+const proximoAtendimentoAprendenteComputed = computed(() => {
+  if(!proximoAtendimentoAprendente.value) return 'Carregando...'
+  if(proximoAtendimentoAprendente.value === 'Sem agendamentos próximos') return proximoAtendimentoAprendente.value
+  return formatarData(proximoAtendimentoAprendente?.value)
+})
+
+const aniversario = computed(() => {
+  if (!aprendente.value?.nascimento) return 'Data de nascimento não informada'
+  return formatarData(aprendente.value.nascimento)
+})
+
 watch(aprendente, async (novoAprendente) => {
   if (!novoAprendente) {
     proximoAtendimentoAprendente.value = null
     return
   }
   const resultado = await buscarAgendamentoProximoDoAprendente(aprendente.value.id)
-
   sessoesAprendentesCount.value= await contarSessoesDoAprendente(aprendente.value.id)
   proximoAtendimentoAprendente.value = resultado?.data_agendamento ?? 'Sem agendamentos próximos'
 }, { immediate: true })

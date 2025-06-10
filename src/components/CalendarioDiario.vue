@@ -1,15 +1,18 @@
 <template>
-  <v-card class="pa-4 bg-white">
-    <v-date-picker
-      v-model="date"
-      :locale="locale"
-      full-width
-      :events="events"
-      color="blue lighten-4"
-      event-color="primary"
-      @click:date="handleDateClick"
-    ></v-date-picker>
-  </v-card>
+  <div class="d-flex">
+    <v-card class="pa-4 bg-white elevation-1 justify-center">
+      <v-date-picker
+        v-model="date"
+        :locale="locale"
+        full-width
+        :events="events"
+        color="blue lighten-4"
+        event-color="primary"
+        @click:date="handleDateClick"
+      ></v-date-picker>
+    </v-card>
+  </div>
+
 </template>
 
 <script setup lang="ts">
