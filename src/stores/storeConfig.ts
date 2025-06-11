@@ -75,7 +75,6 @@ export const useStoreConfig = defineStore('config', () => {
         .insert([{ id_profissional: idProfissional }])
         .select()
         .single()
-
       if (error) throw error
       configuracao.value = data
       return data
@@ -151,10 +150,9 @@ export const useStoreConfig = defineStore('config', () => {
         .select('*')
         .eq('id_config', configuracao.value.id)
         .single()
-        .throwOnError()
-
       if (error) {
         if (error.code === 'PGRST116') {
+          showError(error.message)
           // Se não encontrou mensagens, cria as padrões
           return await createMensagensPadrao(configuracao.value.id)
         }
@@ -163,7 +161,7 @@ export const useStoreConfig = defineStore('config', () => {
 
       mensagensWhatsapp.value = data || null
       mapMessage(data)
-      return mensagensWhatsapp    
+      return mensagensWhatsapp
     } catch (err) {
       if (err instanceof Error) {
         showError(err.message)
@@ -259,7 +257,7 @@ export const useStoreConfig = defineStore('config', () => {
   }
   const updateMensagensWhatsapp = async (mensagens: MensagensWhatsapp) => {
     if (!configuracao.value?.id) return null
-  
+
     try {
       const { data } = await supabase
         .from('tb_config_whatsapp')
@@ -272,7 +270,7 @@ export const useStoreConfig = defineStore('config', () => {
         .select()
         .single()
         .throwOnError()
-  
+
       mensagensWhatsapp.value = data
       return data
     } catch (err) {
@@ -280,7 +278,7 @@ export const useStoreConfig = defineStore('config', () => {
       return null
     }
   }
-  
+
 
   const clearConfig = () => {
     configuracao.value = null
@@ -306,4 +304,4 @@ export const useStoreConfig = defineStore('config', () => {
     updateMensagensWhatsapp,
     clearConfig
   }
-}) 
+})

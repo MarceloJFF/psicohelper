@@ -1,124 +1,229 @@
 <template>
   <v-container>
-    <v-row justify="center" class="mb-6">
-      <v-col cols="12" md="8" lg="6">
-        <h1 class="text-h4 font-weight-bold text-center">Gerenciar Profissionais</h1>
+    <v-row class="mb-4" align="center">
+      <v-col cols="12" md="6">
+        <v-text-field
+          v-model="search"
+          label="Buscar profissional por nome ou e-mail"
+          prepend-inner-icon="mdi-magnify"
+          clearable
+        />
+      </v-col>
+      <v-col cols="12" md="6" class="text-right">
+        <v-btn color="primary" @click="abrirModalProfissional">
+          <v-icon start>mdi-plus</v-icon>
+          Novo Profissional
+        </v-btn>
       </v-col>
     </v-row>
 
-    <v-row justify="center">
-      <v-col cols="12" md="10" lg="8">
-        <v-data-table
-          :headers="headers"
-          :items="profissionais"
-          item-key="id"
-          class="elevation-1"
-          dense
-          :loading="loading"
-          loading-text="Carregando profissionais..."
-        >
-          <template #item.actions="{ item }">
-            <v-btn icon color="primary" @click="abrirModalEditar(item)">
-              <v-icon>mdi-pencil</v-icon>
-            </v-btn>
-          </template>
-        </v-data-table>
-      </v-col>
-    </v-row>
+    <v-data-table
+      :headers="headers"
+      :items="profissionaisFiltrados"
+      :search="search"
+      class="elevation-1"
+      no-data-text="Nenhum profissional encontrado"
+    >
+      <template #item.status="{ item }">
+        <v-chip :color="item.ativo ? 'green' : 'grey'" dark>
+          {{ item.ativo ? 'Ativo' : 'Inativo' }}
+        </v-chip>
+      </template>
 
-    <v-dialog v-model="modalEditar" max-width="500px">
+      <template #item.acao="{ item }">
+        <v-btn icon @click="abrirModalProfissional(item)">
+          <v-icon>mdi-pencil</v-icon>
+        </v-btn>
+        <v-btn icon @click="alternarStatus(item)">
+          <v-icon :color="item.ativo ? 'grey' : 'green'">
+            {{ item.ativo ? 'mdi-eye-off' : 'mdi-eye' }}
+          </v-icon>
+        </v-btn>
+      </template>
+    </v-data-table>
+
+    <!-- Modal -->
+    <v-dialog v-model="dialogProfissional" max-width="500px" persistent>
       <v-card>
-        <v-card-title>Editar Profissional</v-card-title>
+        <v-card-title>
+          <span class="text-h6">{{ profissionalEditando ? 'Editar Profissional' : 'Novo Profissional' }}</span>
+        </v-card-title>
+
         <v-card-text>
-          <v-form ref="form" v-model="formValid">
-            <v-text-field
-              v-model="editarProfissional.nome"
-              label="Nome"
-              :rules="[v => !!v || 'Nome é obrigatório']"
-              required
-            />
-            <v-select
-              v-model="editarProfissional.role"
-              :items="roles"
-              label="Role"
-              required
-            />
-          </v-form>
+          <v-text-field v-model="form.email" label="E-mail" type="email" required />
+
+          <v-text-field
+            v-if="!profissionalEditando"
+            v-model="form.senha"
+            label="Senha"
+            type="password"
+            :rules="[v => !!v || 'Obrigatório']"
+          />
+          <v-text-field
+            v-else
+            v-model="form.senha"
+            label="Nova senha (opcional)"
+            type="password"
+          />
+
+          <v-text-field v-model="form.nome" label="Nome" required />
+          <v-text-field v-model="form.profissao" label="Profissão" />
+          <v-text-field v-model="form.telefone" label="Telefone" />
+          <v-text-field
+            v-model="form.dataExpiracao"
+            label="Data de expiração do acesso"
+            type="date"
+          />
+          <v-select
+            v-model="form.idPlano"
+            label="Plano"
+            :items="planos"
+            item-title="label"
+            item-value="id"
+            required
+          />
         </v-card-text>
+
         <v-card-actions>
-          <v-spacer></v-spacer>
-          <v-btn text @click="modalEditar = false">Cancelar</v-btn>
-          <v-btn
-            :disabled="!formValid"
-            color="primary"
-            @click="salvarEdicao"
-          >
-            Salvar
-          </v-btn>
+          <v-spacer />
+          <v-btn variant="text" @click="dialogProfissional = false">Cancelar</v-btn>
+          <v-btn color="primary" @click="salvarProfissional">Salvar</v-btn>
         </v-card-actions>
       </v-card>
     </v-dialog>
   </v-container>
 </template>
 
-<script setup>
- import { ref, onMounted } from "vue";
- import supabase  from "@/config/supabase"
+<script setup lang="ts">
+import { ref, computed, onMounted } from 'vue'
 
+const ProfissionalService = {
+  async listar() {
+    return [
+      {
+        id: 1,
+        email: 'ana@email.com',
+        nome: 'Ana sssssss  aaaasss assasssa',
+        profissao: 'Psicóloga',
+        telefone: '11999999999',
+        idPlano: 1,
+        ativo: true,
+        dataExpiracao: '2025-12-31'
+      },
+      {
+        id: 2,
+        email: 'bruno@email.com',
+        nome: 'Bruno',
+        profissao: 'Pedagogo',
+        telefone: '11888888888',
+        idPlano: 2,
+        ativo: false,
+        dataExpiracao: '2025-10-15'
+      }
+    ]
+  },
+  async criar(profissional: any) {
+    return { ...profissional, id: Date.now(), ativo: true }
+  },
+  async atualizar(profissional: any) {
+    return profissional
+  }
+}
 
- const profissionais = ref([]);
- const loading = ref(false);
+const search = ref('')
+const dialogProfissional = ref(false)
+const profissionalEditando = ref(false)
 
- const headers = [
-   { text: "Nome", value: "nome" },
-   { text: "Ações", value: "actions", sortable: false },
+const form = ref({
+  id: null,
+  email: '',
+  senha: '',
+  nome: '',
+  profissao: '',
+  telefone: '',
+  idPlano: null,
+  dataExpiracao: '',
+  ativo: true
+})
 
-  ];
+const planos = [
+  { id: 1, label: 'Plano Anamnese' },
+  { id: 2, label: 'Plano Piaget' },
+  { id: 3, label: 'Plano Wallon' },
+]
 
- const modalEditar = ref(false);
- const editarProfissional = ref({ id: null, nome: "", role: "" });
- const roles = ["admin", "user"];
- const formValid = ref(false);
+const headers = [
+  { title: 'Nome', key: 'nome' },
+  { title: 'E-mail', key: 'email' },
+  { title: 'Profissão', key: 'profissao' },
+  { title: 'Telefone', key: 'telefone' },
+  { title: 'Plano', key: 'planoLabel' },
+  { title: 'Expira em', key: 'dataExpiracao' },
+  { title: 'Status', key: 'status' },
+  { title: 'Ações', key: 'acao', sortable: false },
+]
 
- async function fetchProfissionais() {
-   loading.value = true;
-   const session = await supabase.auth.getSession();
-   const token = session.data.session.access_token;
+const profissionais = ref<any[]>([])
 
-   const res = await fetch("/functions/v1/listar_profissionais", {
-     headers: { Authorization: `Bearer ${token}` },
-   });
-   profissionais.value = await res.json();
-   loading.value = false;
- }
+const profissionaisFiltrados = computed(() =>
+  profissionais.value.map(p => ({
+    ...p,
+    planoLabel: planos.find(pl => pl.id === p.idPlano)?.label || '---'
+  }))
+)
 
- function abrirModalEditar(profissional) {
-   editarProfissional.value = { ...profissional };
-   modalEditar.value = true;
- }
+function abrirModalProfissional(profissional = null) {
+  if (profissional) {
+    profissionalEditando.value = true
+    form.value = { ...profissional, senha: '' }
+  } else {
+    profissionalEditando.value = false
+    form.value = {
+      id: null,
+      email: '',
+      senha: '',
+      nome: '',
+      profissao: '',
+      telefone: '',
+      idPlano: null,
+      dataExpiracao: '',
+      ativo: true
+    }
+  }
+  dialogProfissional.value = true
+}
 
- async function salvarEdicao() {
-   if (!formValid.value) return;
+async function salvarProfissional() {
+  try {
+    const payload = {
+      ...form.value,
+      idPlano: Number(form.value.idPlano)
+    }
 
-   const session = await supabase.auth.getSession();
-   const token = session.data.session.access_token;
+    if (profissionalEditando.value && !payload.senha) {
+      delete payload.senha
+    }
 
-   const res = await fetch("/functions/v1/editar_profissional", {
-     method: "POST",
-     headers: {
-       "Content-Type": "application/json",
-       Authorization: `Bearer ${token}`,
-     },
-     body: JSON.stringify(editarProfissional.value),
-   });
+    if (profissionalEditando.value) {
+      const atualizado = await ProfissionalService.atualizar(payload)
+      const idx = profissionais.value.findIndex(p => p.id === atualizado.id)
+      if (idx !== -1) profissionais.value[idx] = atualizado
+    } else {
+      const novo = await ProfissionalService.criar(payload)
+      profissionais.value.push(novo)
+    }
 
-   if (res.ok) {
-     modalEditar.value = false;
-     fetchProfissionais();
-   } else {
-     alert("Erro ao salvar profissional");
-   }
- }
+    dialogProfissional.value = false
+  } catch (error) {
+    console.error('Erro ao salvar profissional:', error)
+  }
+}
 
- onMounted(fetchProfissionais);
- </script>
+function alternarStatus(profissional) {
+  profissional.ativo = !profissional.ativo
+}
+
+onMounted(async () => {
+  profissionais.value = await ProfissionalService.listar()
+})
+</script>

@@ -1,10 +1,10 @@
 import { ref, reactive } from 'vue'
 import { useRouter } from 'vue-router'
 import { defineStore } from 'pinia'
-import supabase from '/src/config/supabase'
-import { useStoreProfissional } from '/src/stores/storeProfissional'
-import { useShowErrorMessage } from '/src/userCases/useShowErrorMessage'
-import { useStoreConfig } from '/src/stores/storeConfig'
+import supabase from '@/config/supabase'
+import { useStoreProfissional } from '@/stores/storeProfissional'
+import { useShowErrorMessage } from '@/userCases/useShowErrorMessage'
+import { useStoreConfig } from '@/stores/storeConfig'
 export const useStoreAuth = defineStore('auth', () => {
 
   const sessionLoaded = ref(false)
@@ -13,8 +13,8 @@ export const useStoreAuth = defineStore('auth', () => {
   const storesProfissional = useStoreProfissional()
   const storeConfig = useStoreConfig()
   const userDetailsDefault = {
-    id: null,
-    email: null
+    id: '',
+    email: ''
   }
 
   const userDetails = reactive({
@@ -30,8 +30,7 @@ export const useStoreAuth = defineStore('auth', () => {
           if (session != null) {
             console.log("Sessao iniciada")
             userDetails.id = session.user.id
-            userDetails.email = session.user.email
-            console.log(session)
+            userDetails.email = session?.user?.email?session?.user?.email:''
             storesProfissional.loadProfissional()
             storeConfig.loadConfiguracao(session.user.id)
             //router.push('/')
@@ -46,18 +45,18 @@ export const useStoreAuth = defineStore('auth', () => {
       })
     }
 
-  const registerUser = async ({ email, password }, profissional) => {
-    const { data, error } = await supabase.auth.signUp({ email, password })
+  const registerUser = async ({ email, password }:{email:any; password:any}, profissional:any) => {
+      const { data, error } = await supabase.auth.signUp({ email, password })
 
     if (data?.user) {
       await storesProfissional.registerProfissional(profissional, data.user.id)
-      await storeConfig.createConfiguracao(storesProfissional.profissionalDetails.value.id)
+      await storeConfig.createConfiguracao(storesProfissional.profissionalDetails?.id)
     }
 
     if (error) showError("Houve um erro ao criar o usuário, tente novamente mais tarde"+error.message)
   }
 
-  const loginUser = async ({ email, password }) => {
+  const loginUser = async ({ email, password }:{email:any; password:any}) => {
     const { data, error } = await supabase.auth.signInWithPassword({
       email,
       password
@@ -65,7 +64,7 @@ export const useStoreAuth = defineStore('auth', () => {
 
     if (data?.user) {
       userDetails.id = data.user.id
-      userDetails.email = data.user.email
+      userDetails.email = data.user.email?data.user.email:''
       await storesProfissional.loadProfissional()
       await storeConfig.loadConfiguracao(data.user.id)
       router.push('/')
