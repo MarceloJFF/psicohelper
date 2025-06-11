@@ -29,6 +29,7 @@ export const useStoreAuth = defineStore('auth', () => {
         if (event === 'SIGNED_IN' || event === 'INITIAL_SESSION') {
           if (session != null) {
             console.log("Sessao iniciada")
+            console.log(session)
             userDetails.id = session.user.id
             userDetails.email = session?.user?.email?session?.user?.email:''
             storesProfissional.loadProfissional()
@@ -46,7 +47,7 @@ export const useStoreAuth = defineStore('auth', () => {
     }
 
   const registerUser = async ({ email, password }:{email:any; password:any}, profissional:any) => {
-      const { data, error } = await supabase.auth.signUp({ email, password })
+    const { data, error } = await supabase.auth.signUp({ email, password })
 
     if (data?.user) {
       await storesProfissional.registerProfissional(profissional, data.user.id)

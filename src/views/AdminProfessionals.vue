@@ -1,5 +1,15 @@
 <template>
   <v-container>
+    <v-alert
+      v-if="error"
+      type="error"
+      class="mb-4"
+      closable
+      @click:close="error = null"
+    >
+      {{ error }}
+    </v-alert>
+
     <v-row class="mb-4" align="center">
       <v-col cols="12" md="6">
         <v-text-field
@@ -21,6 +31,7 @@
       :headers="headers"
       :items="profissionaisFiltrados"
       :search="search"
+      :loading="loading"
       class="elevation-1"
       no-data-text="Nenhum profissional encontrado"
     >
@@ -96,45 +107,42 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
+import supabase from '../config/supabase'
 
-const ProfissionalService = {
-  async listar() {
-    return [
-      {
-        id: 1,
-        email: 'ana@email.com',
-        nome: 'Ana sssssss  aaaasss assasssa',
-        profissao: 'Psicóloga',
-        telefone: '11999999999',
-        idPlano: 1,
-        ativo: true,
-        dataExpiracao: '2025-12-31'
-      },
-      {
-        id: 2,
-        email: 'bruno@email.com',
-        nome: 'Bruno',
-        profissao: 'Pedagogo',
-        telefone: '11888888888',
-        idPlano: 2,
-        ativo: false,
-        dataExpiracao: '2025-10-15'
-      }
-    ]
-  },
-  async criar(profissional: any) {
-    return { ...profissional, id: Date.now(), ativo: true }
-  },
-  async atualizar(profissional: any) {
-    return profissional
-  }
+interface Profissional {
+  profissional_id: string;
+  profissional_nome: string;
+  profissao: string;
+  telefone: string;
+  status_prof: boolean;
+  user_id: string;
+  user_email: string;
+  assinatura_id: string;
+  data_expiracao: string;
+  ativo: boolean;
+  plano_id: string;
+  plano_nome: string;
+}
+
+interface ProfissionalForm {
+  id: string | null;
+  email: string;
+  senha?: string; // Tornando senha opcional
+  nome: string;
+  profissao: string;
+  telefone: string;
+  idPlano: number | null;
+  dataExpiracao: string;
+  ativo: boolean;
 }
 
 const search = ref('')
 const dialogProfissional = ref(false)
 const profissionalEditando = ref(false)
+const loading = ref(false)
+const error = ref<string | null>(null)
 
-const form = ref({
+const form = ref<ProfissionalForm>({
   id: null,
   email: '',
   senha: '',
@@ -168,14 +176,28 @@ const profissionais = ref<any[]>([])
 const profissionaisFiltrados = computed(() =>
   profissionais.value.map(p => ({
     ...p,
-    planoLabel: planos.find(pl => pl.id === p.idPlano)?.label || '---'
+    nome: p.profissional_nome,
+    email: p.user_email || '---',
+    planoLabel: p.plano_nome || '---',
+    dataExpiracao: p.data_expiracao || '---',
+    ativo: p.ativo ?? false
   }))
 )
 
-function abrirModalProfissional(profissional = null) {
+function abrirModalProfissional(profissional: Profissional | null = null) {
   if (profissional) {
     profissionalEditando.value = true
-    form.value = { ...profissional, senha: '' }
+    form.value = {
+      id: profissional.profissional_id,
+      email: profissional.user_email || '',
+      senha: '',
+      nome: profissional.profissional_nome,
+      profissao: profissional.profissao,
+      telefone: profissional.telefone,
+      idPlano: null,
+      dataExpiracao: profissional.data_expiracao || '',
+      ativo: profissional.ativo ?? true
+    }
   } else {
     profissionalEditando.value = false
     form.value = {
@@ -201,13 +223,12 @@ async function salvarProfissional() {
     }
 
     if (profissionalEditando.value && !payload.senha) {
-      delete payload.senha
-    }
-
-    if (profissionalEditando.value) {
-      const atualizado = await ProfissionalService.atualizar(payload)
-      const idx = profissionais.value.findIndex(p => p.id === atualizado.id)
-      if (idx !== -1) profissionais.value[idx] = atualizado
+      const { senha, ...payloadWithoutSenha } = payload;
+      if (profissionalEditando.value) {
+        const atualizado = await ProfissionalService.atualizar(payloadWithoutSenha as ProfissionalForm)
+        const idx = profissionais.value.findIndex(p => p.profissional_id === atualizado.id)
+        if (idx !== -1) profissionais.value[idx] = atualizado
+      }
     } else {
       const novo = await ProfissionalService.criar(payload)
       profissionais.value.push(novo)
@@ -219,11 +240,122 @@ async function salvarProfissional() {
   }
 }
 
-function alternarStatus(profissional) {
-  profissional.ativo = !profissional.ativo
+function alternarStatus(profissional: Profissional) {
+  if (profissional.status_prof) {
+    profissional.status_prof = !profissional.status_prof
+  }
+}
+
+const ProfissionalService = {
+  async listar() {
+    try {
+      loading.value = true
+      error.value = null
+      
+      const response = await fetch("https://ycomsbcspjbudrdeulgo.supabase.co/functions/v1/manager_profissional", {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`
+        }
+      })
+
+      if (!response.ok) {
+        throw new Error('Erro ao carregar profissionais')
+      }
+
+      const data = await response.json()
+      return data
+    } catch (err) {
+      console.error('Erro ao buscar profissionais:', err)
+      error.value = 'Erro ao carregar profissionais'
+      return []
+    } finally {
+      loading.value = false
+    }
+  },
+
+  async criar(profissional: ProfissionalForm) {
+    try {
+      loading.value = true
+      error.value = null
+
+      const response = await fetch('/functions/v1/manager_profissional', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          email: profissional.email,
+          senha: profissional.senha || '123456',
+          nome: profissional.nome,
+          profissao: profissional.profissao,
+          telefone: profissional.telefone,
+          expiracao: profissional.dataExpiracao,
+          idPlano: profissional.idPlano
+        })
+      })
+
+      if (!response.ok) {
+        throw new Error('Erro ao criar profissional')
+      }
+
+      const data = await response.json()
+      return data
+    } catch (err) {
+      console.error('Erro ao criar profissional:', err)
+      error.value = 'Erro ao criar profissional'
+      throw err
+    } finally {
+      loading.value = false
+    }
+  },
+
+  async atualizar(profissional: ProfissionalForm) {
+    try {
+      loading.value = true
+      error.value = null
+
+      const response = await fetch('/functions/v1/manager_profissional', {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          id: profissional.id,
+          nome: profissional.nome,
+          profissao: profissional.profissao,
+          telefone: profissional.telefone,
+          expiracao: profissional.dataExpiracao,
+          idPlano: profissional.idPlano,
+          ativo: profissional.ativo
+        })
+      })
+
+      if (!response.ok) {
+        throw new Error('Erro ao atualizar profissional')
+      }
+
+      const data = await response.json()
+      return data
+    } catch (err) {
+      console.error('Erro ao atualizar profissional:', err)
+      error.value = 'Erro ao atualizar profissional'
+      throw err
+    } finally {
+      loading.value = false
+    }
+  }
 }
 
 onMounted(async () => {
-  profissionais.value = await ProfissionalService.listar()
+  try {
+    profissionais.value = await ProfissionalService.listar()
+    console.log("========")
+    console.log(profissionais)
+  } catch (err) {
+    console.error('Erro ao carregar profissionais:', err)
+  }
 })
 </script>
