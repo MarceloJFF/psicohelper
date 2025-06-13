@@ -131,7 +131,7 @@ interface ProfissionalForm {
   nome: string;
   profissao: string;
   telefone: string;
-  idPlano: number | null;
+  idPlano: string | null;
   dataExpiracao: string;
   ativo: boolean;
 }
@@ -149,7 +149,7 @@ const form = ref<ProfissionalForm>({
   nome: '',
   profissao: '',
   telefone: '',
-  idPlano: null,
+  idPlano: '',
   dataExpiracao: '',
   ativo: true
 })
@@ -171,7 +171,7 @@ const headers = [
   { title: 'Ações', key: 'acao', sortable: false },
 ]
 
-const profissionais = ref<any[]>([])
+const profissionais = ref<Profissional[]>([])
 
 const profissionaisFiltrados = computed(() =>
   profissionais.value.map(p => ({
@@ -186,6 +186,7 @@ const profissionaisFiltrados = computed(() =>
 
 function abrirModalProfissional(profissional: Profissional | null = null) {
   if (profissional) {
+  
     profissionalEditando.value = true
     form.value = {
       id: profissional.profissional_id,
@@ -194,7 +195,7 @@ function abrirModalProfissional(profissional: Profissional | null = null) {
       nome: profissional.profissional_nome,
       profissao: profissional.profissao,
       telefone: profissional.telefone,
-      idPlano: null,
+      idPlano: profissional.plano_nome,
       dataExpiracao: profissional.data_expiracao || '',
       ativo: profissional.ativo ?? true
     }
@@ -217,32 +218,73 @@ function abrirModalProfissional(profissional: Profissional | null = null) {
 
 async function salvarProfissional() {
   try {
+    loading.value = true;
+    error.value = null;
+
     const payload = {
       ...form.value,
       idPlano: Number(form.value.idPlano)
     }
 
-    if (profissionalEditando.value && !payload.senha) {
+    if (profissionalEditando.value) {
       const { senha, ...payloadWithoutSenha } = payload;
-      if (profissionalEditando.value) {
-        const atualizado = await ProfissionalService.atualizar(payloadWithoutSenha as ProfissionalForm)
-        const idx = profissionais.value.findIndex(p => p.profissional_id === atualizado.id)
-        if (idx !== -1) profissionais.value[idx] = atualizado
+      await ProfissionalService.atualizar(payloadWithoutSenha);
+      const idx = profissionais.value.findIndex(p => p.profissional_id === payload.id);
+      if (idx !== -1) {
+        profissionais.value[idx] = {
+          ...profissionais.value[idx],
+          profissional_nome: payload.nome,
+          profissao: payload.profissao,
+          telefone: payload.telefone,
+          data_expiracao: payload.dataExpiracao,
+          plano_id: payload.idPlano?.toString(),
+          ativo: payload.ativo
+        };
       }
     } else {
-      const novo = await ProfissionalService.criar(payload)
-      profissionais.value.push(novo)
+      const novo = await ProfissionalService.criar(payload);
+      profissionais.value.push(novo);
     }
 
-    dialogProfissional.value = false
-  } catch (error) {
-    console.error('Erro ao salvar profissional:', error)
+    dialogProfissional.value = false;
+  } catch (err) {
+    error.value = 'Erro ao salvar profissional';
+    console.error('Erro ao salvar profissional:', err);
+  } finally {
+    loading.value = false;
   }
 }
 
 function alternarStatus(profissional: Profissional) {
-  if (profissional.status_prof) {
-    profissional.status_prof = !profissional.status_prof
+  try {
+    loading.value = true;
+    error.value = null;
+
+    const novoStatus = !profissional.ativo;
+    ProfissionalService.atualizar({
+      id: profissional.profissional_id,
+      email: profissional.user_email,
+      nome: profissional.profissional_nome,
+      profissao: profissional.profissao,
+      telefone: profissional.telefone,
+      dataExpiracao: profissional.data_expiracao,
+      idPlano: Number(profissional.plano_id),
+      ativo: novoStatus
+    }).then(() => {
+      const idx = profissionais.value.findIndex(p => p.profissional_id === profissional.profissional_id);
+      if (idx !== -1) {
+        profissionais.value[idx].ativo = novoStatus;
+      }
+    }).catch(err => {
+      error.value = 'Erro ao alterar status do profissional';
+      console.error('Erro ao alterar status:', err);
+    }).finally(() => {
+      loading.value = false;
+    });
+  } catch (err) {
+    error.value = 'Erro ao alterar status do profissional';
+    console.error('Erro ao alterar status:', err);
+    loading.value = false;
   }
 }
 
@@ -251,7 +293,7 @@ const ProfissionalService = {
     try {
       loading.value = true
       error.value = null
-      
+
       const response = await fetch("https://ycomsbcspjbudrdeulgo.supabase.co/functions/v1/manager_profissional", {
         method: 'GET',
         headers: {
@@ -279,7 +321,7 @@ const ProfissionalService = {
       loading.value = true
       error.value = null
 
-      const response = await fetch('/functions/v1/manager_profissional', {
+      const response = await fetch('https://ycomsbcspjbudrdeulgo.supabase.co/functions/v1/manager_profissional', {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`,
@@ -315,8 +357,8 @@ const ProfissionalService = {
     try {
       loading.value = true
       error.value = null
-
-      const response = await fetch('/functions/v1/manager_profissional', {
+      console.log(profissional)
+      const response = await fetch('https://ycomsbcspjbudrdeulgo.supabase.co/functions/v1/manager_profissional', {
         method: 'PUT',
         headers: {
           'Authorization': `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`,
